@@ -125,14 +125,15 @@ static void htif_done(const struct fdt_scan_node *node, void *extra)
 
 void query_htif(uintptr_t fdt)
 {
-  struct fdt_cb cb;
-  struct htif_scan scan;
+  htif = 1;
+  //struct fdt_cb cb;
+  //struct htif_scan scan;
 
-  memset(&cb, 0, sizeof(cb));
-  cb.open = htif_open;
-  cb.prop = htif_prop;
-  cb.done = htif_done;
-  cb.extra = &scan;
+  //memset(&cb, 0, sizeof(cb));
+  //cb.open = htif_open;
+  //cb.prop = htif_prop;
+  //cb.done = htif_done;
+  //cb.extra = &scan;
 
-  fdt_scan(fdt, &cb);
+  //fdt_scan(fdt, &cb);
 }

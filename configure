@@ -677,6 +677,7 @@ enable_logo
 with_payload
 with_logo
 enable_fp_emulation
+enable_sm
 '
       ac_precious_vars='build_alias
 host_alias
@@ -1326,6 +1327,7 @@ Optional Features:
   --disable-vm            Disable virtual memory
   --enable-logo           Enable boot logo
   --disable-fp-emulation  Disable floating-point emulation
+  --enable-sm             Enable Security Monitor
 
 Optional Packages:
   --with-PACKAGE[=ARG]    use PACKAGE [ARG=yes]
@@ -4092,7 +4094,6 @@ case "${BUILD_32BIT}" in
 	CFLAGS="$default_CFLAGS"
 	LDFLAGS=
 	install_subdir=$host_alias
-
 	;;
 esac
 
@@ -4461,6 +4462,63 @@ $as_echo "$as_me: configuring default subproject : util" >&6;}
 
 $as_echo "#define UTIL_ENABLED /**/" >>confdefs.h
 
+
+
+
+
+
+    # Determine if this is a required or an optional subproject
+
+
+
+    # Determine if there is a group with the same name
+
+
+
+    # Create variations of the subproject name suitable for use as a CPP
+    # enabled define, a shell enabled variable, and a shell function
+
+
+
+
+
+
+
+
+
+
+
+    # Add subproject to our running list
+
+    subprojects="$subprojects sm"
+
+    # Process the subproject appropriately. If enabled add it to the
+    # $enabled_subprojects running shell variable, set a
+    # SUBPROJECT_ENABLED C define, and include the appropriate
+    # 'subproject.ac'.
+
+
+      { $as_echo "$as_me:${as_lineno-$LINENO}: configuring default subproject : sm" >&5
+$as_echo "$as_me: configuring default subproject : sm" >&6;}
+      ac_config_files="$ac_config_files sm.mk:sm/sm.mk.in"
+
+      enable_sm_sproj="yes"
+      subprojects_enabled="$subprojects_enabled sm"
+
+$as_echo "#define SM_ENABLED /**/" >>confdefs.h
+
+      # Check whether --enable-sm was given.
+if test "${enable_sm+set}" = set; then :
+  enableval=$enable_sm;
+fi
+
+if test "x$enable_sm" == "xyes"; then :
+
+
+$as_echo "#define PK_ENABLE_SM /**/" >>confdefs.h
+
+
+fi
 
 
 
@@ -5188,6 +5246,7 @@ do
     "dummy_payload.mk") CONFIG_FILES="$CONFIG_FILES dummy_payload.mk:dummy_payload/dummy_payload.mk.in" ;;
     "machine.mk") CONFIG_FILES="$CONFIG_FILES machine.mk:machine/machine.mk.in" ;;
     "util.mk") CONFIG_FILES="$CONFIG_FILES util.mk:util/util.mk.in" ;;
+    "sm.mk") CONFIG_FILES="$CONFIG_FILES sm.mk:sm/sm.mk.in" ;;
     "config.h") CONFIG_HEADERS="$CONFIG_HEADERS config.h" ;;
     "Makefile") CONFIG_FILES="$CONFIG_FILES Makefile" ;;
 

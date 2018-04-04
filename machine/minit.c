@@ -1,3 +1,4 @@
+#include "sm.h"
 #include "mtrap.h"
 #include "atomic.h"
 #include "vm.h"
@@ -171,12 +172,11 @@ void init_other_hart(uintptr_t hartid, uintptr_t dtb)
   hart_plic_init();
   boot_other_hart(dtb);
 }
-
 void enter_supervisor_mode(void (*fn)(uintptr_t), uintptr_t arg0, uintptr_t arg1)
 {
   // Set up a PMP to permit access to all of memory.
   // Ignore the illegal-instruction trap if PMPs aren't supported.
-  uintptr_t pmpc = PMP_NAPOT | PMP_R | PMP_W | PMP_X;
+	uintptr_t pmpc = PMP_NAPOT | PMP_R | PMP_W | PMP_X;
   asm volatile ("la t0, 1f\n\t"
                 "csrrw t0, mtvec, t0\n\t"
                 "csrw pmpaddr0, %1\n\t"
@@ -184,8 +184,13 @@ void enter_supervisor_mode(void (*fn)(uintptr_t), uintptr_t arg0, uintptr_t arg1
                 ".align 2\n\t"
                 "1: csrw mtvec, t0"
                 : : "r" (pmpc), "r" (-1UL) : "t0");
-
-  uintptr_t mstatus = read_csr(mstatus);
+  
+#ifdef PK_ENABLE_SM
+	printm("initializing sm\r\n");
+	sm_init();
+	printm("initialized sm\r\n");
+#endif
+	uintptr_t mstatus = read_csr(mstatus);
   mstatus = INSERT_FIELD(mstatus, MSTATUS_MPP, PRV_S);
   mstatus = INSERT_FIELD(mstatus, MSTATUS_MPIE, 0);
   write_csr(mstatus, mstatus);
@@ -194,6 +199,6 @@ void enter_supervisor_mode(void (*fn)(uintptr_t), uintptr_t arg0, uintptr_t arg1
 
   register uintptr_t a0 asm ("a0") = arg0;
   register uintptr_t a1 asm ("a1") = arg1;
-  asm volatile ("mret" : : "r" (a0), "r" (a1));
+	asm volatile ("mret" : : "r" (a0), "r" (a1));
   __builtin_unreachable();
 }

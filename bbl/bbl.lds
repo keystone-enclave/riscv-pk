@@ -4,13 +4,85 @@ ENTRY( reset_vector )
 
 SECTIONS
 {
+  . = 0x80000000; /* load starting at the beginning of DRAM */
+  
+	.header :
+  {
+    /* ## manufacturer_keys : */
 
-  /*--------------------------------------------------------------------*/
-  /* Code and read-only segment                                         */
-  /*--------------------------------------------------------------------*/
+    /* 8 Bytes : manufacturer meta/reserved */
+    PROVIDE( sanctum_m_meta = .);
+    . += 0x8;
 
-  /* Begining of code and text segment */
-  . = 0x80000000;
+    /* 32 Bytes : manufacturer public key */
+    PROVIDE( sanctum_m_public_key = . );
+    . += 0x20;
+
+    /* ## device_keys : */
+
+    /* 8 Bytes : device meta/reserved */
+    PROVIDE( sanctum_dev_meta = . );
+    . += 0x8;
+
+    /* 16 Bytes : device PUF b */
+    PROVIDE( sanctum_dev_puf_b = . );
+    . += 0x10;
+
+    /* 32 Bytes : device PUF e */
+    PROVIDE( sanctum_dev_puf_e = . );
+    . += 0x20;
+
+    /* 32 Bytes : device PUF s */
+    PROVIDE( sanctum_dev_puf_s = . );
+    . += 0x20;
+
+    /* 64 Bytes : device symmetric key */
+    PROVIDE( sanctum_dev_symmetric_key = . );
+    . += 0x40;
+
+    /* 32 Bytes : device public key */
+    PROVIDE( sanctum_dev_public_key = . );
+    . += 0x20;
+
+    /* 64 Bytes : device secret key */
+    PROVIDE( sanctum_dev_secret_key = . );
+    . += 0x40;
+
+    /* 64 Bytes : device's signature by manufacturer */
+    PROVIDE( sanctum_dev_signature = . );
+    . += 0x40;
+
+    /* ## security_monitor_keys : */
+
+    /* 8 Bytes : security monitor meta/reserved */
+    PROVIDE( sanctum_sm_meta = . );
+    . += 0x8;
+
+    /* 4 Bytes : security monitor size (bytes) */
+    PROVIDE( sanctum_sm_size = . );
+    LONG( ADDR(.payload) - ADDR( .text ) );
+
+    /* 64 Bytes : security monitor hash */
+    PROVIDE( sanctum_sm_hash = . );
+    . += 0x40;
+
+    /* 64 Bytes : security monitor symmetric key */
+    PROVIDE( sanctum_sm_symmetric_key = . );
+    . += 0x40;
+
+    /* 32 Bytes : security monitor public key */
+    PROVIDE( sanctum_sm_public_key = . );
+    . += 0x20;
+
+    /* 64 Bytes : security monitor secret key */
+    PROVIDE( sanctum_sm_secret_key = . );
+    . += 0x40;
+
+    /* 64 Bytes : security monitor's signature by device */
+    PROVIDE( sanctum_sm_signature = . );
+    . += 0x40;
+  }
+
   _ftext = .;
   PROVIDE( eprol = . );
 
@@ -20,7 +92,7 @@ SECTIONS
   }
 
   /* text: Program code section */
-  .text : 
+  .text :
   {
     *(.text)
     *(.text.*)
@@ -28,7 +100,7 @@ SECTIONS
   }
 
   /* rodata: Read-only data */
-  .rodata : 
+  .rodata :
   {
     *(.rdata)
     *(.rodata)
@@ -60,7 +132,7 @@ SECTIONS
    _fdata = .;
 
   /* data: Writable data */
-  .data : 
+  .data :
   {
     *(.data)
     *(.data.*)
@@ -88,7 +160,7 @@ SECTIONS
   /* bss: Uninitialized writeable data section */
   . = .;
   _bss_start = .;
-  .bss : 
+  .bss :
   {
     *(.bss)
     *(.bss.*)
@@ -102,6 +174,10 @@ SECTIONS
     *(.sbi)
   }
 
+  //_sm_end = .;
+
+  /* # Payload binary */
+  /* ================ */
   .payload :
   {
     *(.payload)

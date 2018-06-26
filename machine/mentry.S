@@ -15,8 +15,8 @@ trap_table:
   .word pmp_trap
   .word misaligned_store_trap
   .word pmp_trap
-  .word bad_trap
-  .word mcall_trap
+  .word sm_call_trap // 8 --> ECALL from U-mode
+  .word mcall_trap // 9 --> ECALL from S-mode
   .word bad_trap
   .word bad_trap
   .word bad_trap

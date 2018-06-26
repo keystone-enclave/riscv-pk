@@ -5,8 +5,8 @@ sm_hdrs = \
 sm_c_srcs = \
   sm.c \
   enclave_syscall.c \
-	aes/aes.c \
-	sha3/sha3.c \
+  aes/aes.c \
+  sha3/sha3.c \
   ed25519/keypair.c \
   ed25519/sign.c \
   ed25519/fe.c \

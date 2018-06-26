@@ -61,7 +61,7 @@ SECTIONS
 
     /* 4 Bytes : security monitor size (bytes) */
     PROVIDE( sanctum_sm_size = . );
-    /* LONG( ADDR(.payload) - ADDR( .text ) ); */
+    LONG( ADDR(.payload) - ADDR( .text ) );
 
     /* 64 Bytes : security monitor hash */
     PROVIDE( sanctum_sm_hash = . );

@@ -14,6 +14,9 @@
 #include <stdarg.h>
 #include <stdio.h>
 
+#ifdef SM_ENABLED
+#include "sm.h"
+#endif
 void __attribute__((noreturn)) bad_trap(uintptr_t* regs, uintptr_t dummy, uintptr_t mepc)
 {
   die("machine mode: unhandlable trap %d @ %p", read_csr(mcause), mepc);
@@ -162,6 +165,14 @@ send_ipi:
       retval = mcall_set_timer(arg0);
 #endif
       break;
+#ifdef SM_ENABLED
+    case SBI_SM_CREATE_ENCLAVE:
+      retval = mcall_sm_create_enclave();
+      break;
+    case SBI_SM_DESTROY_ENCLAVE:
+      retval = mcall_sm_destroy_enclave();
+      break;
+#endif
     default:
       retval = -ENOSYS;
       break;

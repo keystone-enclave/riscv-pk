@@ -48,6 +48,7 @@ SECTIONS
 
     /* 32 Bytes : device public key */
     PROVIDE( sanctum_dev_public_key = . );
+		PROVIDE( PK_D = . );
     . += 0x20;
 
     /* 64 Bytes : device secret key */
@@ -70,6 +71,7 @@ SECTIONS
 
     /* 64 Bytes : security monitor hash */
     PROVIDE( sanctum_sm_hash = . );
+		PROVIDE( SM_H = . );
     . += 0x40;
 
     /* 64 Bytes : security monitor symmetric key */
@@ -78,14 +80,17 @@ SECTIONS
 
     /* 32 Bytes : security monitor public key */
     PROVIDE( sanctum_sm_public_key = . );
+		PROVIDE( PK_SM = . );
     . += 0x20;
 
     /* 64 Bytes : security monitor secret key */
     PROVIDE( sanctum_sm_secret_key = . );
+		PROVIDE( SK_SM = . );
     . += 0x40;
 
     /* 64 Bytes : security monitor's signature by device */
     PROVIDE( sanctum_sm_signature = . );
+		PROVIDE( SM_SIG = . );
     . += 0x40;
   }
 

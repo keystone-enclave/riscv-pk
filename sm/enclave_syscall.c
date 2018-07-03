@@ -77,7 +77,7 @@ void * virt_to_phys(uint64_t va) {
   // TODO: probably wise to use MSTATUS to ensure OS permissions are not ignored during SM syscalls
 }
 
-void sm_call_trap(uintptr_t* regs, uintptr_t mcause, uintptr_t mepc)
+void u_ecall_trap(uintptr_t* regs, uintptr_t mcause, uintptr_t mepc)
 {
   write_csr(mepc, mepc + 4);
 

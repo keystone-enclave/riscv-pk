@@ -194,7 +194,7 @@ $(2)_junk += $$($(2)_c_objs) $$($(2)_c_deps) $$($(2)_asm_objs)
 # Build a library for this subproject
 
 lib$(1).a : $$($(2)_c_objs) $$($(2)_asm_objs)
-	$(AR) rcv $$@ $$^
+	$(AR) rcv $$@ $$(notdir $$^)
 	$(RANLIB) $$@
 
 $(2)_junk += lib$(1).a

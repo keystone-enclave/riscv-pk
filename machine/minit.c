@@ -1,4 +1,3 @@
-#include "sm.h"
 #include "mtrap.h"
 #include "atomic.h"
 #include "vm.h"
@@ -12,6 +11,9 @@
 #include <string.h>
 #include <limits.h>
 
+#ifdef SM_ENABLED
+# include "sm.h"
+#endif
 pte_t* root_page_table;
 uintptr_t mem_size;
 volatile uint64_t* mtime;
@@ -185,7 +187,7 @@ void enter_supervisor_mode(void (*fn)(uintptr_t), uintptr_t arg0, uintptr_t arg1
                 "1: csrw mtvec, t0"
                 : : "r" (pmpc), "r" (-1UL) : "t0");
   
-#ifdef PK_ENABLE_SM
+#ifdef SM_ENABLED
 	printm("initializing sm\r\n");
 	sm_init();
 	printm("initialized sm\r\n");

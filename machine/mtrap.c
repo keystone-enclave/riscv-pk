@@ -167,10 +167,10 @@ send_ipi:
       break;
 #ifdef SM_ENABLED
     case SBI_SM_CREATE_ENCLAVE:
-      retval = mcall_sm_create_enclave();
+      retval = mcall_sm_create_enclave(arg0, arg1);
       break;
     case SBI_SM_DESTROY_ENCLAVE:
-      retval = mcall_sm_destroy_enclave();
+      retval = mcall_sm_destroy_enclave(arg0);
       break;
 #endif
     default:

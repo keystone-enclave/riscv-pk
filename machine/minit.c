@@ -54,6 +54,10 @@ static void delegate_traps()
     (1U << CAUSE_STORE_PAGE_FAULT) |
     (1U << CAUSE_USER_ECALL);
 
+#ifdef SM_ENABLED
+  exceptions &= ~(1U << CAUSE_USER_ECALL);
+#endif
+
   write_csr(mideleg, interrupts);
   write_csr(medeleg, exceptions);
   assert(read_csr(mideleg) == interrupts);

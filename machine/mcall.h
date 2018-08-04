@@ -22,7 +22,7 @@
 #define ABI_SM_AES 1001
 #define ABI_SM_SIGN 1002
 #define ABI_SM_POET 1003
-
+#define ABI_SM_RUN  1004
 
 // FILED IDs
 #define SM_FIELD_PK_D	100

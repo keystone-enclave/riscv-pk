@@ -181,6 +181,9 @@ send_ipi:
     case SBI_SM_RUN_ENCLAVE:
       retval = mcall_sm_run_enclave(arg0, arg1);
       break;
+    case SBI_SM_EXIT_ENCLAVE:
+      retval = mcall_sm_exit_enclave(arg0);
+      break;
 #endif
     default:
       retval = -ENOSYS;

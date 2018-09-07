@@ -4,6 +4,7 @@
 #include <string.h>
 #include <stdarg.h>
 #include "sm-abi.h"
+#include "enclave.h"
 
 #define AES256 1
 #define CTR 1

@@ -15,6 +15,8 @@
 #define SBI_SM_DESTROY_ENCLAVE  102
 #define SBI_SM_COPY_TO_ENCLAVE  103
 #define SBI_SM_COPY_FROM_ENCLAVE  104
+#define SBI_SM_RUN_ENCLAVE      105
+#define SBI_SM_EXIT_ENCLAVE     1101
 
 // SM CALLS (from U-mode)
 #define ABI_SM_DEADBEEF 999
@@ -22,7 +24,7 @@
 #define ABI_SM_AES 1001
 #define ABI_SM_SIGN 1002
 #define ABI_SM_POET 1003
-
+#define ABI_SM_RUN  1004
 
 // FILED IDs
 #define SM_FIELD_PK_D	100

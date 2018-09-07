@@ -16,6 +16,7 @@
 #define SBI_SM_COPY_TO_ENCLAVE  103
 #define SBI_SM_COPY_FROM_ENCLAVE  104
 #define SBI_SM_RUN_ENCLAVE      105
+#define SBI_SM_EXIT_ENCLAVE     1101
 
 // SM CALLS (from U-mode)
 #define ABI_SM_DEADBEEF 999

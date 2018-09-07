@@ -31,62 +31,6 @@ trap_table:
 reset_vector:
   j do_reset
 
-#ifdef SM_ENABLED
-
-.Ldelegate_to_s:
-  # delegate trap to S mode
-  # Set sIE to 0
-
-  STORE a2, 12*REGBYTES(sp)
-
-  csrr a0, mstatus
-  # MSTATUS_SPP:    0x00000100
-  # MSTATUS_SPIE:   0x00000020
-  # MSTATUS_SIE:    0x00000002
-  # MSTATUS_MPP:    0x00001800
-
-  # sPIE <-- sIE
-  andi a1, a0, 0x2
-  sll a2, a1, 4
-
-  # sPP <-- mPP[0]
-  srl a1, a0, 3
-  andi a1, a1, 0x100
-  or a2, a2, a1
-
-  # mPP <-- 0x1
-  li a1, 0x0800
-  or a2, a2, a1
-
-  # Set sIE to 0, add sPP, sPIE
-  li a1, 0xFFFFFFFFFFFFE6DD
-  and a0, a0, a1
-  or a0, a0, a2
-  csrw mstatus, a0
-
-  LOAD a2, 12*REGBYTES(sp)
-
-  # sepc <-- mepc
-  csrr a0, mepc
-  csrw sepc, a0
-  # scause <-- mcause
-  csrr a0, mcause
-  csrw scause, a0
-  # sbadaddr <-- mbadaddr
-  csrr a0, mbadaddr
-  csrw sbadaddr, a0
-  # Set M-mode return address to S-mode handler
-  # mepc <-- stvec
-  csrr a0, stvec
-  csrw mepc, a0
-  # Restore dirty registers and stack pointer
-  LOAD a0, 10*REGBYTES(sp)
-  LOAD a1, 11*REGBYTES(sp)
-  csrrw sp, mscratch, sp # sp <--> mscratch (save SP, restore M-mode SP)
-  mret
-
-#endif
-
 trap_vector:
   csrrw sp, mscratch, sp
   beqz sp, .Ltrap_from_machine_mode
@@ -95,15 +39,6 @@ trap_vector:
   STORE a1, 11*REGBYTES(sp)
 
   csrr a1, mcause
-#ifdef SM_ENABLED
-  li a0, CAUSE_USER_ECALL
-  bne a0, a1, .Lcontinue_handle_trap
-  
-  li a0, 1000
-  bge a0, a7, .Ldelegate_to_s
-
-.Lcontinue_handle_trap:
-#endif
 
   bgez a1, .Lhandle_trap_in_machine_mode
 

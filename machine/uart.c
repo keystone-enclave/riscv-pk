@@ -57,6 +57,7 @@ static void uart_done(const struct fdt_scan_node *node, void *extra)
 
   // Enable Rx/Tx channels
   uart = (void*)(uintptr_t)scan->reg;
+  uart[UART_REG_DIV] = 868;
   uart[UART_REG_TXCTRL] = UART_TXEN;
   uart[UART_REG_RXCTRL] = UART_RXEN;
 }

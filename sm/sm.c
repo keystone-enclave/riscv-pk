@@ -16,13 +16,10 @@ int smm_init(uintptr_t start, uint64_t size, uint8_t perm)
     printm("sm: failed to initialize a PMP region\n");
     return -1;
   }
-  //printm("sm: SMM PMP region index = %d\n", region);
 
   int reg = pmp_set(region);
-  
   if(reg < 0)
   {
-    printm("sm: failed to set PMP\n");
     pmp_region_debug_print(region);
     return -1;
   }
@@ -57,10 +54,14 @@ void sm_print_cert()
 void sm_init(void)
 {
 	// initialize SMM
-	smm_init(SMM_BASE, SMM_SIZE, 0);
-
+	int ret;
+  ret = smm_init(SMM_BASE, SMM_SIZE, 0);
+  if(ret < 0)
+    die("[SM] intolerable error - failed to initialize SM memory");
   // reserve the last PMP register for the OS
-  set_os_pmp_region();
+  ret = set_os_pmp_region();
+  if(ret < 0)
+    die("[SM] intolerable error - failed to initialize OS memory");
   
   // for debug
   // sm_print_cert();

@@ -1,8 +1,8 @@
 #include "pmp.h"
+#include "atomic.h"
 
 uint32_t reg_bitmap = 0;
 uint32_t region_def_bitmap = 0;
-
 struct pmp_region regions[PMP_MAX_N_REGION];
 
 #if __riscv_xlen == 64
@@ -48,14 +48,8 @@ struct pmp_region regions[PMP_MAX_N_REGION];
   return error; \
 }
 
-inline int is_pmp_region_set(int region_idx) {
-  return (regions[region_idx].reg_idx >= 0);
-}
 inline int is_pmp_region_valid(int region_idx) {
   return TEST_BIT(region_def_bitmap, region_idx);
-}
-inline int is_pmp_reg_set(int reg_idx) {
-  return TEST_BIT(reg_bitmap, reg_idx);
 }
 int search_rightmost_unset(uint32_t bitmap, int max) {
   int i;
@@ -75,40 +69,28 @@ int get_free_reg_idx() {
   return search_rightmost_unset(reg_bitmap, PMP_N_REG);
 }
 
-int pmp_set_bind_reg(int region_idx, int reg_idx)
+int pmp_set(int region_idx)
 { 
   if(!is_pmp_region_valid(region_idx)) 
     PMP_ERROR(-EINVAL, "Invalid PMP region index");
   
-  if(is_pmp_region_set(region_idx))
-    PMP_ERROR(-EINVAL, "PMP region already set");
-
+  int reg_idx = regions[region_idx].reg_idx;
   uintptr_t pmpcfg = (uintptr_t) regions[region_idx].cfg << (8*(reg_idx%PMP_PER_GROUP));
   uintptr_t pmpaddr = regions[region_idx].addr;
 
   //printm("pmp_set(): reg %d, pmpcfg:%lx, pmpaddr<<2:%lx\n", reg_idx, pmpcfg, pmpaddr<<2);
 
-  SET_BIT(reg_bitmap, reg_idx);
-  regions[region_idx].reg_idx = reg_idx;
-
   int n=reg_idx, g=reg_idx>>2;
   switch(n) {
-#define X(n,g) case n: { PMP_SET(n, g, pmpaddr, pmpcfg); return 0; }
+#define X(n,g) case n: { PMP_SET(n, g, pmpaddr, pmpcfg); break; }
   LIST_OF_PMP_REGS
 #undef X
+    default:  
+      die("pmp_set failed: this must not be tolerated\n");
   } 
-  // NEVER reach here
-  // bbl is not properly configured.
-  PMP_ERROR(-EFAULT, "Unreachable code");
-}
+  
 
-int pmp_set(int region_idx)
-{ 
-  int reg_idx = get_free_reg_idx();
-  if(reg_idx < 0) 
-    PMP_ERROR(-EBUSY, "No available PMP register");
-
-  return pmp_set_bind_reg(region_idx, reg_idx);
+  return 0;
 }
 
 int pmp_unset(int region_idx)
@@ -116,22 +98,16 @@ int pmp_unset(int region_idx)
   if(!is_pmp_region_valid(region_idx))
     PMP_ERROR(-EINVAL,"Invalid PMP region index");
 
-  if(!is_pmp_region_set(region_idx))
-    PMP_ERROR(-EINVAL, "PMP region not set");
-  
   int reg_idx = regions[region_idx].reg_idx;
-
   int n=reg_idx, g=reg_idx>>2;
   switch(n) {
 #define X(n,g) case n: { PMP_UNSET(n, g); break;}
   LIST_OF_PMP_REGS
 #undef X
     default:
-      return -1;
+      die("pmp_unset failed: this must not be tolerated\n");
   }
-
-  UNSET_BIT(reg_bitmap, reg_idx);
-  regions[region_idx].reg_idx = -1;
+  
   return 0;
 }
 
@@ -139,7 +115,7 @@ int pmp_region_debug_print(int region_idx)
 {
   if(!is_pmp_region_valid(region_idx))
     PMP_ERROR(-EINVAL,"Invalid PMP region index");
-  
+ 
   uintptr_t start = regions[region_idx].start;
   uint64_t size = regions[region_idx].size;
   uint8_t perm = regions[region_idx].perm;
@@ -173,15 +149,21 @@ int pmp_region_init(uintptr_t start, uint64_t size, uint8_t perm)
   if(region_idx < 0)
     PMP_ERROR(-EFAULT, "Reached the maximum number of PMP regions");
 
+  int reg_idx = get_free_reg_idx();
+  if(reg_idx < 0)
+    PMP_ERROR(-EFAULT, "No available PMP register");
+
   // initialize the region (only supports NAPOT)
   regions[region_idx].start = start;
   regions[region_idx].size = size;
   regions[region_idx].perm = perm;
   regions[region_idx].cfg = (PMP_NAPOT | perm);
   regions[region_idx].addr = (start | (size/2-1)) >> 2;
-  regions[region_idx].reg_idx = -1;
+  regions[region_idx].reg_idx = reg_idx;
+  
   SET_BIT(region_def_bitmap, region_idx);
-
+  SET_BIT(reg_bitmap, reg_idx);
+  
   return region_idx;
 }
 
@@ -189,38 +171,54 @@ int pmp_region_free(int region_idx)
 {
   if(!is_pmp_region_valid(region_idx))
     PMP_ERROR(-EINVAL, "Invalid PMP region index");
-  
+ 
+  /*
   if(is_pmp_region_set(region_idx)) {
     int ret = pmp_unset(region_idx);
     if(ret) {
       return ret;
     }
-  }
+  }*/
 
+  int reg_idx = regions[region_idx].reg_idx;
+  UNSET_BIT(region_def_bitmap, region_idx);
+  UNSET_BIT(reg_bitmap, reg_idx);
   regions[region_idx].start = 0;
   regions[region_idx].size = 0;
   regions[region_idx].perm = 0;
   regions[region_idx].cfg = 0;
   regions[region_idx].addr = 0;
-  UNSET_BIT(region_def_bitmap, region_idx);
+  regions[region_idx].reg_idx = -1;
   
   return 0;
 }
 
 int set_os_pmp_region()
 {
-  int region_idx = get_free_region_idx();
   int reg_idx = PMP_N_REG - 1; //last PMP reg
   uint8_t perm = PMP_W | PMP_X | PMP_R; 
+  int region_idx;
+  int ret;
+  if(TEST_BIT(reg_bitmap, reg_idx))
+    return -1;
+
+  region_idx = get_free_region_idx();
+  if(region_idx < 0)
+    return -1;
   regions[region_idx].start = 0;
   regions[region_idx].size = -1UL;
   regions[region_idx].perm = perm;
   regions[region_idx].cfg = (PMP_NAPOT | perm);
   regions[region_idx].addr = (-1UL);
-  regions[region_idx].reg_idx = -1;
+  regions[region_idx].reg_idx = reg_idx;
   SET_BIT(region_def_bitmap, region_idx);
+  SET_BIT(reg_bitmap, reg_idx);
 
-  return pmp_set_bind_reg(region_idx, reg_idx);
+  ret = pmp_set(region_idx);
+  if(ret)
+    return -1;
+
+  return 0;
 }
 
 void* pmp_get_addr(int region_idx)

@@ -6,14 +6,35 @@
 #include <string.h>
 
 #define ENCL_MAX  16
-static uint64_t encl_bitmap = 0;
-static int running_encl_id = -1;
-
-extern void save_host_regs(void);
-
 #define RET_ON_ERR(ret) {if(ret<0) return ret;}
 
+static uint64_t encl_bitmap = 0;
+extern void save_host_regs(void);
+
 struct enclave_t enclaves[ENCL_MAX];
+
+/* FIXME: this takes O(n), change it to use a hash table */
+int encl_satp_to_eid(reg satp)
+{
+  int i;
+  for(i=0; i<ENCL_MAX; i++)
+  {
+    if(enclaves[i].encl_satp == satp)
+      return i;
+  }
+  return -1;
+}
+/* FIXME: this takes O(n), change it to use a hash table */
+int host_satp_to_eid(reg satp)
+{
+  int i;
+  for(i=0; i<ENCL_MAX; i++)
+  {
+    if(enclaves[i].host_satp == satp)
+      return i;
+  }
+  return -1;
+}
 
 int encl_alloc_idx()
 {
@@ -23,12 +44,13 @@ int encl_alloc_idx()
     if(!(encl_bitmap & (0x1 << i)))
       break;
   }
+  if(i != ENCL_MAX)
+    SET_BIT(encl_bitmap, i);
 
-  if(i == ENCL_MAX)
-    return -1;
-
-  SET_BIT(encl_bitmap, i); 
-  return i;
+  if(i != ENCL_MAX)
+    return i;
+  else
+    return -1;  
 }
 
 int encl_free_idx(int idx)
@@ -194,8 +216,6 @@ reg run_enclave(int eid, uintptr_t ptr)
   // FIXME: this works for now 
   // because only one enclave will run on a SM.
   // We should make SM identify the enclave by using { encl_satp -> eid } map
-  running_encl_id = eid;
-
   /*
   asm volatile(
       "mv tp, %0\n"
@@ -209,6 +229,8 @@ reg run_enclave(int eid, uintptr_t ptr)
 
 uint64_t exit_enclave(uint64_t retval)
 {
+  int running_encl_id = encl_satp_to_eid(read_csr(satp));
+
   if(running_encl_id < 0)
     return -1;
  
@@ -217,7 +239,6 @@ uint64_t exit_enclave(uint64_t retval)
 
   // set PMP
   pmp_set(encl.rid);
-  running_encl_id = -1;
 
   // restore interrupt handler
   write_csr(stvec, encl.host_stvec);

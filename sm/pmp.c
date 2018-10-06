@@ -6,6 +6,8 @@ uint32_t reg_bitmap = 0;
 uint32_t region_def_bitmap = 0;
 struct pmp_region regions[PMP_MAX_N_REGION];
 
+static spinlock_t pmp_lock = SPINLOCK_INIT;
+
 #ifdef SM_ENABLED
 extern void send_ipi_many(uintptr_t*, int);
 #endif
@@ -93,6 +95,24 @@ int pmp_set_global(int region_idx)
 }
 #endif
 
+int pmp_set_atomic(int region_idx)
+{
+  int ret;
+  spinlock_lock(&pmp_lock);
+  ret = pmp_set(region_idx);
+  spinlock_unlock(&pmp_lock);
+  return ret;
+}
+
+int pmp_unset_atomic(int region_idx)
+{
+  int ret;
+  spinlock_lock(&pmp_lock);
+  ret = pmp_unset(region_idx);
+  spinlock_unlock(&pmp_lock);
+  return ret;
+}
+
 int pmp_set(int region_idx)
 { 
   if(!is_pmp_region_valid(region_idx)) 
@@ -157,33 +177,81 @@ int pmp_region_debug_print(int region_idx)
   return 0;  
 }
 
-int pmp_region_init(uintptr_t start, uint64_t size, uint8_t perm)
-{
-  // do not allow over 256 MB
-  if(size > PMP_MAX_SIZE)
-    PMP_ERROR(-ENOSYS, "PMP size over 256MB not implemented");
 
-  // size should be power of 2
-  if(!(size && !(size&(size-1))))
-    PMP_ERROR(-EINVAL, "PMP size should be power of 2");
-  
+int pmp_region_init_atomic(uintptr_t start, uint64_t size, uint8_t perm, enum pmp_priority priority)
+{
+  int ret;
+  spinlock_lock(&pmp_lock);
+  ret = pmp_region_init(start, size, perm, priority);
+  spinlock_unlock(&pmp_lock);
+  return ret;
+}
+
+int pmp_region_init(uintptr_t start, uint64_t size, uint8_t perm,enum pmp_priority priority)
+{
+  uintptr_t pmp_address;
+  int reg_idx = -1;
+  int region_idx = -1;
+  /* if region covers the entire RAM */
+  if(size == -1UL && start == 0)
+  {
+    pmp_address = -1UL;
+  }
+  else
+  {
+    // size should be power of 2
+    if(!(size && !(size&(size-1))))
+      PMP_ERROR(-EINVAL, "PMP size should be power of 2");
+
+    // size should be page granularity
+    if(!(size % RISCV_PGSIZE == 0))
+      PMP_ERROR(-EINVAL, "PMP granularity is RISCV_PGSIZE");
+
+    // the starting address must be naturally aligned
+    if(start & (size-1))
+      PMP_ERROR(-EINVAL, "PMP region should be naturally aligned");
+
+    pmp_address = (start | (size/2-1)) >> 2;
+  }
   //find avaiable pmp region idx
-  int region_idx = get_free_region_idx();
-  if(region_idx < 0)
+  region_idx = get_free_region_idx();
+  if(region_idx < 0 || region_idx > PMP_MAX_N_REGION)
     PMP_ERROR(-EFAULT, "Reached the maximum number of PMP regions");
 
-  int reg_idx = get_free_reg_idx();
-  if(reg_idx < 0)
-    PMP_ERROR(-EFAULT, "No available PMP register");
+  switch(priority)
+  {
+    case(PMP_PRI_ANY): {
+      reg_idx = get_free_reg_idx();
+      if(reg_idx < 0)
+        PMP_ERROR(-EFAULT, "No available PMP register");
+      if(TEST_BIT(reg_bitmap, reg_idx) || reg_idx >= PMP_N_REG)
+        PMP_ERROR(-EFAULT, "PMP register unavailable");
+      break;
+    }
+    case(PMP_PRI_TOP): {
+      reg_idx = 0;
+      if(TEST_BIT(reg_bitmap, reg_idx))
+        PMP_ERROR(-EFAULT, "PMP register unavailable");
+      break;
+    }
+    case(PMP_PRI_BOTTOM): {
+      reg_idx = PMP_N_REG - 1;
+      if(TEST_BIT(reg_bitmap, reg_idx))
+        PMP_ERROR(-EFAULT, "PMP register unavailable");
+      break;
+    }
+    default: {
+      PMP_ERROR(-EINVAL, "Invalid priority");
+    }
+  }
 
   // initialize the region (only supports NAPOT)
   regions[region_idx].start = start;
   regions[region_idx].size = size;
   regions[region_idx].perm = perm;
   regions[region_idx].cfg = (PMP_NAPOT | perm);
-  regions[region_idx].addr = (start | (size/2-1)) >> 2;
+  regions[region_idx].addr = pmp_address;
   regions[region_idx].reg_idx = reg_idx;
-  
   SET_BIT(region_def_bitmap, region_idx);
   SET_BIT(reg_bitmap, reg_idx);
   
@@ -213,34 +281,6 @@ int pmp_region_free(int region_idx)
   regions[region_idx].addr = 0;
   regions[region_idx].reg_idx = -1;
   
-  return 0;
-}
-
-int set_os_pmp_region()
-{
-  int reg_idx = PMP_N_REG - 1; //last PMP reg
-  uint8_t perm = PMP_W | PMP_X | PMP_R; 
-  int region_idx;
-  int ret;
-  if(TEST_BIT(reg_bitmap, reg_idx))
-    return -1;
-
-  region_idx = get_free_region_idx();
-  if(region_idx < 0)
-    return -1;
-  regions[region_idx].start = 0;
-  regions[region_idx].size = -1UL;
-  regions[region_idx].perm = perm;
-  regions[region_idx].cfg = (PMP_NAPOT | perm);
-  regions[region_idx].addr = (-1UL);
-  regions[region_idx].reg_idx = reg_idx;
-  SET_BIT(region_def_bitmap, region_idx);
-  SET_BIT(reg_bitmap, reg_idx);
-
-  ret = pmp_set(region_idx);
-  if(ret)
-    return -1;
-
   return 0;
 }
 

@@ -121,12 +121,12 @@ int create_enclave(uintptr_t base, uintptr_t size)
     return -EINVAL;
 
   // 1. create a PMP region binded to the enclave
-  ret = pmp_region_init(base, size, perm);
+  ret = pmp_region_init_atomic(base, size, perm, PMP_PRI_ANY);
   RET_ON_ERR(ret);
 
   region = ret;
   // 2. set pmp
-  ret = pmp_set(region); 
+  //ret = pmp_set(region); 
   RET_ON_ERR(ret);
  
   // 3. initialize and verify enclave memory layout. 

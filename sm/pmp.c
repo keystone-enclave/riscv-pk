@@ -1,10 +1,14 @@
 #include "pmp.h"
+#include "mtrap.h"
 #include "atomic.h"
 
 uint32_t reg_bitmap = 0;
 uint32_t region_def_bitmap = 0;
 struct pmp_region regions[PMP_MAX_N_REGION];
 
+#ifdef SM_ENABLED
+extern void send_ipi_many(uintptr_t*, int);
+#endif
 #if __riscv_xlen == 64
 # define LIST_OF_PMP_REGS  X(0,0)  X(1,0)  X(2,0)  X(3,0) \
                            X(4,0)  X(5,0)  X(6,0)  X(7,0) \
@@ -69,6 +73,26 @@ int get_free_reg_idx() {
   return search_rightmost_unset(reg_bitmap, PMP_N_REG);
 }
 
+void handle_ipi_pmp(uintptr_t* regs, uintptr_t dummy, uintptr_t mepc)
+{
+  printm("handle ipi pmp\n");
+
+  return;
+}
+
+#ifdef __riscv_atomic
+/* set pmp and populate it to every other hart */
+int pmp_set_global(int region_idx)
+{
+  if(!is_pmp_region_valid(region_idx))
+    PMP_ERROR(-EINVAL, "Invalid PMP region index");
+
+ // send_ipi_many(0, IPI_PMP);
+
+  return 0;
+}
+#endif
+
 int pmp_set(int region_idx)
 { 
   if(!is_pmp_region_valid(region_idx)) 
@@ -88,7 +112,6 @@ int pmp_set(int region_idx)
     default:  
       die("pmp_set failed: this must not be tolerated\n");
   } 
-  
 
   return 0;
 }

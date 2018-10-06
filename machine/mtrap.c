@@ -94,8 +94,10 @@ static uintptr_t mcall_set_timer(uint64_t when)
   set_csr(mie, MIP_MTIP);
   return 0;
 }
-
-static void send_ipi_many(uintptr_t* pmask, int event)
+#ifndef SM_ENABLED
+static 
+#endif
+void send_ipi_many(uintptr_t* pmask, int event)
 {
   _Static_assert(MAX_HARTS <= 8 * sizeof(*pmask), "# harts > uintptr_t bits");
   uintptr_t mask = hart_mask;

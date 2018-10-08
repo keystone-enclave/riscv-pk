@@ -94,8 +94,10 @@ static uintptr_t mcall_set_timer(uint64_t when)
   set_csr(mie, MIP_MTIP);
   return 0;
 }
-
-static void send_ipi_many(uintptr_t* pmask, int event)
+#ifndef SM_ENABLED
+static 
+#endif
+void send_ipi_many(uintptr_t* pmask, int event)
 {
   _Static_assert(MAX_HARTS <= 8 * sizeof(*pmask), "# harts > uintptr_t bits");
   uintptr_t mask = hart_mask;
@@ -109,7 +111,7 @@ static void send_ipi_many(uintptr_t* pmask, int event)
 
   if (event == IPI_SOFT)
     return;
-
+  
   // wait until all events have been handled.
   // prevent deadlock by consuming incoming IPIs.
   uint32_t incoming_ipi = 0;
@@ -171,12 +173,6 @@ send_ipi:
       break;
     case SBI_SM_DESTROY_ENCLAVE:
       retval = mcall_sm_destroy_enclave(arg0);
-      break;
-    case SBI_SM_COPY_TO_ENCLAVE:
-      retval = mcall_sm_copy_to_enclave(arg0, arg1, arg2, arg3);
-      break;
-    case SBI_SM_COPY_FROM_ENCLAVE:
-      retval = mcall_sm_copy_from_enclave(arg0, arg1, arg2);
       break;
     case SBI_SM_RUN_ENCLAVE:
       retval = mcall_sm_run_enclave(arg0, arg1);

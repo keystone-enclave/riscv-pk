@@ -26,7 +26,7 @@ trap_table:
   .word bad_trap
 #ifdef SM_ENABLED
 # define HANDLE_IPI_PMP_VECTOR 16
-  .word handle_ipi_pmp
+  .word handle_pmp_ipi
 #endif
 
   .option norvc

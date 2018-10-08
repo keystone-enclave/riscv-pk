@@ -2,7 +2,6 @@
 
 #include "pmp.h"
 #include "enclave.h"
-#include "atomic.h"
 #include <errno.h>
 
 int mcall_sm_create_enclave(unsigned long base, unsigned long size)
@@ -18,25 +17,6 @@ int mcall_sm_destroy_enclave(unsigned long eid)
   if(get_host_satp(eid) != read_csr(satp))
     return -EFAULT;
   ret = destroy_enclave((int)eid);
-  return ret;
-}
-
-int mcall_sm_copy_from_enclave(unsigned long eid, unsigned long ptr, unsigned long size)
-{
-  int ret;
-  if(get_host_satp(eid) != read_csr(satp))
-    return -EFAULT;
-  ret = copy_from_enclave(eid, (void*) ptr, (size_t) size);
-  return ret;
-}
-
-int mcall_sm_copy_to_enclave(unsigned long eid, unsigned long addr, unsigned long ptr, unsigned long size)
-{
-  int ret;
-  if(get_host_satp(eid) != read_csr(satp))
-    return -EFAULT;
-
-  ret = copy_to_enclave(eid, (uintptr_t) addr,(uintptr_t) ptr, (size_t) size);
   return ret;
 }
 

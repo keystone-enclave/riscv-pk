@@ -79,6 +79,7 @@ static inline void wfi()
 #define IPI_FENCE_I    0x2
 #define IPI_SFENCE_VMA 0x4
 #define IPI_HALT       0x8
+#define IPI_PMP       0x10
 
 #define MACHINE_STACK_SIZE RISCV_PGSIZE
 #define MENTRY_HLS_OFFSET (INTEGER_CONTEXT_SIZE + SOFT_FLOAT_CONTEXT_SIZE)

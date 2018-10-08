@@ -15,7 +15,7 @@ trap_table:
   .word pmp_trap
   .word misaligned_store_trap
   .word pmp_trap
-  .word u_ecall_trap // 8 --> ECALL from U-mode
+  .word bad_trap
   .word mcall_trap // 9 --> ECALL from S-mode
   .word bad_trap
   .word bad_trap
@@ -24,6 +24,10 @@ trap_table:
   .word __trap_from_machine_mode
   .word bad_trap
   .word bad_trap
+#ifdef SM_ENABLED
+# define HANDLE_IPI_PMP_VECTOR 16
+  .word handle_pmp_ipi
+#endif
 
   .option norvc
   .section .text.init,"ax",@progbits
@@ -80,6 +84,7 @@ trap_vector:
   lw a0, MENTRY_IPI_PENDING_OFFSET(a0)
   sw x0, MENTRY_IPI_PENDING_OFFSET(a0)
 #endif
+
   and a1, a0, IPI_SOFT
   beqz a1, 1f
   csrs mip, MIP_SSIP
@@ -96,6 +101,11 @@ trap_vector:
   beqz a1, 1f
   wfi
   j 1b
+#ifdef SM_ENABLED
+1:
+  andi a1, a0, IPI_PMP
+  bnez a1, .Lipi_pmp
+#endif
 1:
   j .Lmret
 
@@ -189,6 +199,12 @@ restore_regs:
   LOAD t6,31*REGBYTES(sp)
   LOAD sp, 2*REGBYTES(sp)
   mret
+
+#ifdef SM_ENABLED
+.Lipi_pmp:
+  li a1, HANDLE_IPI_PMP_VECTOR
+  j .Lhandle_trap_in_machine_mode
+#endif
 
 .Ltrap_from_machine_mode:
   csrr sp, mscratch

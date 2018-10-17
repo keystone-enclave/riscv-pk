@@ -94,10 +94,7 @@ static uintptr_t mcall_set_timer(uint64_t when)
   set_csr(mie, MIP_MTIP);
   return 0;
 }
-#ifndef SM_ENABLED
-static 
-#endif
-void send_ipi_many(uintptr_t* pmask, int event)
+static void send_ipi_many(uintptr_t* pmask, int event)
 {
   _Static_assert(MAX_HARTS <= 8 * sizeof(*pmask), "# harts > uintptr_t bits");
   uintptr_t mask = hart_mask;
@@ -175,7 +172,9 @@ send_ipi:
       retval = mcall_sm_destroy_enclave(arg0);
       break;
     case SBI_SM_RUN_ENCLAVE:
-      retval = mcall_sm_run_enclave(arg0, arg1);
+      mcall_sm_run_enclave(arg0, arg1, arg2);
+      /* the entry point is passed to the runtime through $a0 */
+      retval = arg1;
       break;
     case SBI_SM_EXIT_ENCLAVE:
       retval = mcall_sm_exit_enclave(arg0);

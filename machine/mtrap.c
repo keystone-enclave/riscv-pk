@@ -172,15 +172,18 @@ send_ipi:
       retval = mcall_sm_destroy_enclave(arg0);
       break;
     case SBI_SM_RUN_ENCLAVE:
-      mcall_sm_run_enclave(arg0, arg1, arg2);
+      mcall_sm_run_enclave(regs, arg0, arg1, arg2);
       /* the entry point is passed to the runtime through $a0 */
       retval = arg1;
       break;
     case SBI_SM_EXIT_ENCLAVE:
-      retval = mcall_sm_exit_enclave(arg0);
+      retval = mcall_sm_exit_enclave(regs, arg0);
+      break;
+    case SBI_SM_STOP_ENCLAVE:
+      retval = mcall_sm_stop_enclave(regs, arg0);
       break;
     case SBI_SM_NOT_IMPLEMENTED:
-      retval = mcall_sm_not_implemented(arg0);
+      retval = mcall_sm_not_implemented(regs, arg0);
       break;
 #endif
     default:

@@ -16,6 +16,8 @@
 
 #ifdef SM_ENABLED
 #include "sm.h"
+static int run_enclave_executed = -1;
+static spinlock_t debug_lock = SPINLOCK_INIT;
 #endif
 void __attribute__((noreturn)) bad_trap(uintptr_t* regs, uintptr_t dummy, uintptr_t mepc)
 {
@@ -51,9 +53,11 @@ void printm(const char* s, ...)
 {
   va_list vl;
 
+  spinlock_lock(&debug_lock);
   va_start(vl, s);
   vprintm(s, vl);
   va_end(vl);
+  spinlock_unlock(&debug_lock);
 }
 
 static void send_ipi(uintptr_t recipient, int event)
@@ -123,12 +127,39 @@ static void send_ipi_many(uintptr_t* pmask, int event)
     mb();
   }
 }
+/*
+int get_ptidx(int level, uintptr_t vaddr)
+{
+  uintptr_t vpn = vaddr >> RISCV_PGSHIFT;
+  int idx;
+  idx = vpn >> (level-1)*9;
+}
+
+void manual_walk_pagetable()
+{
+  uintptr_t vaddr = read_csr(mepc);
+  uintptr_t satp = read_csr(satp);
+
+  uintptr_t* level3 = satp << RISCV_PGSHIFT;
+  uintptr_t pte3 = level3[get_ptidx(3,vaddr)]
+}
+*/
+void printout_mcause()
+{
+  //if(run_enclave_executed == read_csr(mhartid)) { 
+  //  printm("[mtrap] hartid: %d, mcause: 0x%lx, mepc: 0x%lx, stvec: 0x%lx\r\n", read_csr(mhartid), read_csr(mcause), read_csr(mepc), read_csr(stvec));
+  //  printm("[mtrap] sptbr: 0x%lx, satp: 0x%lx\r\n", read_csr(sptbr), read_csr(satp)); 
+  //}
+}
 
 void mcall_trap(uintptr_t* regs, uintptr_t mcause, uintptr_t mepc)
 {
   write_csr(mepc, mepc + 4);
 
   uintptr_t n = regs[17], arg0 = regs[10], arg1 = regs[11], arg2 = regs[12], arg3 = regs[13], retval, ipi_type;
+
+  //if(run_enclave_executed == read_csr(mhartid))
+  //  printm("[mcall_trap()] a0:%lx, a1:%lx, a2:%lx, n:%d\r\n",arg0, arg1, arg2, n);
 
   switch (n)
   {
@@ -170,13 +201,16 @@ send_ipi:
       break;
     case SBI_SM_DESTROY_ENCLAVE:
       retval = mcall_sm_destroy_enclave(arg0);
+      run_enclave_executed = -1;
       break;
     case SBI_SM_RUN_ENCLAVE:
       retval = mcall_sm_run_enclave(regs, arg0, arg1, arg2);
       if(!retval)
       {
-      /* the entry point is passed to the runtime through $a0 */
+        run_enclave_executed = read_csr(mhartid);
+        /* the entry point is passed to the runtime through $a0 */
         retval = arg1;
+        printm("mcall SM_RUN_ENCLAVE returning... $a0=0x%lx\r\n", arg1);
       }
       break;
     case SBI_SM_EXIT_ENCLAVE:

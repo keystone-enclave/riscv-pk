@@ -17,6 +17,28 @@ static spinlock_t encl_lock = SPINLOCK_INIT;
 extern void save_host_regs(void);
 extern void restore_host_regs(void);
 
+// send S-mode interrupts and most exceptions straight to S-mode
+static void no_delegate_traps()
+{
+  if (!supports_extension('S'))
+    return;
+
+  uintptr_t interrupts = 0;// MIP_SSIP | MIP_STIP | MIP_SEIP;
+  uintptr_t exceptions = 0;
+  /*
+    (1U << CAUSE_MISALIGNED_FETCH) |
+    (1U << CAUSE_FETCH_PAGE_FAULT) |
+    (1U << CAUSE_BREAKPOINT) |
+    (1U << CAUSE_LOAD_PAGE_FAULT) |
+    (1U << CAUSE_STORE_PAGE_FAULT) |
+    (1U << CAUSE_USER_ECALL);
+  */
+  write_csr(mideleg, interrupts);
+  write_csr(medeleg, exceptions);
+  assert(read_csr(mideleg) == interrupts);
+  assert(read_csr(medeleg) == exceptions);
+}
+
 /* FIXME: this takes O(n), change it to use a hash table */
 int encl_satp_to_eid(uintptr_t satp)
 {
@@ -117,8 +139,10 @@ int init_enclave_memory(uintptr_t base, uintptr_t size)
   // this function does the followings:
   // (1) Traverse the page table to see if any address points to the outside of EPM
   // (2) Zero out every page table entry that is not valid
+  printm("[pgtable init] base: 0x%lx, size: 0x%lx\r\n", base, size);
   ret = init_encl_pgtable(ptlevel, (pte_t*) base, base, size);
-  
+  print_pgtable(ptlevel, (pte_t*) base, 0);
+
   // FIXME: probably we will also need to:
   // (3) Zero out every page that is not pointed by the page table
 
@@ -175,6 +199,7 @@ uintptr_t create_enclave(uintptr_t base, uintptr_t size, uintptr_t eidptr)
   enclaves[eid].eid = eid;
   enclaves[eid].rid = region;
   enclaves[eid].host_satp = read_csr(satp);
+  //print_pgtable(3, (pte_t*) (read_csr(satp) << RISCV_PGSHIFT), 0);
   enclaves[eid].encl_satp = ((base >> RISCV_PGSHIFT) | SATP_MODE_CHOICE);
   enclaves[eid].n_thread = 0;
 
@@ -233,13 +258,14 @@ uintptr_t destroy_enclave(int eid)
   return ENCLAVE_SUCCESS;
 }
 
-#define RUNTIME_START_ADDRESS 0xffffffffc0000000
+#define RUNTIME_START_ADDRESS 0xffffffff20000000UL
 
 uintptr_t run_enclave(uintptr_t* host_regs, int eid, uintptr_t entry, uintptr_t retptr)
 {
   int runable;
   int hart_id;
 
+  printm("run_enclave called!\r\n");
   spinlock_lock(&encl_lock);
   runable = TEST_BIT(encl_bitmap, eid) 
     && (enclaves[eid].state >= 0) 
@@ -268,19 +294,31 @@ uintptr_t run_enclave(uintptr_t* host_regs, int eid, uintptr_t entry, uintptr_t 
   swap_prev_state(&enclaves[eid].threads[0], host_regs);
   swap_prev_mepc(&enclaves[eid].threads[0], read_csr(mepc)); 
   enclaves[eid].host_stvec[hart_id] = read_csr(stvec);
+  write_csr(stvec, RUNTIME_START_ADDRESS + 0x40);
+  printm("[sm] enclave stvec: 0x%lx\r\n", read_csr(stvec));
 
   // entry point after return (mret)
   write_csr(mepc, RUNTIME_START_ADDRESS); // address of trampoline (runtime)
+  printm("[sm] enclave entry: 0x%lx\r\n", read_csr(mepc));
 
   // switch to enclave page table
+  printm("[sm] host_satp: 0x%lx\r\n", read_csr(satp));
   write_csr(satp, enclaves[eid].encl_satp);
+  printm("[sm] enclave page table: 0x%lx\r\n", read_csr(satp));
  
   // disable timer set by the OS 
   clear_csr(mie, MIP_MTIP);
+  printm("[sm] mip: 0x%lx, mie: 0x%lx\r\n", read_csr(mip), read_csr(mie));
 
   // unset PMP
   pmp_unset(enclaves[eid].rid);
+ 
 
+  printm("run_enclave returning, $a0=0x%lx\r\n", host_regs[10]);
+  asm volatile("sfence.vma\n\t");
+  printm("sfence.vma\r\n");
+
+  //no_delegate_traps();
   return ENCLAVE_SUCCESS;
 }
 

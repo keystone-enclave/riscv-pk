@@ -125,7 +125,7 @@ int pmp_set_global(int region_idx)
 }
 
 int pmp_set(int region_idx)
-{ 
+{
   if(!is_pmp_region_valid(region_idx)) 
     PMP_ERROR(PMP_REGION_INVALID, "Invalid PMP region index");
   
@@ -133,14 +133,14 @@ int pmp_set(int region_idx)
   uintptr_t pmpcfg = (uintptr_t) regions[region_idx].cfg << (8*(reg_idx%PMP_PER_GROUP));
   uintptr_t pmpaddr = regions[region_idx].addr;
 
-  /*spinlock_lock(&pmp_lock);
-  printm("pmp_set() [hart %d]: pmpreg %d, address:%lx, size:%lx\n", 
+  spinlock_lock(&pmp_lock);
+  printm("pmp_set() [hart %d]: pmpreg %d, address:%lx, size:%lx\r\n", 
       read_csr(mhartid), reg_idx, regions[region_idx].addr<<2, regions[region_idx].size);
   spinlock_unlock(&pmp_lock);
-  */
+  
   int n=reg_idx;
   switch(n) {
-#define X(n,g) case n: { PMP_SET(n, g, pmpaddr, pmpcfg); break; }
+#define X(n,g) case n: { break; } //PMP_SET(n, g, pmpaddr, pmpcfg); break; }
   LIST_OF_PMP_REGS
 #undef X
     default:  
@@ -158,18 +158,18 @@ int pmp_unset(int region_idx)
   int reg_idx = regions[region_idx].reg_idx;
   int n=reg_idx;
   switch(n) {
-#define X(n,g) case n: { PMP_UNSET(n, g); break;}
+#define X(n,g) case n: { break; } //PMP_UNSET(n, g); break;}
   LIST_OF_PMP_REGS
 #undef X
     default:
       die("pmp_unset failed: this must not be tolerated\n");
   }
   
-  /*spinlock_lock(&pmp_lock);
-  printm("pmp_unset() [hart %d]: pmpreg %d, address:%lx, size:%lx\n", 
+  spinlock_lock(&pmp_lock);
+  printm("pmp_unset() [hart %d]: pmpreg %d, address:%lx, size:%lx\r\n", 
       read_csr(mhartid), reg_idx, regions[region_idx].addr<<2, regions[region_idx].size);
   spinlock_unlock(&pmp_lock);
-  */
+  
   return PMP_SUCCESS;
 }
 

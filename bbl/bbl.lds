@@ -6,6 +6,15 @@ SECTIONS
 {
   . = 0x80000000; /* load starting at the beginning of DRAM */
   
+  _ftext = .;
+  PROVIDE( eprol = . );
+
+  .text :
+  {
+    *(.text.init)
+  }
+
+
 	.header :
   {
     /* ## manufacturer_keys : */
@@ -88,14 +97,6 @@ SECTIONS
     . += 0x40;
   }
  
-  _ftext = .;
-  PROVIDE( eprol = . );
-
-  .text :
-  {
-    *(.text.init)
-  }
-
   /* text: Program code section */
   .text :
   {

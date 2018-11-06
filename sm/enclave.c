@@ -150,8 +150,9 @@ int init_enclave_memory(uintptr_t base, uintptr_t size)
   // this function does the followings:
   // (1) Traverse the page table to see if any address points to the outside of EPM
   // (2) Zero out every page table entry that is not valid
-  ret = init_encl_pgtable(ptlevel, (pte_t*) base, base, size);
+  //ret = init_encl_pgtable(ptlevel, (pte_t*) base, base, size);
   
+  ret = 0;
   // FIXME: probably we will also need to:
   // (3) Zero out every page that is not pointed by the page table
 
@@ -327,7 +328,7 @@ enclave_ret_t run_enclave(uintptr_t* host_regs, struct keystone_sbi_run_t run_ar
 
   // set PMP
   pmp_set(enclaves[eid].rid, PMP_ALL_PERM);
-  osm_pmp_set(PMP_NO_PERM);
+  //osm_pmp_set(PMP_NO_PERM);
 
   return ENCLAVE_SUCCESS;
 }
@@ -442,7 +443,7 @@ enclave_ret_t resume_enclave(uintptr_t* host_regs, unsigned int eid)
 
   // set PMP
   pmp_set(enclaves[eid].rid, PMP_ALL_PERM);
-  osm_pmp_set(PMP_NO_PERM); 
+  //osm_pmp_set(PMP_NO_PERM); 
 
   return ENCLAVE_SUCCESS;
 }

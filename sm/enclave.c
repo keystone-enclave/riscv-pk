@@ -83,30 +83,11 @@ unsigned long get_host_satp(unsigned int eid)
   return enclaves[eid].host_satp;
 }
 
-int detect_region_overlap(unsigned int eid, uintptr_t addr, uintptr_t size)
-{
-  void* epm_base;
-  size_t epm_size;
-
-  epm_base = pmp_get_addr(enclaves[eid].rid);
-  epm_size = pmp_get_size(enclaves[eid].rid);
-
-  return ((uintptr_t) epm_base < addr + size) &&
-         ((uintptr_t) epm_base + epm_size > addr);
-}
-
 int copy_word_to_host(uintptr_t* ptr, uintptr_t value)
 {
   int region_overlap = 0, i;
   spinlock_lock(&encl_lock);
-  for(i=0; i<ENCL_MAX; i++)
-  {
-    if(!TEST_BIT(encl_bitmap, i))
-      continue;
-    region_overlap |= detect_region_overlap(i, (uintptr_t) ptr, sizeof(uintptr_t));
-    if(region_overlap)
-      break;
-  }
+  region_overlap = detect_region_overlap_atomic((uintptr_t)ptr, sizeof(uintptr_t));
   if(!region_overlap)
     *ptr = value;
   spinlock_unlock(&encl_lock);
@@ -123,14 +104,7 @@ int copy_region_from_host(void* source, void* dest, size_t size){
 
   int region_overlap = 0, i;
   spinlock_lock(&encl_lock);
-  for(i=0; i<ENCL_MAX; i++)
-  {
-    if(!TEST_BIT(encl_bitmap, i))
-      continue;
-    region_overlap |= detect_region_overlap(i, (uintptr_t)source, size);
-    if(region_overlap)
-      break;
-  }
+  region_overlap = detect_region_overlap_atomic((uintptr_t) source, sizeof(uintptr_t));
   if(!region_overlap)
     memcpy(dest, source, size);
   spinlock_unlock(&encl_lock);
@@ -173,30 +147,10 @@ enclave_ret_t create_enclave(struct keystone_sbi_create_t create_args)
   int region_overlap = 0;
   
   // 1. create a PMP region binded to the enclave
-  
   ret = ENCLAVE_PMP_FAILURE;
 
-  if(pmp_region_init_atomic(base, size, PMP_PRI_ANY, &region))
+  if(pmp_region_init_atomic(base, size, PMP_PRI_ANY, &region, 0))
     goto error;
-
-  // - if base and (base+size) not belong to other enclaves
-  spinlock_lock(&encl_lock);
-  for(i=0; i<ENCL_MAX; i++)
-  {
-    if(!TEST_BIT(encl_bitmap, i))
-      continue;
-    region_overlap |= detect_region_overlap(i, base, size);
-    if(region_overlap)
-      break;
-  }
-  spinlock_unlock(&encl_lock);
-
-  
-  if(region_overlap)
-  {
-    printm("region overlaps with enclave %d\n", i);
-    goto free_region;
-  }
 
   // 2. allocate eid
   eid = encl_alloc_idx();

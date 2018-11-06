@@ -40,6 +40,7 @@
 #define PMP_REGION_NOT_ALIGNED              22
 #define PMP_REGION_MAX_REACHED              23
 #define PMP_REGION_INVALID                  24
+#define PMP_REGION_OVERLAP                  25
 
 void sm_init(void);
 

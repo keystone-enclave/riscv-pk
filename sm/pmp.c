@@ -313,9 +313,9 @@ int pmp_region_init(uintptr_t start, uint64_t size, enum pmp_priority priority, 
       break;
     }
     case(PMP_PRI_BOTTOM): {
+      /* the bottom register can be used by multiple regions, 
+       * so we don't check its availability */
       reg_idx = PMP_N_REG - 1;
-      if(TEST_BIT(reg_bitmap, reg_idx))
-        PMP_ERROR(PMP_REGION_MAX_REACHED, "PMP register unavailable");
       break;
     }
     default: {

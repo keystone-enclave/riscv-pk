@@ -128,7 +128,7 @@ void mcall_trap(uintptr_t* regs, uintptr_t mcause, uintptr_t mepc)
 {
   write_csr(mepc, mepc + 4);
 
-  uintptr_t n = regs[17], arg0 = regs[10], arg1 = regs[11], arg2 = regs[12], arg3 = regs[13], retval, ipi_type, entry_point;
+  uintptr_t n = regs[17], arg0 = regs[10], arg1 = regs[11], arg2 = regs[12], arg3 = regs[13], retval, ipi_type;
 
   switch (n)
   {
@@ -172,13 +172,7 @@ send_ipi:
       retval = mcall_sm_destroy_enclave(arg0);
       break;
     case SBI_SM_RUN_ENCLAVE:
-      retval = mcall_sm_run_enclave(regs, arg0, &entry_point);
-      if(!retval)
-      {
-      /* TODO: have a cleaner way to do this
-	 the entry point is passed to the runtime through $a0 */
-        retval = entry_point;
-      }
+      retval = mcall_sm_run_enclave(regs, arg0);
       break;
     case SBI_SM_EXIT_ENCLAVE:
       retval = mcall_sm_exit_enclave(regs, arg0);

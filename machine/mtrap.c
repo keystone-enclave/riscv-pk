@@ -183,6 +183,9 @@ send_ipi:
     case SBI_SM_RESUME_ENCLAVE:
       retval = mcall_sm_resume_enclave(regs, arg0);
       break;
+    case SBI_SM_ATTEST_ENCLAVE:
+      retval = mcall_sm_attest_enclave(arg0, arg1, arg2);
+      break;
     case SBI_SM_NOT_IMPLEMENTED:
       retval = mcall_sm_not_implemented(regs, arg0);
       break;

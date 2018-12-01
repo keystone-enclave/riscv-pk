@@ -97,7 +97,7 @@ SECTIONS
     *(.sbi)
   }
 
-  INCLUDE ../bbl/sanctum_params.lds
+  INCLUDE ../../riscv-pk/bbl/sanctum_params.lds
 
   /* # Payload binary */
   /* ================ */

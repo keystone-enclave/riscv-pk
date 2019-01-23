@@ -98,6 +98,8 @@ SECTIONS
   }
 
   INCLUDE ../bbl/sanctum_params.lds
+  
+  . = ALIGN(0x1000);
 
   /* # Payload binary */
   /* ================ */

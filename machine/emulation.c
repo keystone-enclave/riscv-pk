@@ -69,6 +69,7 @@ static DECLARE_EMULATION_FUNC(emulate_rvc)
 void illegal_insn_trap(uintptr_t* regs, uintptr_t mcause, uintptr_t mepc)
 {
   asm (".pushsection .rodata\n"
+       ".align 6\n"
        "illegal_insn_trap_table:\n"
        "  .word truly_illegal_insn\n"
 #if !defined(__riscv_flen) && defined(PK_ENABLE_FP_EMULATION)

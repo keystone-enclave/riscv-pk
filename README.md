@@ -1,5 +1,5 @@
-RISC-V Proxy Kernel and Boot Loader
-=====================================
+RISC-V Proxy Kernel and Boot Loader + Keystone SM
+=================================================
 
 About
 ---------
@@ -14,28 +14,19 @@ This package also contains the Berkeley Boot Loader, `bbl`, which is a
 supervisor execution environment for tethered RISC-V systems.  It is
 designed to host the RISC-V Linux port.
 
+This also contains the Keystone Security Monitor (SM) in `sm`.
+
 Build Steps
 ---------------
 
-We assume that the RISCV environment variable is set to the RISC-V tools
-install path, and that the riscv-gnu-toolchain package is installed.
-Please note that building the binaries directly inside the source
-directory is not supported; you need to use a separate build directory.
+We suggest building the bbl image using the top-level build in
+[keystone](https://github.com/keystone-enclave/keystone).
 
-    $ mkdir build
-    $ cd build
-    $ ../configure --prefix=$RISCV --host=riscv64-unknown-elf
-    $ make
-    $ make install
+If you wish to build the bbl independently, either:
+follow the build instructions
+[here](http://docs.keystone-enclave.org/en/dev/Getting-Started/Running-Keystone-with-QEMU.html#build-berkeley-bootloader-bbl-with-keystone-security-monitor)
+or follow the flow in the Makefile in
+[keystone](https://github.com/keystone-enclave/keystone).
 
-Alternatively, the GNU/Linux toolchain may be used to build this package,
-by setting `--host=riscv64-unknown-linux-gnu`.
-
-By default, 64-bit (RV64) versions of `pk` and `bbl` are built.  To
-built 32-bit (RV32) versions, supply a `--enable-32bit` flag to the
-configure command.
-
-The `install` step installs 64-bit build products into a directory
-matching your host (e.g. `$RISCV/riscv64-unknown-elf`). 32-bit versions 
-are installed into a directory matching a 32-bit version of your host (e.g.
-`$RISCV/riscv32-unknown-elf`).
+The top-level Makefile will always be the most up-to-date build
+instructions.

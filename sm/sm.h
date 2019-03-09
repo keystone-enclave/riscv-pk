@@ -38,6 +38,7 @@
 #define ENCLAVE_NOT_RESUMABLE               (enclave_ret_t)10
 #define ENCLAVE_EDGE_CALL_HOST              (enclave_ret_t)11
 #define ENCLAVE_NOT_INITIALIZED             (enclave_ret_t)12
+#define ENCLAVE_NO_FREE_RESOURCE            (enclave_ret_t)13
 
 #define PMP_UNKNOWN_ERROR                   -1U
 #define PMP_SUCCESS                         0
@@ -47,9 +48,6 @@
 #define PMP_REGION_MAX_REACHED              23
 #define PMP_REGION_INVALID                  24
 #define PMP_REGION_OVERLAP                  25
-
-#define STOP_TIMER_INTERRUPT  0
-#define STOP_EDGE_CALL_HOST   1
 
 void sm_init(void);
 
@@ -64,7 +62,7 @@ struct keystone_sbi_pregion_t
   uintptr_t paddr;
   size_t size;
 };
-struct runtime_params_t 
+struct runtime_params_t
 {
   uint64_t runtime_entry;
   uint64_t user_entry;

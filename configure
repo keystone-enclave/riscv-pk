@@ -590,6 +590,7 @@ ac_subst_vars='LTLIBOBJS
 LIBOBJS
 subprojects_enabled
 subprojects
+TARGET_PLATFORM
 BBL_LOGO_FILE
 BBL_PAYLOAD
 install_subdir
@@ -676,6 +677,7 @@ enable_vm
 enable_logo
 with_payload
 with_logo
+with_target_platform
 enable_sm
 enable_fp_emulation
 '
@@ -1334,6 +1336,7 @@ Optional Packages:
   --without-PACKAGE       do not use PACKAGE (same as --with-PACKAGE=no)
   --with-payload          Set ELF payload for bbl
   --with-logo             Specify a better logo
+  --with-target-platform  Set a specific platform for the sm to build with
 
 Some influential environment variables:
   CC          C compiler command
@@ -4322,6 +4325,16 @@ $as_echo "$as_me: configuring optional subproject : sm" >&6;}
         subprojects_enabled="$subprojects_enabled sm"
 
 $as_echo "#define SM_ENABLED /**/" >>confdefs.h
+
+
+# Check whether --with-target_platform was given.
+if test "${with_target_platform+set}" = set; then :
+  withval=$with_target_platform; TARGET_PLATFORM=$with_target_platform
+
+else
+  TARGET_PLATFORM=default
+
+fi
 
 
       };

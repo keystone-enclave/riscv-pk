@@ -75,7 +75,7 @@ sprojs_include := -I. $(addprefix -I$(src_dir)/, $(sprojs_enabled))
 VPATH := $(addprefix $(src_dir)/, $(sprojs_enabled))
 
 #-------------------------------------------------------------------------
-# Programs and flags 
+# Programs and flags
 #-------------------------------------------------------------------------
 
 # C++ compiler
@@ -85,7 +85,7 @@ VPATH := $(addprefix $(src_dir)/, $(sprojs_enabled))
 CC            := @CC@
 READELF       := @READELF@
 OBJCOPY       := @OBJCOPY@
-CFLAGS        := @CFLAGS@ $(CFLAGS) -DBBL_PAYLOAD=\"bbl_payload\" -DBBL_LOGO_FILE=\"bbl_logo_file\"
+CFLAGS        := @CFLAGS@ $(CFLAGS) -DBBL_PAYLOAD=\"bbl_payload\" -DBBL_LOGO_FILE=\"bbl_logo_file\" -DTARGET_PLATFORM_HEADER=\"platform/@TARGET_PLATFORM@/@TARGET_PLATFORM@.h\"
 BBL_PAYLOAD   := @BBL_PAYLOAD@
 COMPILE       := $(CC) -MMD -MP $(CFLAGS) \
                  $(sprojs_include)
@@ -132,7 +132,7 @@ dist_junk += $(sprojs_mk)
 #-------------------------------------------------------------------------
 # This function is used by the subproject template to reverse the list
 # of dependencies. It uses recursion to perform the reversal.
-# 
+#
 # Arguments:
 #  $(1)   : space separated input list
 #  retval : input list in reverse order
@@ -154,7 +154,7 @@ endef
 # subprojects defining a certain set of make variables which are all
 # prefixed with the subproject name. Since subproject names can have
 # dashes in them (and the make variables are assumed to only use
-# underscores) the template takes two arguments - one with the regular 
+# underscores) the template takes two arguments - one with the regular
 # subproject name and one with dashes replaced with underscores.
 #
 # Arguments:
@@ -284,7 +284,7 @@ clean-$(1) :
 
 libs += lib$(1).a
 objs += $$($(2)_c_objs)
-srcs += $$(addprefix $(src_dir)/$(1)/, $$($(2)_c_srcs)) 
+srcs += $$(addprefix $(src_dir)/$(1)/, $$($(2)_c_srcs))
 hdrs += $$(addprefix $(src_dir)/$(1)/, $$($(2)_hdrs))
 junk += $$($(2)_junk)
 deps += $$($(2)_c_deps)
@@ -375,7 +375,7 @@ dist_junk += config.status config.h Makefile config.log
 # Distribution
 #-------------------------------------------------------------------------
 # The distribution tarball is named project-ver.tar.gz and it includes
-# both enabled and disabled subprojects. 
+# both enabled and disabled subprojects.
 
 dist_files = \
   $(sprojs) \

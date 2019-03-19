@@ -10,6 +10,7 @@
 #include "page.h"
 #include <string.h>
 #include "atomic.h"
+#include "platform.h"
 
 #define ENCL_MAX  16
 
@@ -415,6 +416,8 @@ static inline enclave_ret_t context_switch_to_enclave(uintptr_t* regs,
   osm_pmp_set(PMP_NO_PERM);
   pmp_set(enclaves[eid].utrid, PMP_ALL_PERM);
 
+  // Setup any platform specific defenses
+  platform_switch_to_enclave(&(enclaves[eid].ped));
   return ENCLAVE_SUCCESS;
 }
 
@@ -438,6 +441,8 @@ inline void context_switch_to_host(uintptr_t* encl_regs,
   // enable timer interrupt
   set_csr(mie, MIP_MTIP);
 
+  // Reconfigure platform specific defenses
+  platform_switch_from_enclave(&(enclaves[eid].ped));
   return;
 }
 
@@ -454,6 +459,9 @@ void enclave_init_metadata(){
   /* Assumes eids are incrementing values, which they are for now */
   for(eid=0; eid < ENCL_MAX; eid++){
     enclaves[eid].state = INVALID;
+
+    /* Fire all platform specific init */
+    platform_init(&(enclaves[eid].ped));
   }
 }
 

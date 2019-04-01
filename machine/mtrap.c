@@ -108,7 +108,7 @@ static void send_ipi_many(uintptr_t* pmask, int event)
 
   if (event == IPI_SOFT)
     return;
-  
+
   // wait until all events have been handled.
   // prevent deadlock by consuming incoming IPIs.
   uint32_t incoming_ipi = 0;

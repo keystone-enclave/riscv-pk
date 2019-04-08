@@ -19,6 +19,7 @@
 #define SBI_SM_RUN_ENCLAVE      105
 #define SBI_SM_STOP_ENCLAVE     106
 #define SBI_SM_RESUME_ENCLAVE   107
+#define SBI_SM_EXTEND_ENCLAVE   108
 #define SBI_SM_EXIT_ENCLAVE     1101
 #define SBI_SM_NOT_IMPLEMENTED  1111
 
@@ -40,6 +41,7 @@
 #define ENCLAVE_NOT_INITIALIZED             (enclave_ret_t)12
 #define ENCLAVE_NO_FREE_RESOURCE            (enclave_ret_t)13
 #define ENCLAVE_SBI_PROHIBITED              (enclave_ret_t)14
+#define ENCLAVE_REQUEST_FREEMEM             (enclave_ret_t)15
 
 #define PMP_UNKNOWN_ERROR                   -1U
 #define PMP_SUCCESS                         0

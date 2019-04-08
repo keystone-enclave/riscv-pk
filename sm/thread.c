@@ -40,3 +40,10 @@ void swap_prev_satp(struct thread_state_t* thread, uintptr_t current_satp)
   thread->prev_satp = current_satp;
   write_csr(satp, tmp);
 }
+
+void swap_prev_sepc(struct thread_state_t* thread, uintptr_t current_sepc)
+{
+  uintptr_t tmp = thread->prev_sepc;
+  thread->prev_sepc = current_sepc;
+  write_csr(sepc, tmp);
+}

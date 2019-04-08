@@ -47,6 +47,7 @@ static inline enclave_ret_t context_switch_to_enclave(uintptr_t* regs,
   swap_prev_mepc(&enclaves[eid].threads[0], read_csr(mepc));
   swap_prev_stvec(&enclaves[eid].threads[0], read_csr(stvec));
   swap_prev_satp(&enclaves[eid].threads[0], read_csr(satp));
+  swap_prev_sepc(&enclaves[eid].threads[0], read_csr(sepc));
 
   if(load_parameters){
     // passing parameters for a first run
@@ -110,7 +111,7 @@ inline void context_switch_to_host(uintptr_t* encl_regs,
   swap_prev_stvec(&enclaves[eid].threads[0], read_csr(stvec));
   swap_prev_mepc(&enclaves[eid].threads[0], read_csr(mepc));
   swap_prev_satp(&enclaves[eid].threads[0], read_csr(satp));
-
+  swap_prev_sepc(&enclaves[eid].threads[0], read_csr(sepc));
 
   // enable timer interrupt
   set_csr(mie, MIP_MTIP);
@@ -502,6 +503,29 @@ enclave_ret_t run_enclave(uintptr_t* host_regs, eid_t eid)
   return context_switch_to_enclave(host_regs, eid, 1);
 }
 
+enclave_ret_t extend_enclave(eid_t eid, uintptr_t size)
+{
+  int extendable;
+  spinlock_lock(&encl_lock);
+  extendable = ENCLAVE_EXISTS(eid);
+  spinlock_unlock(&encl_lock);
+
+  if(!extendable) {
+    return ENCLAVE_UNKNOWN_ERROR;
+  }
+
+  // FIXME: only simulating it
+  // printm("extend enclave requested [size:0x%lx]\n", size);
+  if(pmp_extend_atomic(enclaves[eid].rid, size))
+  {
+    printm("failed to extend enclave\n");
+    return ENCLAVE_UNKNOWN_ERROR;
+  }
+  pmp_set_global(enclaves[eid].rid, PMP_NO_PERM);
+
+  return ENCLAVE_SUCCESS;
+}
+
 enclave_ret_t exit_enclave(uintptr_t* encl_regs, unsigned long retval, eid_t eid)
 {
   int exitable;
@@ -535,14 +559,15 @@ enclave_ret_t stop_enclave(uintptr_t* encl_regs, uint64_t request, eid_t eid)
 
   if(!stoppable)
     return ENCLAVE_NOT_RUNNING;
-
   context_switch_to_host(encl_regs, eid);
 
-  switch(request) {
+  switch(request & 0xffff) {
   case(STOP_TIMER_INTERRUPT):
     return ENCLAVE_INTERRUPTED;
   case(STOP_EDGE_CALL_HOST):
     return ENCLAVE_EDGE_CALL_HOST;
+  case(STOP_INCREASE_FREEMEM):
+    return ENCLAVE_REQUEST_FREEMEM | (request & ~0xffff);
   default:
     return ENCLAVE_UNKNOWN_ERROR;
   }

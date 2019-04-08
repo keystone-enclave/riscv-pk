@@ -81,6 +81,22 @@ uintptr_t mcall_sm_resume_enclave(uintptr_t* host_regs, unsigned long eid)
   return resume_enclave(host_regs, (unsigned int) eid);
 }
 
+uintptr_t mcall_sm_extend_enclave(unsigned long eid, uintptr_t size)
+{
+  unsigned long host_satp;
+
+  /* an enclave cannot call this SBI */
+  if (cpu_is_enclave_context()) {
+    return ENCLAVE_SBI_PROHIBITED;
+  }
+
+  if (get_host_satp(eid, &host_satp) != ENCLAVE_SUCCESS ||
+      host_satp != read_csr(satp))
+    return ENCLAVE_NOT_ACCESSIBLE;
+
+  return extend_enclave((unsigned int) eid, size);
+}
+
 uintptr_t mcall_sm_exit_enclave(uintptr_t* encl_regs, unsigned long retval)
 {
   /* only an enclave itself can call this SBI */
@@ -110,6 +126,7 @@ uintptr_t mcall_sm_attest_enclave(uintptr_t report, uintptr_t data, uintptr_t si
 
   return attest_enclave(report, data, size, cpu_get_enclave_id());
 }
+
 
 /* TODO: this should be removed in the future. */
 uintptr_t mcall_sm_not_implemented(uintptr_t* encl_regs, unsigned long cause)

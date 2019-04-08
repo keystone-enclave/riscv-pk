@@ -98,6 +98,13 @@ static void region_init(region_id_t i,
   regions[i].reg_idx = (addrmode == PMP_TOR && reg_idx > 0 ? reg_idx + 1 : reg_idx);
 }
 
+static void region_extend(region_id_t i,
+                         uintptr_t size)
+{
+  regions[i].size += size;
+}
+
+
 static int is_pmp_region_valid(region_id_t region_idx)
 {
   return TEST_BIT(region_def_bitmap, region_idx);
@@ -529,6 +536,36 @@ int pmp_region_init(uintptr_t start, uint64_t size, enum pmp_priority priority, 
 
     return tor_region_init(start, size, priority, rid, allow_overlap);
   }
+}
+
+int pmp_extend_atomic(region_id_t rid, uintptr_t size)
+{
+  spinlock_lock(&pmp_lock);
+
+  if(!is_pmp_region_valid(rid))
+    return PMP_REGION_INVALID;
+
+  if(!size)
+    PMP_ERROR(PMP_REGION_SIZE_INVALID, "Invalid PMP size");
+
+  uintptr_t start = region_get_addr(rid);
+  uint64_t old_size = region_get_size(rid);
+  uint64_t new_size = old_size + size;
+
+  if(region_is_napot(rid)) {
+    if(!(new_size & (new_size - 1)) && !(start & (new_size - 1))) {
+      PMP_ERROR(PMP_REGION_SIZE_INVALID, "Cannot extend PMP region");
+    }
+    region_extend(rid, size);
+  } else if(region_is_tor(rid)) {
+    region_extend(rid, size);
+  } else {
+    return PMP_UNKNOWN_ERROR;
+  }
+
+  spinlock_unlock(&pmp_lock);
+
+  return PMP_SUCCESS;
 }
 
 uintptr_t pmp_region_get_addr(region_id_t i)

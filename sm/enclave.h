@@ -34,6 +34,7 @@ typedef enum {
 #define STOP_TIMER_INTERRUPT  0
 #define STOP_EDGE_CALL_HOST   1
 #define STOP_EXIT_ENCLAVE     2
+#define STOP_INCREASE_FREEMEM 3
 
 /* For now, eid's are a simple unsigned int */
 typedef unsigned int eid_t;
@@ -91,6 +92,7 @@ enclave_ret_t create_enclave(struct keystone_sbi_create_t create_args);
 enclave_ret_t destroy_enclave(eid_t eid);
 enclave_ret_t run_enclave(uintptr_t* host_regs, eid_t eid);
 enclave_ret_t resume_enclave(uintptr_t* regs, eid_t eid);
+enclave_ret_t extend_enclave(eid_t eid, uintptr_t size);
 // callables from the enclave
 enclave_ret_t exit_enclave(uintptr_t* regs, unsigned long retval, eid_t eid);
 enclave_ret_t stop_enclave(uintptr_t* regs, uint64_t request, eid_t eid);

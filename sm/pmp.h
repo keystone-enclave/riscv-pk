@@ -98,7 +98,7 @@ int pmp_set_global(region_id_t n, uint8_t perm);
 int pmp_unset(region_id_t n);
 int pmp_unset_global(region_id_t n);
 int pmp_detect_region_overlap_atomic(uintptr_t base, uintptr_t size);
-
+int pmp_extend_atomic(region_id_t n, uintptr_t size);
 uintptr_t pmp_region_get_addr(region_id_t i);
 uint64_t pmp_region_get_size(region_id_t i);
 

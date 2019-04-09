@@ -2,9 +2,6 @@
 // Copyright (c) 2018, The Regents of the University of California (Regents).
 // All Rights Reserved. See LICENSE for license details.
 //------------------------------------------------------------------------------
-#include "sm.h"
-#include "bits.h"
-#include "vm.h"
 #include "enclave.h"
 #include "pmp.h"
 #include "page.h"
@@ -140,7 +137,6 @@ void enclave_init_metadata(){
     platform_init(&(enclaves[eid].ped));
   }
 }
-
 
 static enclave_ret_t init_enclave_memory(uintptr_t base, uintptr_t size,
     uintptr_t utbase, uintptr_t utsize)
@@ -614,5 +610,27 @@ enclave_ret_t attest_enclave(uintptr_t report_ptr, uintptr_t data, uintptr_t siz
     return ret;
   }
 
+  return ENCLAVE_SUCCESS;
+}
+
+
+#define MAX_SM_STACK_BUFFER 256
+enclave_ret_t enclave_getrandom(uint8_t* buffer, uintptr_t size, eid_t eid){
+
+  unsigned char rnd_buffer[MAX_SM_STACK_BUFFER];
+  uintptr_t copy_size;
+  enclave_ret_t ret;
+  do{
+    copy_size = size <= MAX_SM_STACK_BUFFER?size:MAX_SM_STACK_BUFFER;
+
+    platform_getrandom_fill(rnd_buffer, copy_size);
+    ret = copy_to_enclave(&(enclaves[eid]), buffer, rnd_buffer, copy_size);
+
+    if( ret != ENCLAVE_SUCCESS)
+      return ret;
+
+    size -= copy_size;
+    buffer = buffer+copy_size;
+  }while(size > 0);
   return ENCLAVE_SUCCESS;
 }

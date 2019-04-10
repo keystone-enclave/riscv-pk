@@ -42,8 +42,6 @@ static inline enclave_ret_t context_switch_to_enclave(uintptr_t* regs,
   /* save host context */
   swap_prev_state(&enclaves[eid].threads[0], regs);
   swap_prev_mepc(&enclaves[eid].threads[0], read_csr(mepc));
-  swap_prev_stvec(&enclaves[eid].threads[0], read_csr(stvec));
-  swap_prev_satp(&enclaves[eid].threads[0], read_csr(satp));
 
   if(load_parameters){
     // passing parameters for a first run
@@ -83,9 +81,6 @@ static inline enclave_ret_t context_switch_to_enclave(uintptr_t* regs,
   osm_pmp_set(PMP_NO_PERM);
   pmp_set(enclaves[eid].utrid, PMP_ALL_PERM);
 
-  // TODO: enable floats?
-  write_csr(sstatus, read_csr(sstatus) | SSTATUS_FS);
-
   // Setup any platform specific defenses
   platform_switch_to_enclave(&(enclaves[eid].ped));
 
@@ -104,9 +99,7 @@ inline void context_switch_to_host(uintptr_t* encl_regs,
 
   /* restore host context */
   swap_prev_state(&enclaves[eid].threads[0], encl_regs);
-  swap_prev_stvec(&enclaves[eid].threads[0], read_csr(stvec));
   swap_prev_mepc(&enclaves[eid].threads[0], read_csr(mepc));
-  swap_prev_satp(&enclaves[eid].threads[0], read_csr(satp));
 
 
   // enable timer interrupt
@@ -407,6 +400,9 @@ enclave_ret_t create_enclave(struct keystone_sbi_create_t create_args)
   enclaves[eid].n_thread = 0;
   enclaves[eid].params = params;
   enclaves[eid].pa_params = pa_params;
+
+  /* Init enclave state (regs etc) */
+  clean_state(&enclaves[eid].threads[0]);
 
   /* prepare hash and signature for attestation */
   spinlock_lock(&encl_lock);

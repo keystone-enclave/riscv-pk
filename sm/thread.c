@@ -25,7 +25,11 @@ void swap_prev_state(struct thread_state_t* thread, uintptr_t* regs)
 }
 
 /* Swaps all s-mode csrs defined in 1.10 standard */
-void swap_prev_smode_csrs(struct thread_state_t* thread){
+/* TODO: Right now we are only handling the ones that our test
+   platforms support. Realistically we should have these behind
+   defines for extensions (ex: N extension)*/
+void swap_prev_smode_csrs(struct thread_state_t*
+thread){
 
   uintptr_t tmp;
 
@@ -35,7 +39,7 @@ void swap_prev_smode_csrs(struct thread_state_t* thread){
   write_csr(csrname, tmp);
 
   LOCAL_SWAP_CSR(sstatus);
-  // We can't read these or set these from M-mode?
+  // These only exist with N extension.
   //LOCAL_SWAP_CSR(sedeleg);
   //LOCAL_SWAP_CSR(sideleg);
   LOCAL_SWAP_CSR(sie);

@@ -131,8 +131,10 @@ void enclave_init_metadata(){
   }
 }
 
-static enclave_ret_t init_enclave_memory(uintptr_t utbase, uintptr_t utsize)
+static enclave_ret_t clean_enclave_memory(uintptr_t utbase, uintptr_t utsize)
 {
+
+  // This function is quite temporary. See issue #38
 
   // Zero out the untrusted memory region, since it may be in
   // indeterminate state.
@@ -380,8 +382,8 @@ enclave_ret_t create_enclave(struct keystone_sbi_create_t create_args)
   if(pmp_set_global(region, PMP_NO_PERM))
     goto free_shared_region;
 
-  // cleanup some memory regions for sanity
-  init_enclave_memory(utbase, utsize);
+  // cleanup some memory regions for sanity See issue #38
+  clean_enclave_memory(utbase, utsize);
 
   // initialize enclave metadata
   enclaves[eid].eid = eid;

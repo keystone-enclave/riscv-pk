@@ -97,7 +97,7 @@ waymask_t enclave_allocated_ways;
 
 #define L2_NUM_SETS 512
 #define L2_SET_SIZE (L2_SIZE/L2_NUM_SETS)
-#define L2_SET_STRIDE L2_SET_SIZE
+#define L2_LINE_SIZE (64)
 
 /* Interface */
 size_t waymask_allocate_ways(size_t n_ways, unsigned int target_hart,

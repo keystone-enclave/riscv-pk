@@ -137,20 +137,25 @@ void waymask_clear_ways(waymask_t mask, unsigned int core){
      each cache set */
 
   int cur_mask = 0;
-  int i = 0;
+  int i,j = 0;
   for(i=0; i < WM_NUM_WAYS; i++){
     cur_mask = 1<<i;
-    if( cur_mask & mask){
+
+    /* Only clear the way if we need to */
+    if( cur_mask & mask ){
+
+      /* Only set the data cache waymask. */
       _wm_assign_mask(cur_mask, GET_CORE_DWAY(core));
-      /* We iterate by set size */
+
+      /* We iterate by line size, one for each set */
       uintptr_t next = L2_SCRATCH_START;
-      for(; next < L2_SCRATCH_STOP; next+=L2_SET_STRIDE){
+      for(j=0; j < L2_NUM_SETS; next+=L2_LINE_SIZE, j++){
         *(uintptr_t*)next = 0;
       }
     }
   }
 
-  /* Return the ways */
+  /* Reset the mask ways, only d$ again */
   _wm_assign_mask(mask, GET_CORE_DWAY(core));
 
 }

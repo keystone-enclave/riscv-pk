@@ -27,8 +27,12 @@ void platform_switch_to_enclave(struct platform_enclave_data_t* ped){
   /* Assign the ways to all cores */
   waymask_apply_allocated_mask(ped->saved_mask, core);
 
-  /* TODO Clear out these ways MUST first apply mask to other masters*/
-  //clear_ways(ped->saved_mask);
+  /* Clear out these ways MUST first apply mask to other masters */
+  /* uintptr_t cycles1,cycles2; */
+  /* asm volatile ("rdcycle %0" : "=r" (cycles1)); */
+  waymask_clear_ways(ped->saved_mask, core);
+  /* asm volatile ("rdcycle %0" : "=r" (cycles2)); */
+  /* printm("Wipe cost %lx\r\n",cycles2-cycles1); */
 
 }
 

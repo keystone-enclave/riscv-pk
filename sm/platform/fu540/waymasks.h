@@ -86,12 +86,26 @@ waymask_t enclave_allocated_ways;
 //no hart0?
 #define GET_HART_WAY( hartnum ) ( hartnum - 2 )
 
+#define GET_CORE_DWAY( core ) ( core * 2 )
+
+// L2 Zero Device (Scratchpad) info
+#define L2_SCRATCH_START (0x0A000000)
+#define L2_SCRATCH_STOP  (0x0BFFFFFF)
+
+/* 32 MB */
+#define L2_SIZE (32*1024*1024)
+
+#define L2_NUM_SETS 512
+#define L2_SET_SIZE (L2_SIZE/L2_NUM_SETS)
+#define L2_SET_STRIDE L2_SET_SIZE
+
 /* Interface */
 size_t waymask_allocate_ways(size_t n_ways, unsigned int target_hart,
                              waymask_t* mask);
 void waymask_apply_allocated_mask(waymask_t mask, unsigned int target_hart);
 void waymask_free_ways(waymask_t _mask);
 void waymask_init();
+void waymask_clear_ways(waymask_t mask, unsigned int core);
 
 /* Internals */
 int _wm_choose_ways_for_hart(size_t n_ways, waymask_t* _mask, unsigned int target_hart);

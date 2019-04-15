@@ -128,3 +128,29 @@ int _wm_assign_mask(waymask_t mask, unsigned int master){
 void waymask_init(){
   enclave_allocated_ways = 0;
 }
+
+
+void waymask_clear_ways(waymask_t mask, unsigned int core){
+
+  /* L2 Scratchpad (L2 Zero Device) allows us to write to non-memory
+     backed locations. We'll do one way at a time, writing once to
+     each cache set */
+
+  int cur_mask = 0;
+  int i = 0;
+  for(i=0; i < WM_NUM_WAYS; i++){
+    cur_mask = 1<<i;
+    if( cur_mask & mask){
+      _wm_assign_mask(cur_mask, GET_CORE_DWAY(core));
+      /* We iterate by set size */
+      uintptr_t next = L2_SCRATCH_START;
+      for(; next < L2_SCRATCH_STOP; next+=L2_SET_STRIDE){
+        *(uintptr_t*)next = 0;
+      }
+    }
+  }
+
+  /* Return the ways */
+  _wm_assign_mask(mask, GET_CORE_DWAY(core));
+
+}

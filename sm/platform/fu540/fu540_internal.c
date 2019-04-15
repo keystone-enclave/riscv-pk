@@ -7,7 +7,7 @@
 #include "page.h"
 #include <string.h>
 void platform_init(struct platform_enclave_data_t* ped){
-  ped->num_ways = 2;
+  ped->num_ways = WM_NUM_WAYS/2;
   ped->saved_mask = 0;
 }
 
@@ -21,7 +21,7 @@ void platform_switch_to_enclave(struct platform_enclave_data_t* ped){
                                            core,
                                            &ped->saved_mask);
 
-  printm("Chose ways: 0x%x, core 0x%x\r\n",ped->saved_mask, core);
+  //printm("Chose ways: 0x%x, core 0x%x\r\n",ped->saved_mask, core);
 
 
   /* Assign the ways to all cores */

@@ -40,20 +40,20 @@ jobs:
       script:
         - ./.fast-setup.sh
         - export PATH=$PATH:$TRAVIS_BUILD_DIR/riscv-qemu/riscv64-linux-user
-				- cd riscv-pk
-				- mkdir build
-				- cd build
-				- ../configure \
-    			--enable-logo \
-    			--host=riscv64-unknown-elf \
-    			--with-payload=../../riscv-linux/vmlinux \
-    			--enable-sm
-				- make
-				- cd ../..
+        - cd riscv-pk
+        - mkdir build
+        - cd build
+        - ../configure \
+          --enable-logo \
+          --host=riscv64-unknown-elf \
+          --with-payload=../../riscv-linux/vmlinux \
+          --enable-sm
+        - make
+        - cd ../..
         - cd riscv-pk/sm/tests
-				- mkdir build
-				- cd build
-				- cmake ..; make
+        - mkdir build
+        - cd build
+        - cmake ..; make
         - make test CTEST_OUTPUT_ON_FAILURE=TRUE
         - cd $TRAVIS_BUILD_DIR
         - cd riscv-qemu; git clean -fxd > /dev/null;git reset --hard > /dev/null;rm -rf .git;mv ../riscv-qemu-git  .git;cd ..

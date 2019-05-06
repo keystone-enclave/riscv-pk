@@ -49,8 +49,8 @@ jobs:
           --with-payload=../../riscv-linux/vmlinux \
           --enable-sm
         - make
-        - cd ../..
-        - cd riscv-pk/sm/tests
+        - cd $TRAVIS_BUILD_DIR
+        - cd sm/tests
         - mkdir build
         - cd build
         - cmake ..; make

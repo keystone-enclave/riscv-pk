@@ -24,8 +24,9 @@ addons:
     - gcc
     - git
 
-#branches:
-#  only:
+branches:
+  only:
+    - keystone
 
 before_install:
   - if [ -d "riscv-qemu/.git" ]; then ls; else git clone --shallow-since=2018-05-01 https://github.com/qemu/qemu riscv-qemu; fi

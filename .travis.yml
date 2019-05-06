@@ -54,7 +54,7 @@ jobs:
 				- mkdir build
 				- cd build
 				- cmake ..; make
-        - qemu-riscv64 test_pmp
+        - make test CTEST_OUTPUT_ON_FAILURE=TRUE
         - cd $TRAVIS_BUILD_DIR
         - cd riscv-qemu; git clean -fxd > /dev/null;git reset --hard > /dev/null;rm -rf .git;mv ../riscv-qemu-git  .git;cd ..
 

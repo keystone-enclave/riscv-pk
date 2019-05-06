@@ -12,7 +12,7 @@ include_directories(
     ../../
     ../../build
 )
-
+enable_testing()
 SET(CMOCKA_LIBRARY ../cmocka/libcmocka-static.a)
 add_library(cmocka STATIC IMPORTED)
 SET_TARGET_PROPERTIES(cmocka PROPERTIES IMPORTED_LOCATION ${CMOCKA_LIBRARY})
@@ -20,7 +20,8 @@ SET_TARGET_PROPERTIES(cmocka PROPERTIES IMPORTED_LOCATION ${CMOCKA_LIBRARY})
 add_executable(pmp_test pmp_test.c mock/machine.c)
 target_link_libraries(pmp_test cmocka)
 
-add_test(pmp_test ${CMAKE_CURRENT_BINARY_DIR}/pmp_test)
+add_test(pmp_test
+        qemu-riscv64 ${CMAKE_CURRENT_BINARY_DIR}/pmp_test)
 
 set_target_properties(pmp_test
         PROPERTIES

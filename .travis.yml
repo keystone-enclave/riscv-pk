@@ -4,7 +4,8 @@ cache:
   apt: true
   timeout: 1000 #In seconds
   directories:
-  - $TRAVIS_BUILD_DIR/riscv-qemu
+    - $TRAVIS_BUILD_DIR/riscv
+    - $TRAVIS_BUILD_DIR/riscv-qemu
 
 git:
   submodules: false
@@ -31,6 +32,7 @@ before_install:
   - cd riscv-qemu; git checkout v4.0.0; cd ..
   - cp -r riscv-qemu/.git riscv-qemu-git
   - cd riscv-qemu; ./configure --target-list=riscv64-linux-user; make; cd ..
+  - ./.fast-setup.sh
 
 jobs:
   include:
@@ -38,9 +40,7 @@ jobs:
       script: true
     - stage: build everything & test
       script:
-        - ./.fast-setup.sh
         - export PATH=$PATH:$TRAVIS_BUILD_DIR/riscv-qemu/riscv64-linux-user
-        - cd riscv-pk
         - mkdir build
         - cd build
         - ../configure \

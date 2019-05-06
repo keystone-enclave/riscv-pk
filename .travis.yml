@@ -40,7 +40,7 @@ jobs:
       script: true
     - stage: build everything & test
       script:
-        - cd riscv-qemu; ./configure --target-list=riscv64-linux-user; make; cd ..
+        - cd riscv-qemu; ./configure --target-list=riscv64-linux-user; make -j$(nproc); cd ..
         - export PATH=$PATH:$TRAVIS_BUILD_DIR/riscv-qemu/riscv64-linux-user
         - mkdir build
         - cd build
@@ -56,5 +56,5 @@ jobs:
         - cmake ..; make
         - make test CTEST_OUTPUT_ON_FAILURE=TRUE
         - cd $TRAVIS_BUILD_DIR
-        - cd riscv-qemu; git clean -fxd > /dev/null;git reset --hard > /dev/null;rm -rf .git;mv ../riscv-qemu-git  .git;cd ..
+        - cd riscv-qemu; make clean; git checkout -f . ; git clean -df > /dev/null;git reset --hard > /dev/null;rm -rf .git;mv ../riscv-qemu-git  .git;cd ..
 

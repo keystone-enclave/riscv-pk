@@ -27,8 +27,8 @@ addons:
 #  only:
 
 before_install:
-  - if [ -d "riscv-qemu/.git" ]; then ls; else git clone --shallow-since=2018-05-01 https://github.com/riscv/riscv-qemu riscv-qemu; fi
-  - cd riscv-qemu; git checkout riscv-qemu-3.1; cd ..
+  - if [ -d "riscv-qemu/.git" ]; then ls; else git clone --shallow-since=2018-05-01 https://github.com/qemu/qemu riscv-qemu; fi
+  - cd riscv-qemu; git checkout v4.0.0; cd ..
   - cp -r riscv-qemu/.git riscv-qemu-git
   - cd riscv-qemu; ./configure --target-list=riscv64-linux-user; make; cd ..
 

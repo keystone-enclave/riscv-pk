@@ -1,0 +1,60 @@
+language: minimal
+dist: xenial
+cache:
+  apt: true
+  timeout: 1000 #In seconds
+  directories:
+  - $TRAVIS_BUILD_DIR/riscv-qemu
+
+git:
+  submodules: false
+  depth: 1
+
+env:
+  - RISCV=$TRAVIS_BUILD_DIR/riscv PATH=$PATH:$RISCV/bin
+
+addons:
+  apt:
+    packages:
+    - autoconf
+    - automake
+    - autotools-dev
+    - build-essential
+    - gcc
+    - git
+
+#branches:
+#  only:
+
+before_install:
+  - if [ -d "riscv-qemu/.git" ]; then ls; else git clone --shallow-since=2018-05-01 https://github.com/riscv/riscv-qemu riscv-qemu; fi
+  - cd riscv-qemu; git checkout riscv-qemu-3.1; cd ..
+  - cp -r riscv-qemu/.git riscv-qemu-git
+  - cd riscv-qemu; ./configure --target-list=riscv64-linux-user; make; cd ..
+
+jobs:
+  include:
+    - stage: cache warmup
+      script: true
+    - stage: build everything & test
+      script:
+        - ./.fast-setup.sh
+        - export PATH=$PATH:$TRAVIS_BUILD_DIR/riscv-qemu/riscv64-linux-user
+				- cd riscv-pk
+				- mkdir build
+				- cd build
+				- ../configure \
+    			--enable-logo \
+    			--host=riscv64-unknown-elf \
+    			--with-payload=../../riscv-linux/vmlinux \
+    			--enable-sm
+				- make
+				- cd ../..
+        - cd riscv-pk/sm/tests
+				- mkdir build
+				- cd build
+				- cmake ..; make
+        - qemu-riscv64 test_pmp
+        - cd $TRAVIS_BUILD_DIR
+        - cd riscv-qemu; git clean -fxd > /dev/null;git reset --hard > /dev/null;rm -rf .git;mv ../riscv-qemu-git  .git;cd ..
+

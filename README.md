@@ -30,3 +30,30 @@ or follow the flow in the Makefile in
 
 The top-level Makefile will always be the most up-to-date build
 instructions.
+
+Test
+--------------
+
+Make sure that `qemu-riscv64` is in your PATH.
+`qemu-riscv64` can be compiled from the upstream [qemu source](https://github.com/qemu/qemu) v4.0.0 (try `./configure --target-list=riscv64-linux-user`).
+
+Current test only covers the security monitor, and exists as a separate build system.
+
+```
+cd sm/tests
+mkdir build; cd build
+cmake ..
+make
+```
+
+... and run tests!
+
+```
+make test
+```
+
+To see the why your test fails the test, you should try
+
+```
+make test CTEST_OUTPUT_ON_FAILURE=TRUE
+```

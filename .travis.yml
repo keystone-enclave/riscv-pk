@@ -32,7 +32,6 @@ before_install:
   - if [ -d "riscv-qemu/.git" ]; then ls; else git clone --shallow-since=2018-05-01 https://github.com/qemu/qemu riscv-qemu; fi
   - cd riscv-qemu; git checkout v4.0.0; cd ..
   - cp -r riscv-qemu/.git riscv-qemu-git
-  - cd riscv-qemu; ./configure --target-list=riscv64-linux-user; make; cd ..
   - ./.fast-setup.sh
 
 jobs:
@@ -41,6 +40,7 @@ jobs:
       script: true
     - stage: build everything & test
       script:
+        - cd riscv-qemu; ./configure --target-list=riscv64-linux-user; make; cd ..
         - export PATH=$PATH:$TRAVIS_BUILD_DIR/riscv-qemu/riscv64-linux-user
         - mkdir build
         - cd build

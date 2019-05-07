@@ -34,7 +34,7 @@ jobs:
   include:
     - stage: build everything & test
       script:
-        - if [ -f riscv/qemu-riscv64 ]; then ls riscv; else ./.build-qemu.sh; fi
+        - if [ -f riscv/bin/qemu-riscv64 ]; then ls riscv; else ./.build-qemu.sh; fi
         - mkdir build
         - cd build
         - ../configure

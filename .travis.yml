@@ -47,6 +47,6 @@ jobs:
         - mkdir build
         - cd build
         - cmake ..; make
-        - make test CTEST_OUTPUT_ON_FAILURE=TRUE
+        - make test CTEST_OUTPUT_ON_FAILURE=TRUE ARGS="--verbose"
         - cd $TRAVIS_BUILD_DIR
 

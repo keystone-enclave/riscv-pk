@@ -93,12 +93,81 @@ static void test_pmp_region_init_and_free()
   assert_int_equal(regions[0].allow_overlap, false);
   assert_int_equal(regions[0].reg_idx, 0);
 
-  pmp_region_free_atomic(0);
+  pmp_region_free_atomic(rid);
 
   assert_int_equal(region_def_bitmap, 0x0);
   assert_int_equal(reg_bitmap, 0x0);
   struct pmp_region zero = {0};
   assert_memory_equal(&regions[0], &zero, sizeof(struct pmp_region));
+}
+
+static void test_pmp_region_init_not_page_granularity()
+{
+  region_id rid;
+  assert_int_equal(region_def_bitmap, 0x0);
+  assert_int_equal(reg_bitmap, 0x0);
+  struct pmp_region zero = {0};
+  assert_memory_equal(&regions[0], &zero, sizeof(struct pmp_region));
+
+  assert_int_not_equal(
+      pmp_region_init_atomic(0xdeadbeef,
+                             0x4000,
+                             PMP_PRI_TOP,
+                             &rid,
+                             false),
+      PMP_SUCCESS);
+
+  assert_int_not_equal(
+      pmp_region_init_atomic(0xdeadb000,
+                             0x4444,
+                             PMP_PRI_TOP,
+                             &rid,
+                             false),
+      PMP_SUCCESS);
+
+  assert_int_equal(region_def_bitmap, 0x0);
+  assert_int_equal(reg_bitmap, 0x0);
+  assert_memory_equal(&regions[0], &zero, sizeof(struct pmp_region));
+}
+
+static void test_pmp_region_init_tor_pri_top()
+{
+  assert_int_equal(region_def_bitmap, 0x0);
+  region_id rid;
+
+  // TOP TOR must start from 0, so this should fail
+  assert_int_not_equal(
+      pmp_region_init_atomic(0xdeadb000,
+                             0x4000,
+                             PMP_PRI_TOP,
+                             &rid,
+                             false),
+      PMP_SUCCESS);
+
+  assert_int_equal(region_def_bitmap, 0x0);
+  assert_int_equal(reg_bitmap, 0x0);
+  struct pmp_region zero = {0};
+  assert_memory_equal(&regions[0], &zero, sizeof(struct pmp_region));
+
+  // This should succeed
+  assert_int_equal(
+      pmp_region_init_atomic(0x0,
+                             0xdead000,
+                             PMP_PRI_TOP,
+                             &rid,
+                             false),
+      PMP_SUCCESS);
+
+  assert_int_equal(region_def_bitmap, 0x1);
+  assert_int_equal(reg_bitmap, 0x1);
+  assert_int_equal(rid, 0);
+  assert_int_equal(regions[0].size, 0xdead000);
+  assert_int_equal(regions[0].addrmode, PMP_TOR);
+  assert_int_equal(regions[0].addr, 0x0);
+  assert_int_equal(regions[0].allow_overlap, false);
+  assert_int_equal(regions[0].reg_idx, 0);
+
+  pmp_region_free_atomic(rid);
 }
 
 static void test_region_helpers()
@@ -157,6 +226,8 @@ int main()
     cmocka_unit_test(test_get_free_reg_idx),
     cmocka_unit_test(test_get_conseq_free_reg_idx),
     cmocka_unit_test(test_pmp_region_init_and_free),
+    cmocka_unit_test(test_pmp_region_init_not_page_granularity),
+    cmocka_unit_test(test_pmp_region_init_tor_pri_top),
     cmocka_unit_test(test_region_helpers),
   };
 

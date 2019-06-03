@@ -89,7 +89,7 @@ static inline enclave_ret_code context_switch_to_enclave(uintptr_t* regs,
   return ENCLAVE_SUCCESS;
 }
 
-inline void context_switch_to_host(uintptr_t* encl_regs,
+static inline void context_switch_to_host(uintptr_t* encl_regs,
     enclave_id eid){
   // get the running enclave on this SM
   struct enclave encl = enclaves[eid];

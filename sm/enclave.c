@@ -144,19 +144,6 @@ static enclave_ret_code clean_enclave_memory(uintptr_t utbase, uintptr_t utsize)
   return ENCLAVE_SUCCESS;
 }
 
-static enclave_ret_code host_satp_to_eid(uintptr_t satp, enclave_id* eid)
-{
-  unsigned int i;
-  for(i=0; i<ENCL_MAX; i++)
-  {
-    if(enclaves[i].host_satp == satp){
-      *eid = i;
-      return ENCLAVE_SUCCESS;
-    }
-  }
-  return ENCLAVE_INVALID_ID;
-}
-
 static enclave_ret_code encl_alloc_eid(enclave_id* _eid)
 {
   enclave_id eid;

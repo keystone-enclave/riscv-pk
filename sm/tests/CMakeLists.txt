@@ -18,18 +18,18 @@ add_library(cmocka STATIC IMPORTED)
 SET_TARGET_PROPERTIES(cmocka PROPERTIES IMPORTED_LOCATION ${CMOCKA_LIBRARY})
 
 ### test pmp ###
-add_executable(pmp_test pmp_test.c mock/machine.c)
-target_link_libraries(pmp_test cmocka)
-add_test(pmp_test
-        qemu-riscv64 ${CMAKE_CURRENT_BINARY_DIR}/pmp_test)
-set_target_properties(pmp_test
+add_executable(test_pmp test_pmp.c mock/machine.c)
+target_link_libraries(test_pmp cmocka)
+add_test(test_pmp
+        qemu-riscv64 ${CMAKE_CURRENT_BINARY_DIR}/test_pmp)
+set_target_properties(test_pmp
         PROPERTIES
         LINK_FLAGS  "-Wl,--wrap=printm -Wl,--wrap=poweroff -Wl,--wrap=disabled_hart_mask -Wl,--wrap=hart_mask"
 )
 
 ### test enclave ###
-add_executable(enclave_test
-                enclave_test.c
+add_executable(test_enclave
+                test_enclave.c
                 mock/machine.c
                 mock/secure_boot.c
                 ../platform/default/default.c
@@ -46,10 +46,10 @@ add_executable(enclave_test
                 ../thread.c
                 ../sm.c
                 )
-target_link_libraries(enclave_test cmocka)
-add_test(enclave_test
-        qemu-riscv64 ${CMAKE_CURRENT_BINARY_DIR}/enclave_test)
-set_target_properties(enclave_test
+target_link_libraries(test_enclave cmocka)
+add_test(test_enclave
+        qemu-riscv64 ${CMAKE_CURRENT_BINARY_DIR}/test_enclave)
+set_target_properties(test_enclave
         PROPERTIES
         COMPILE_FLAGS -DTARGET_PLATFORM_HEADER=\\"..\/platform\/default\/default.h\\"
         LINK_FLAGS

@@ -306,7 +306,8 @@ static int is_create_args_valid(struct keystone_sbi_create* args)
       args->user_paddr >= epm_end)
     return 0;
   if (args->free_paddr < epm_start ||
-      args->free_paddr >= epm_end)
+      args->free_paddr > epm_end)
+      // note: free_paddr == epm_end if there's no free memory
     return 0;
 
   // check the order of physical addresses

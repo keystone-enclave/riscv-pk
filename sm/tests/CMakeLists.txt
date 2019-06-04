@@ -39,7 +39,6 @@ add_executable(enclave_test
                 ../ed25519/sc.c
                 ../ed25519/sign.c
                 ../ed25519/keypair.c
-                ../enclave.c
                 ../pmp.c
                 ../attest.c
                 ../cpu.c

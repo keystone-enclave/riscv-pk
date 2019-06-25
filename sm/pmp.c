@@ -171,7 +171,7 @@ static int detect_region_overlap(uintptr_t addr, uintptr_t size)
 
   // Safety check the addr+size
   uintptr_t input_end;
-  if( __checked_uaddl(addr, size, &input_end)){
+  if( CHECKED_ADD(addr, size, &input_end)){
     return 1;
   }
 

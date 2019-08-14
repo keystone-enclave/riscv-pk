@@ -679,6 +679,7 @@ with_payload
 with_logo
 with_target_platform
 enable_sm
+enable_softfloat
 enable_fp_emulation
 '
       ac_precious_vars='build_alias
@@ -1329,6 +1330,7 @@ Optional Features:
   --disable-vm            Disable virtual memory
   --enable-logo           Enable boot logo
   --enable-sm             Subproject sm
+  --enable-softfloat      Subproject softfloat
   --disable-fp-emulation  Disable floating-point emulation
 
 Optional Packages:
@@ -4409,15 +4411,60 @@ fi
     # 'subproject.ac'.
 
 
-      { $as_echo "$as_me:${as_lineno-$LINENO}: configuring default subproject : softfloat" >&5
-$as_echo "$as_me: configuring default subproject : softfloat" >&6;}
-      ac_config_files="$ac_config_files softfloat.mk:softfloat/softfloat.mk.in"
 
-      enable_softfloat_sproj="yes"
-      subprojects_enabled="$subprojects_enabled softfloat"
+      # For optional subprojects we capture the 'subproject.ac' as a
+      # shell function so that in the MCPPBS_GROUP macro we can just
+      # call this shell function instead of reading in 'subproject.ac'
+      # again.
+
+      _mpbp_softfloat_configure ()
+      {
+        { $as_echo "$as_me:${as_lineno-$LINENO}: configuring optional subproject : softfloat" >&5
+$as_echo "$as_me: configuring optional subproject : softfloat" >&6;}
+        ac_config_files="$ac_config_files softfloat.mk:softfloat/softfloat.mk.in"
+
+        enable_softfloat_sproj="yes"
+        subprojects_enabled="$subprojects_enabled softfloat"
 
 $as_echo "#define SOFTFLOAT_ENABLED /**/" >>confdefs.h
 
+
+      };
+
+      # Optional subprojects add --enable-subproject command line
+      # options, _if_ the subproject name is not also a group name.
+
+
+        # Check whether --enable-softfloat was given.
+if test "${enable_softfloat+set}" = set; then :
+  enableval=$enable_softfloat; enable_softfloat_sproj="yes"
+else
+  enable_softfloat_sproj="no"
+fi
+
+
+        if test "$enable_softfloat_sproj" = "yes"; then :
+
+          eval "_mpbp_softfloat_configure"
+
+else
+
+          { $as_echo "$as_me:${as_lineno-$LINENO}: processing optional subproject : softfloat" >&5
+$as_echo "$as_me: processing optional subproject : softfloat" >&6;}
+
+fi
+
+
+
+     # Always execute the subproject configure code if we are enabling
+     # all subprojects.
+
+     if     test "$enable_optional_subprojects" = "yes" \
+             && test "$enable_softfloat_sproj" = "no"  ; then :
+
+       eval "_mpbp_softfloat_configure"
+
+fi
 
 
 

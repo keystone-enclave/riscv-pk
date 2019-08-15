@@ -441,12 +441,20 @@ enclave_ret_code create_enclave(struct keystone_sbi_create create_args)
 
   /* Platform create happens as the last thing before hashing/etc since
      it may modify the enclave struct */
+  unsigned long cycles1,cycles2;
+  asm volatile ("rdcycle %0" : "=r" (cycles1));
   platform_create_enclave(&enclaves[eid]);
+  asm volatile ("rdcycle %0" : "=r" (cycles2));
+  printm("Copy: %ld cycles\r\n", cycles2-cycles1);
 
   /* Validate memory, prepare hash and signature for attestation */
   spinlock_lock(&encl_lock);
   enclaves[eid].state = FRESH;
+
+  asm volatile ("rdcycle %0" : "=r" (cycles1));
   ret = validate_and_hash_enclave(&enclaves[eid]);
+  asm volatile ("rdcycle %0" : "=r" (cycles2));
+  printm("Hash: %ld cycles\r\n", cycles2-cycles1);
   spinlock_unlock(&encl_lock);
 
   if(ret != ENCLAVE_SUCCESS)

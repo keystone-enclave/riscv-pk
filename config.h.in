@@ -42,6 +42,9 @@
 /* Define if the DTS is to be displayed */
 #undef PK_PRINT_DEVICE_TREE
 
+/* Enable multimem plugin */
+#undef PLUGIN_ENABLE_MULTIMEM
+
 /* Define if subproject MCPPBS_SPROJ_NORM is enabled */
 #undef SM_ENABLED
 

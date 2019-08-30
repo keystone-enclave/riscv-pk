@@ -678,6 +678,7 @@ enable_logo
 with_payload
 with_logo
 with_target_platform
+enable_sm_multimem
 enable_sm
 enable_fp_emulation
 '
@@ -1328,6 +1329,7 @@ Optional Features:
                           Enable all optional subprojects
   --disable-vm            Disable virtual memory
   --enable-logo           Enable boot logo
+  --enable-sm-multimem    Specify sm plugins to include
   --enable-sm             Subproject sm
   --disable-fp-emulation  Disable floating-point emulation
 
@@ -4333,6 +4335,14 @@ if test "${with_target_platform+set}" = set; then :
 
 else
   TARGET_PLATFORM=default
+
+fi
+
+
+# Check whether --enable-sm_multimem was given.
+if test "${enable_sm_multimem+set}" = set; then :
+  enableval=$enable_sm_multimem;
+$as_echo "#define PLUGIN_ENABLE_MULTIMEM /**/" >>confdefs.h
 
 fi
 

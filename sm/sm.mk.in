@@ -18,6 +18,7 @@ sm_c_srcs = \
   ed25519/ge.c \
   ed25519/sc.c \
   platform/@TARGET_PLATFORM@/@TARGET_PLATFORM@.c \
+	plugins/plugins.c \
 
 sm_asm_srcs =
 

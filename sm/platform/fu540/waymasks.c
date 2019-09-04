@@ -1,5 +1,16 @@
 #include "waymasks.h"
 
+void waymask_debug_printstatus(){
+  unsigned int hartid = read_csr(mhartid);
+  printm("mhartid: %x, coremasters: %x & %x\r\n",hartid, (hartid)*2, (hartid)*2 + 1);
+
+  unsigned int master;
+  for(master=0;master<WM_NUM_MASTERS;master++){
+    waymask_t* master_mask = WM_REG_ADDR(master);
+    printm("Master %x : %0.8x\r\n",master, *master_mask);
+  }
+}
+
 size_t waymask_allocate_ways(size_t n_ways, unsigned int target_hart,
                              waymask_t* mask){
 
@@ -15,6 +26,7 @@ size_t waymask_allocate_ways(size_t n_ways, unsigned int target_hart,
 
   // Mark these ways as used by an enclave
   enclave_allocated_ways |= *mask;
+  allocated_ways |= *mask;
 
   return remaining;
 }
@@ -25,7 +37,7 @@ int master_is_for_hart(unsigned int master, unsigned int hart){
 
 void waymask_apply_allocated_mask(waymask_t mask, unsigned int target_hart){
 
-  // Lockout/assign  masters from these ways
+  // Lockout/assign masters from these ways
   unsigned int master;
   for(master=0;master<WM_NUM_MASTERS;master++){
 
@@ -52,6 +64,7 @@ void waymask_free_ways(waymask_t _mask){
 
   // Re-enable those ways as free to be allocated
   enclave_allocated_ways &= WM_FLIP_MASK(_mask);
+  allocated_ways &= WM_FLIP_MASK(_mask);
 }
 
 // Simplest possible way choosing, with reserved way for each hart
@@ -94,8 +107,8 @@ int _wm_lockout_ways(waymask_t mask, unsigned int master){
   // Supposedly this isn't allowed, we'll see what happens.
   // "At least one cache way must be enabled. "
   waymask_t* master_mask = WM_REG_ADDR(master);
-
-  *master_mask &= WM_FLIP_MASK(mask);
+  waymask_t current_mask = *master_mask;
+  *master_mask = current_mask & WM_FLIP_MASK(mask);
   return 0;
 }
 
@@ -126,10 +139,35 @@ int _wm_assign_mask(waymask_t mask, unsigned int master){
 }
 
 void waymask_init(){
+  allocated_ways = 0;
   enclave_allocated_ways = 0;
+  scratchpad_allocated_ways = 0;
+}
+
+void waymask_allocate_scratchpad(){
+
+  /* Avoid the 'special' ways we reserve for cores */
+  waymask_t mask = 0xF00 | 0x80 | 0x1000 | 0x2000 | 0x4000;
+
+  /* tmp sanity check */
+  if( (allocated_ways & mask) != 0){
+    printm("Cannot allocate ways for scratchpad, in use!\r\n");
+    return;
+  }
+
+  scratchpad_allocated_ways = mask;
+  allocated_ways |= scratchpad_allocated_ways;
+}
+
+void waymask_free_scratchpad(){
+
+  allocated_ways &= WM_FLIP_MASK(scratchpad_allocated_ways);
+  scratchpad_allocated_ways = 0;
+
 }
 
 
+/* TODO check this is the right way to clear */
 void waymask_clear_ways(waymask_t mask, unsigned int core){
 
   /* L2 Scratchpad (L2 Zero Device) allows us to write to non-memory

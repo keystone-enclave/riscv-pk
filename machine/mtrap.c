@@ -189,6 +189,9 @@ send_ipi:
     case SBI_SM_RANDOM:
       retval = mcall_sm_random();
       break;
+    case SBI_SM_CALL_PLUGIN:
+      retval = mcall_sm_call_plugin(arg0, arg1, arg2, arg3);
+      break;
     case SBI_SM_NOT_IMPLEMENTED:
       retval = mcall_sm_not_implemented(regs, arg0);
       break;

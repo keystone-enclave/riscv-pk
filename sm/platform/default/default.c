@@ -1,15 +1,31 @@
 /* Default platform does nothing special here */
 #include "enclave.h"
 
-void platform_init(struct platform_enclave_data* enclave){
+enclave_ret_code platform_init_global_once(){
+  return ENCLAVE_SUCCESS;
+}
+
+enclave_ret_code platform_init_global(){
+  return ENCLAVE_SUCCESS;
+}
+
+void platform_init_enclave(struct enclave* enclave){
   return;
 }
 
-void platform_switch_to_enclave(struct platform_enclave_data* enclave){
+void platform_destroy_enclave(struct enclave* enclave){
   return;
 }
 
-void platform_switch_from_enclave(struct platform_enclave_data* enclave){
+enclave_ret_code platform_create_enclave(struct enclave* enclave){
+  return ENCLAVE_SUCCESS;
+}
+
+void platform_switch_to_enclave(struct enclave* enclave){
+  return;
+}
+
+void platform_switch_from_enclave(struct enclave* enclave){
   return;
 }
 

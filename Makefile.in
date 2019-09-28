@@ -95,7 +95,7 @@ COMPILE       := $(CC) -MMD -MP $(CFLAGS) \
 
 LD            := $(CC)
 LDFLAGS       := @LDFLAGS@ -nostartfiles -nostdlib -static $(LDFLAGS)
-LIBS          := @LIBS@
+LIBS          := @LIBS@ librs.a
 LINK          := $(LD) $(LDFLAGS)
 
 # Library creation
@@ -147,6 +147,24 @@ define reverse_list_h
     $(2))
 endef
 
+
+librs_out := librs/riscv64gc-unknown-none-elf/debug
+librs.a : $(librs_out)/riscv_pk_rs.S
+	$(COMPILE) -c $^ 
+	$(AR) rcv $@ riscv_pk_rs.o
+	$(RANLIB) $@
+
+$(librs_out)/riscv_pk_rs.S: $(librs_out)/riscv_pk_rs.a
+	mkdir librs || true
+	$(eval _PWD := $(shell pwd))
+	cd $(src_dir) ;\
+	cargo rustc --target-dir $(_PWD)/librs -- --emit=llvm-bc -Clto
+	llc -march=riscv64 -target-abi=lp64d -mattr="+64bit,+m,+a,+f,+d,+c" -code-model=medium $(librs_out)/deps/*.bc -o $(librs_out)/riscv_pk_rs.S
+
+$(librs_out)/riscv_pk_rs.a:
+
+-include $(librs_out)/libriscv_pk_rs.d
+
 #-------------------------------------------------------------------------
 # Template for per subproject rules
 #-------------------------------------------------------------------------
@@ -193,7 +211,7 @@ $(2)_junk += $$($(2)_c_objs) $$($(2)_c_deps) $$($(2)_asm_objs)
 
 # Build a library for this subproject
 
-lib$(1).a : $$($(2)_c_objs) $$($(2)_asm_objs)
+lib$(1).a : $$($(2)_c_objs) $$($(2)_asm_objs) librs.a
 	$(AR) rcv $$@ $$(notdir $$^)
 	$(RANLIB) $$@
 

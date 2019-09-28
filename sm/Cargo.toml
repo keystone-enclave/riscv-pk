@@ -1,0 +1,10 @@
+[package]
+name = "sm"
+version = "0.1.0"
+edition = "2018"
+
+[lib]
+path = "lib.rs"
+
+[dependencies]
+riscv = { version = "0.5", features = ["inline-asm"] }

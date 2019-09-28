@@ -8,13 +8,6 @@
 #include "sm.h"
 #include "enclave.h"
 
-/* hart state for regulating SBI */
-struct cpu_state
-{
-  int is_enclave;
-  enclave_id eid;
-};
-
 /* external functions */
 int cpu_is_enclave_context();
 int cpu_get_enclave_id();

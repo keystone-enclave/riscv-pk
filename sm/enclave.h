@@ -125,4 +125,16 @@ enclave_ret_code copy_from_host(void* source, void* dest, size_t size);
 int get_enclave_region_index(enclave_id eid, enum enclave_region_type type);
 uintptr_t get_enclave_region_base(enclave_id eid, int memid);
 uintptr_t get_enclave_region_size(enclave_id eid, int memid);
+
+// Here follow definitions for Rust interop; don't use these directly.
+#define ENCL_MAX  16
+extern struct enclave enclaves[ENCL_MAX];
+
+enclave_ret_code copy_from_enclave(struct enclave* enclave,
+                                   void* dest, void* source, size_t size);
+enclave_ret_code copy_to_enclave(struct enclave* enclave,
+                                 void* dest, void* source, size_t size);
+void enclave_lock(void);
+void enclave_unlock(void);
+
 #endif

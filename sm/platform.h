@@ -1,6 +1,8 @@
 #ifndef _PLATFORM_H_
 #define _PLATFORM_H_
 
+struct enclave;
+
 /* These functions are defined by platform/soc specific objects,
    defined in platform/$PLATFORM/$PLATFORM.c */
 

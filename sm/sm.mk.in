@@ -3,7 +3,6 @@ sm_hdrs = \
   sm-sbi.h \
 
 sm_c_srcs = \
-  sm.c \
   sm-sbi.c \
   thread.c \
   pmp.c \

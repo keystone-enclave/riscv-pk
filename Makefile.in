@@ -85,7 +85,8 @@ VPATH := $(addprefix $(src_dir)/, $(sprojs_enabled))
 CC            := @CC@
 READELF       := @READELF@
 OBJCOPY       := @OBJCOPY@
-CFLAGS        := @CFLAGS@ $(CFLAGS) -DBBL_PAYLOAD=\"bbl_payload\" -DBBL_LOGO_FILE=\"bbl_logo_file\" -DTARGET_PLATFORM_HEADER=\"platform/@TARGET_PLATFORM@/@TARGET_PLATFORM@.h\"
+PLATFORM_FLAG := -DTARGET_PLATFORM_HEADER=\"platform/@TARGET_PLATFORM@/@TARGET_PLATFORM@.h\"
+CFLAGS        := @CFLAGS@ $(CFLAGS) -DBBL_PAYLOAD=\"bbl_payload\" -DBBL_LOGO_FILE=\"bbl_logo_file\" $(PLATFORM_FLAG)
 BBL_PAYLOAD   := @BBL_PAYLOAD@
 COMPILE       := $(CC) -MMD -MP $(CFLAGS) \
                  $(sprojs_include)
@@ -158,6 +159,7 @@ $(librs_out)/riscv_pk_rs.S: $(librs_out)/riscv_pk_rs.a
 	mkdir librs || true
 	$(eval _PWD := $(shell pwd))
 	cd $(src_dir) ;\
+	export CFLAGS=$(PLATFORM_FLAG) ;\
 	cargo rustc --target-dir $(_PWD)/librs -- --emit=llvm-bc -Clto
 	llc -march=riscv64 -target-abi=lp64d -mattr="+64bit,+m,+a,+f,+d,+c" -code-model=medium $(librs_out)/deps/*.bc -o $(librs_out)/riscv_pk_rs.S
 

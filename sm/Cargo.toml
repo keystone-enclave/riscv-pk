@@ -8,3 +8,8 @@ path = "lib.rs"
 
 [dependencies]
 riscv = { version = "0.5", features = ["inline-asm"] }
+spin = "0.5"
+util = { path = "../util" }
+
+[build-dependencies]
+bindgen = "0.50"

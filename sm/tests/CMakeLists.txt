@@ -41,10 +41,8 @@ add_executable(test_enclave
                 ../ed25519/keypair.c
                 ../pmp.c
                 ../attest.c
-                ../cpu.c
                 ../crypto.c
                 ../thread.c
-                ../sm.c
                 )
 target_link_libraries(test_enclave cmocka)
 add_test(test_enclave

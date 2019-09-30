@@ -25,24 +25,24 @@
 #define SBI_SM_NOT_IMPLEMENTED  1111
 
 /* error codes */
-#define ENCLAVE_NOT_IMPLEMENTED             (enclave_ret_code)-2U
-#define ENCLAVE_UNKNOWN_ERROR               (enclave_ret_code)-1U
-#define ENCLAVE_SUCCESS                     (enclave_ret_code)0
-#define ENCLAVE_INVALID_ID                  (enclave_ret_code)1
-#define ENCLAVE_INTERRUPTED                 (enclave_ret_code)2
-#define ENCLAVE_PMP_FAILURE                 (enclave_ret_code)3
-#define ENCLAVE_NOT_RUNNABLE                (enclave_ret_code)4
-#define ENCLAVE_NOT_DESTROYABLE             (enclave_ret_code)5
-#define ENCLAVE_REGION_OVERLAPS             (enclave_ret_code)6
-#define ENCLAVE_NOT_ACCESSIBLE              (enclave_ret_code)7
-#define ENCLAVE_ILLEGAL_ARGUMENT            (enclave_ret_code)8
-#define ENCLAVE_NOT_RUNNING                 (enclave_ret_code)9
-#define ENCLAVE_NOT_RESUMABLE               (enclave_ret_code)10
-#define ENCLAVE_EDGE_CALL_HOST              (enclave_ret_code)11
-#define ENCLAVE_NOT_INITIALIZED             (enclave_ret_code)12
-#define ENCLAVE_NO_FREE_RESOURCE            (enclave_ret_code)13
-#define ENCLAVE_SBI_PROHIBITED              (enclave_ret_code)14
-#define ENCLAVE_ILLEGAL_PTE                 (enclave_ret_code)15
+#define ENCLAVE_NOT_IMPLEMENTED             -2U
+#define ENCLAVE_UNKNOWN_ERROR               -1U
+#define ENCLAVE_SUCCESS                     0
+#define ENCLAVE_INVALID_ID                  1
+#define ENCLAVE_INTERRUPTED                 2
+#define ENCLAVE_PMP_FAILURE                 3
+#define ENCLAVE_NOT_RUNNABLE                4
+#define ENCLAVE_NOT_DESTROYABLE             5
+#define ENCLAVE_REGION_OVERLAPS             6
+#define ENCLAVE_NOT_ACCESSIBLE              7
+#define ENCLAVE_ILLEGAL_ARGUMENT            8
+#define ENCLAVE_NOT_RUNNING                 9
+#define ENCLAVE_NOT_RESUMABLE               10
+#define ENCLAVE_EDGE_CALL_HOST              11
+#define ENCLAVE_NOT_INITIALIZED             12
+#define ENCLAVE_NO_FREE_RESOURCE            13
+#define ENCLAVE_SBI_PROHIBITED              14
+#define ENCLAVE_ILLEGAL_PTE                 15
 
 #define PMP_UNKNOWN_ERROR                   -1U
 #define PMP_SUCCESS                         0
@@ -59,7 +59,6 @@ void sm_init(void);
 /* platform specific functions */
 #define ATTESTATION_KEY_LENGTH  64
 void sm_retrieve_pubkey(void* dest);
-void sm_sign(void* sign, const void* data, size_t len);
 
 /* creation parameters */
 struct keystone_sbi_pregion

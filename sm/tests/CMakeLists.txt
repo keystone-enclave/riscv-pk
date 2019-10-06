@@ -17,6 +17,29 @@ SET(CMOCKA_LIBRARY ../cmocka/libcmocka-static.a)
 add_library(cmocka STATIC IMPORTED)
 SET_TARGET_PROPERTIES(cmocka PROPERTIES IMPORTED_LOCATION ${CMOCKA_LIBRARY})
 
+set(LIBRS_BUILD_DIR "${CMAKE_CURRENT_BINARY_DIR}/riscv64gc-unknown-none-elf/debug/")
+set(LIBRS_INTERMEDIATE_LIBRARY "${LIBRS_BUILD_DIR}/libriscv_pk_rs.a")
+set(LIBRS_INTERMEDIATE_ASM "${LIBRS_BUILD_DIR}/libriscv_pk_rs.S")
+
+add_custom_target(librs_cargo ALL
+    COMMENT "Compiling librs"
+    COMMAND CARGO_TARGET_DIR=${CMAKE_CURRENT_BINARY_DIR} CFLAGS='-DTARGET_PLATFORM_HEADER="platform/default/default.h"' cargo rustc -- --emit=llvm-bc -Clto
+    BYPRODUCTS ${LIBRS_INTERMEDIATE_LIBRARY}
+    WORKING_DIRECTORY ${CMAKE_CURRENT_SOURCE_DIR}/../..
+)
+set_target_properties(librs_cargo PROPERTIES LOCATION ${CMAKE_CURRENT_BINARY_DIR})
+
+add_custom_command(
+    OUTPUT ${LIBRS_INTERMEDIATE_ASM}
+    COMMAND llc -march=riscv64 -target-abi=lp64d -mattr="+64bit,+m,+a,+f,+d,+c" -code-model=medium ${LIBRS_BUILD_DIR}/deps/*.bc -o ${LIBRS_INTERMEDIATE_ASM}
+    DEPENDS librs_cargo ${LIBRS_INTERMEDIATE_LIBRARY}
+)
+set_property(SOURCE ${LIBRS_INTERMEDIATE_ASM} PROPERTY LANGUAGE C)
+
+add_library(librs ${LIBRS_INTERMEDIATE_ASM})
+
+
+
 ### test pmp ###
 add_executable(test_pmp test_pmp.c mock/machine.c)
 target_link_libraries(test_pmp cmocka)
@@ -24,7 +47,7 @@ add_test(test_pmp
         qemu-riscv64 ${CMAKE_CURRENT_BINARY_DIR}/test_pmp)
 set_target_properties(test_pmp
         PROPERTIES
-        LINK_FLAGS  "-Wl,--wrap=printm -Wl,--wrap=poweroff -Wl,--wrap=disabled_hart_mask -Wl,--wrap=hart_mask"
+        LINK_FLAGS  "-Wl,--wrap=printm -Wl,--wrap=mcall_console_putchar -Wl,--wrap=poweroff -Wl,--wrap=disabled_hart_mask -Wl,--wrap=hart_mask"
 )
 
 ### test enclave ###
@@ -44,7 +67,7 @@ add_executable(test_enclave
                 ../crypto.c
                 ../thread.c
                 )
-target_link_libraries(test_enclave cmocka)
+target_link_libraries(test_enclave cmocka librs)
 add_test(test_enclave
         qemu-riscv64 ${CMAKE_CURRENT_BINARY_DIR}/test_enclave)
 set_target_properties(test_enclave
@@ -53,6 +76,7 @@ set_target_properties(test_enclave
         LINK_FLAGS
           "-Wl,--wrap=printm \
           -Wl,--wrap=poweroff \
+          -Wl,--wrap=mcall_console_putchar \
           -Wl,--wrap=disabled_hart_mask \
           -Wl,--wrap=hart_mask \
           -Wl,--wrap=sanctum_sm_hash \

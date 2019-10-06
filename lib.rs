@@ -27,8 +27,3 @@ pub extern fn panic_impl(info: &PanicInfo) -> ! {
  
 #[lang = "eh_personality"]
 extern fn eh_personality() {}
-
-#[no_mangle]
-extern fn abort() -> ! {
-    loop {}
-}

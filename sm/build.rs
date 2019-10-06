@@ -37,6 +37,7 @@ fn main() {
     let bindings = bindgen::Builder::default()
         .header("bindings.h")
         .clang_arg("--target=riscv64")
+        .clang_arg("-I.")
         .clang_arg("-I../machine/")
         .clang_arg(format!("-I{}", sysroot_include.to_str().unwrap()))
         .clang_args(cflags_iter)

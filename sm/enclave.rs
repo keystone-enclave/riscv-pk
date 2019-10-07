@@ -6,6 +6,11 @@ use crate::bindings::*;
 use crate::sm;
 
 
+fn enclave_exists(eid: enclave_id) -> bool {
+  unsafe {
+    enclaves[eid as usize].state >= enclave_state_FRESH
+  }
+}
 
 #[no_mangle]
 pub extern fn get_enclave_region_index(eid: enclave_id, ty: enclave_region_type) -> c_int
@@ -139,3 +144,119 @@ pub extern fn attest_enclave(report_ptr: usize, data: usize, size: usize, eid: e
 
   return ENCLAVE_SUCCESS as enclave_ret_code;
 }
+
+
+#[no_mangle]
+pub extern fn run_enclave(host_regs: *mut usize, eid: enclave_id) -> enclave_ret_code 
+{
+  let runnable = unsafe {
+      enclave_lock();
+      
+      enclave_exists(eid)
+          && enclaves[eid as usize].n_thread < MAX_ENCL_THREADS
+  };
+
+  unsafe {
+      if runnable {
+        enclaves[eid as usize].state = enclave_state_RUNNING;
+        enclaves[eid as usize].n_thread += 1;
+      }
+      enclave_unlock();
+  }
+
+  if !runnable {
+    return ENCLAVE_NOT_RUNNABLE as enclave_ret_code;
+  }
+
+  // Enclave is OK to run, context switch to it
+  unsafe {
+      context_switch_to_enclave(host_regs, eid as u32, 1)
+  }
+}
+
+#[no_mangle]
+pub extern fn exit_enclave(encl_regs: *mut usize, retval: c_ulong, eid: enclave_id) -> enclave_ret_code
+{
+  let eid = eid as usize;
+
+  let exitable = unsafe {
+    enclave_lock();
+    let out = enclaves[eid].state == enclave_state_RUNNING;
+    enclave_unlock();
+    out
+  };
+
+  if !exitable {
+    return ENCLAVE_NOT_RUNNING as enclave_ret_code;
+  }
+
+  unsafe {
+    context_switch_to_host(encl_regs, eid as u32);
+  }
+
+  // update enclave state
+  unsafe {
+      enclave_lock();
+      enclaves[eid].n_thread -= 1;
+      if enclaves[eid].n_thread == 0 {
+        enclaves[eid].state = enclave_state_INITIALIZED;
+      }
+      enclave_unlock();
+  }
+
+  return ENCLAVE_SUCCESS as enclave_ret_code;
+}
+
+#[no_mangle]
+pub extern fn stop_enclave(encl_regs: *mut usize, request: u64, eid: enclave_id) -> enclave_ret_code
+{
+  let eid = eid as usize;
+
+  let stoppable = unsafe {
+      enclave_lock();
+      let out = enclaves[eid].state == enclave_state_RUNNING;
+      enclave_unlock();
+      out
+  };
+
+  if !stoppable {
+    return ENCLAVE_NOT_RUNNING as enclave_ret_code;
+  }
+
+  unsafe {
+    context_switch_to_host(encl_regs, eid as u32);
+  }
+
+  match request {
+      n if n == STOP_TIMER_INTERRUPT as u64 =>
+          ENCLAVE_INTERRUPTED as enclave_ret_code,
+      n if n == STOP_EDGE_CALL_HOST as u64 =>
+          ENCLAVE_EDGE_CALL_HOST as enclave_ret_code,
+      _ =>
+          ENCLAVE_UNKNOWN_ERROR as enclave_ret_code
+  }
+}
+
+#[no_mangle]
+pub extern fn resume_enclave(host_regs: *mut usize, eid: enclave_id) -> enclave_ret_code
+{
+  let eid = eid as usize;
+
+  let resumable = unsafe {
+      enclave_lock();
+      let out = enclaves[eid].state == enclave_state_RUNNING // not necessary?
+               && enclaves[eid].n_thread > 0; // not necessary
+      enclave_unlock();
+      out
+  };
+
+  if !resumable {
+    return ENCLAVE_NOT_RESUMABLE as enclave_ret_code;
+  }
+
+  // Enclave is OK to resume, context switch to it
+  return unsafe {
+      context_switch_to_enclave(host_regs, eid as u32, 0)
+  }
+}
+

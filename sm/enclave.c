@@ -39,7 +39,7 @@ extern byte dev_public_key[PUBLIC_KEY_SIZE];
  *
  * Expects that eid has already been valided, and it is OK to run this enclave
 */
-static inline enclave_ret_code context_switch_to_enclave(uintptr_t* regs,
+enclave_ret_code context_switch_to_enclave(uintptr_t* regs,
                                                 enclave_id eid,
                                                 int load_parameters){
 
@@ -96,7 +96,7 @@ static inline enclave_ret_code context_switch_to_enclave(uintptr_t* regs,
   return ENCLAVE_SUCCESS;
 }
 
-static inline void context_switch_to_host(uintptr_t* encl_regs,
+void context_switch_to_host(uintptr_t* encl_regs,
     enclave_id eid){
 
   // set PMP
@@ -512,91 +512,5 @@ enclave_ret_code destroy_enclave(enclave_id eid)
   encl_free_eid(eid);
 
   return ENCLAVE_SUCCESS;
-}
-
-
-enclave_ret_code run_enclave(uintptr_t* host_regs, enclave_id eid)
-{
-  int runable;
-
-  spinlock_lock(&encl_lock);
-  runable = (ENCLAVE_EXISTS(eid)
-             && enclaves[eid].n_thread < MAX_ENCL_THREADS);
-  if(runable) {
-    enclaves[eid].state = RUNNING;
-    enclaves[eid].n_thread++;
-  }
-  spinlock_unlock(&encl_lock);
-
-  if(!runable) {
-    return ENCLAVE_NOT_RUNNABLE;
-  }
-
-  // Enclave is OK to run, context switch to it
-  return context_switch_to_enclave(host_regs, eid, 1);
-}
-
-enclave_ret_code exit_enclave(uintptr_t* encl_regs, unsigned long retval, enclave_id eid)
-{
-  int exitable;
-
-  spinlock_lock(&encl_lock);
-  exitable = enclaves[eid].state == RUNNING;
-  spinlock_unlock(&encl_lock);
-
-  if(!exitable)
-    return ENCLAVE_NOT_RUNNING;
-
-  context_switch_to_host(encl_regs, eid);
-
-  // update enclave state
-  spinlock_lock(&encl_lock);
-  enclaves[eid].n_thread--;
-  if(enclaves[eid].n_thread == 0)
-    enclaves[eid].state = INITIALIZED;
-  spinlock_unlock(&encl_lock);
-
-  return ENCLAVE_SUCCESS;
-}
-
-enclave_ret_code stop_enclave(uintptr_t* encl_regs, uint64_t request, enclave_id eid)
-{
-  int stoppable;
-
-  spinlock_lock(&encl_lock);
-  stoppable = enclaves[eid].state == RUNNING;
-  spinlock_unlock(&encl_lock);
-
-  if(!stoppable)
-    return ENCLAVE_NOT_RUNNING;
-
-  context_switch_to_host(encl_regs, eid);
-
-  switch(request) {
-  case(STOP_TIMER_INTERRUPT):
-    return ENCLAVE_INTERRUPTED;
-  case(STOP_EDGE_CALL_HOST):
-    return ENCLAVE_EDGE_CALL_HOST;
-  default:
-    return ENCLAVE_UNKNOWN_ERROR;
-  }
-}
-
-enclave_ret_code resume_enclave(uintptr_t* host_regs, enclave_id eid)
-{
-  int resumable;
-
-  spinlock_lock(&encl_lock);
-  resumable = (ENCLAVE_EXISTS(eid)
-               && (enclaves[eid].state == RUNNING) // not necessary
-               && enclaves[eid].n_thread > 0); // not necessary
-  spinlock_unlock(&encl_lock);
-
-  if(!resumable) {
-    return ENCLAVE_NOT_RESUMABLE;
-  }
-
-  // Enclave is OK to resume, context switch to it
-  return context_switch_to_enclave(host_regs, eid, 0);
 }
 

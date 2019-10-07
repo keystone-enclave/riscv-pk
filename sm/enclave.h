@@ -130,6 +130,11 @@ uintptr_t get_enclave_region_size(enclave_id eid, int memid);
 #define ENCL_MAX  16
 extern struct enclave enclaves[ENCL_MAX];
 
+enclave_ret_code context_switch_to_enclave(uintptr_t* regs,
+                                           enclave_id eid,
+                                           int load_parameters);
+void context_switch_to_host(uintptr_t* encl_regs,
+                            enclave_id eid);
 enclave_ret_code copy_from_enclave(struct enclave* enclave,
                                    void* dest, void* source, size_t size);
 enclave_ret_code copy_to_enclave(struct enclave* enclave,

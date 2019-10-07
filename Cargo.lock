@@ -270,6 +270,7 @@ name = "riscv-pk-rs"
 version = "0.1.0"
 dependencies = [
  "sm 0.1.0",
+ "util 0.1.0",
 ]
 
 [[package]]

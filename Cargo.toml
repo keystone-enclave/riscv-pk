@@ -9,3 +9,4 @@ crate-type = [ "staticlib" ]
 
 [dependencies]
 sm = { path="./sm" }
+util = { path="./util" }

@@ -1,16 +1,111 @@
-use core::mem::size_of;
+use core::mem::{forget, size_of, zeroed};
 use core::slice;
 
 use util::ctypes::*;
+use util::insert_field;
 use crate::bindings::*;
 use crate::sm;
 
+const SATP_MODE_CHOICE: usize = insert_field!(0, SATP64_MODE as usize, SATP_MODE_SV39 as usize);
 
 fn enclave_exists(eid: enclave_id) -> bool {
   unsafe {
     enclaves[eid as usize].state >= enclave_state_FRESH
   }
 }
+
+
+unsafe fn clean_enclave_memory(utbase: usize, utsize: usize)
+{
+
+  // This function is quite temporary. See issue #38
+
+  // Zero out the untrusted memory region, since it may be in
+  // indeterminate state.
+  (utbase as *mut c_void).write_bytes(0, utsize);
+}
+
+
+/* Ensures that dest ptr is in host, not in enclave regions
+ */
+unsafe fn copy_word_to_host(dest_ptr: *mut usize, value: usize) -> enclave_ret_code 
+{
+  enclave_lock();
+  let region_overlap = pmp_detect_region_overlap_atomic(dest_ptr as usize,
+                                                        size_of::<usize>());
+  if region_overlap == 0 {
+    *dest_ptr = value;
+  }
+  enclave_unlock();
+
+  if region_overlap != 0 {
+    ENCLAVE_REGION_OVERLAPS as enclave_ret_code
+  } else {
+    ENCLAVE_SUCCESS as enclave_ret_code
+  }
+}
+
+// TODO: This function is externally used by sm-sbi.c.
+// Change it to be internal (remove from the enclave.h and make static)
+/* Internal function enforcing a copy source is from the untrusted world.
+ * Does NOT do verification of dest, assumes caller knows what that is.
+ * Dest should be inside the SM memory.
+ */
+#[no_mangle]
+pub unsafe extern fn copy_from_host(source: *mut c_void, dest: *mut c_void, size: usize) -> enclave_ret_code
+{
+  enclave_lock();
+  let region_overlap = pmp_detect_region_overlap_atomic(source as usize, size);
+  // TODO: Validate that dest is inside the SM.
+  if region_overlap == 0 {
+    dest.copy_from_nonoverlapping(source, size);
+  }
+  enclave_unlock();
+
+  if region_overlap != 0 {
+    ENCLAVE_REGION_OVERLAPS as enclave_ret_code
+  } else {
+    ENCLAVE_SUCCESS as enclave_ret_code
+  }
+}
+
+/* copies data from enclave, source must be inside EPM */
+unsafe fn copy_from_enclave(enclave: &enclave, dest: *mut c_void, source: *const c_void, size: usize) -> enclave_ret_code
+{
+  enclave_lock();
+  let legal = buffer_in_enclave_region(&*enclave, source, size);
+
+  if legal {
+    dest.copy_from_nonoverlapping(source, size);
+  }
+  enclave_unlock();
+
+  if !legal {
+    ENCLAVE_ILLEGAL_ARGUMENT as enclave_ret_code
+  } else {
+    ENCLAVE_SUCCESS as enclave_ret_code
+  }
+}
+
+/* copies data into enclave, destination must be inside EPM */
+unsafe fn copy_to_enclave(enclave: &enclave, dest: *mut c_void, source: *const c_void, size: usize) -> enclave_ret_code
+{
+  enclave_lock();
+  let legal = buffer_in_enclave_region(enclave, dest, size);
+
+  if legal {
+    dest.copy_from_nonoverlapping(source, size);
+  }
+  enclave_unlock();
+
+  if !legal {
+    ENCLAVE_ILLEGAL_ARGUMENT as enclave_ret_code
+  } else {
+    ENCLAVE_SUCCESS as enclave_ret_code
+  }
+}
+
+
 
 #[no_mangle]
 pub extern fn get_enclave_region_index(eid: enclave_id, ty: enclave_region_type) -> c_int
@@ -24,6 +119,29 @@ pub extern fn get_enclave_region_index(eid: enclave_id, ty: enclave_region_type)
   }
   // No such region for this enclave
   -1
+}
+
+
+fn buffer_in_enclave_region(enclave: &enclave, start: *const c_void, size: usize) -> bool
+{
+  let start = start as usize;
+  let end = start + size;
+
+  let mut enclave_iter = enclave.regions.iter()
+      .filter(|r| r.type_ != enclave_region_type_REGION_INVALID)
+      .filter(|r| r.type_ != enclave_region_type_REGION_UTM);
+
+  /* Check if the source is in a valid region */
+  for region in enclave_iter {
+    let region_start = unsafe { pmp_region_get_addr(region.pmp_rid) };
+    let region_size = unsafe { pmp_region_get_size(region.pmp_rid) } as usize;
+    let region_end = region_start + region_size;
+
+    if start >= region_start && end <= region_end {
+      return true
+    }
+  }
+  false
 }
 
 #[no_mangle]
@@ -144,6 +262,225 @@ pub extern fn attest_enclave(report_ptr: usize, data: usize, size: usize, eid: e
 
   return ENCLAVE_SUCCESS as enclave_ret_code;
 }
+
+
+
+struct PmpRegion {
+    region: c_int 
+}
+
+impl PmpRegion {
+    fn reserve(base: usize, size: usize, prio: pmp_priority) -> Result<Self, c_int> {
+        let region = unsafe {
+            let mut region = 0;
+            let err = pmp_region_init_atomic(base, size as u64, prio, &mut region, 0);
+            if err != 0 {
+                return Err(err);
+            }
+            region
+        };
+
+        Ok(Self {
+            region
+        })
+    }
+
+    fn leak(self) -> c_int {
+        let out = self.region;
+        forget(self);
+        out
+    }
+
+    fn set_global(&mut self, prop: u8) -> Result<(), c_int> {
+        let err = unsafe {
+            pmp_set_global(self.region, prop)
+        };
+        if err == 0 { Ok(()) }
+        else { Err(err) }
+    }
+}
+
+impl Drop for PmpRegion {
+    fn drop(&mut self) {
+      unsafe {
+          pmp_region_free_atomic(self.region);
+      }
+    }
+}
+
+
+fn encl_alloc_eid() -> Result<enclave_id, enclave_ret_code>
+{
+  unsafe {
+      enclave_lock();
+
+      let found = enclaves.iter_mut()
+          .enumerate()
+          .find(|(_, enc)| enc.state < 0);
+
+      let ret = if let Some((eid, enclave)) = found {
+        enclave.state = enclave_state_ALLOCATED;
+        Ok(eid as enclave_id)
+      } else {
+        Err(ENCLAVE_NO_FREE_RESOURCE as enclave_ret_code)
+      };
+
+      enclave_unlock();
+      ret
+  }
+}
+
+#[no_mangle]
+pub extern fn encl_free_eid(eid: enclave_id) -> enclave_ret_code
+{
+  unsafe {
+    enclave_lock();
+    enclaves[eid as usize].state = enclave_state_DESTROYED;
+    enclave_unlock();
+  }
+  ENCLAVE_SUCCESS as enclave_ret_code
+}
+
+struct Eid {
+    eid: enclave_id
+}
+
+impl Eid {
+    fn reserve() -> Result<Eid, usize> {
+        Ok(Self {
+            eid: encl_alloc_eid()?
+        })
+    }
+
+    fn leak(self) -> enclave_id {
+        let out = self.eid;
+        forget(self);
+        out
+    }
+}
+
+impl Drop for Eid {
+    fn drop(&mut self) {
+        encl_free_eid(self.eid);
+    }
+}
+
+/* This handles creation of a new enclave, based on arguments provided
+ * by the untrusted host.
+ *
+ * This may fail if: it cannot allocate PMP regions, EIDs, etc
+ */
+#[no_mangle]
+pub unsafe extern fn create_enclave(create_args: keystone_sbi_create) -> enclave_ret_code
+{
+  /* EPM and UTM parameters */
+  let base = create_args.epm_region.paddr;
+  let size = create_args.epm_region.size;
+  let utbase = create_args.utm_region.paddr;
+  let utsize = create_args.utm_region.size;
+  let eidptr = create_args.eid_pptr as *mut usize;
+
+  /* Runtime parameters */
+  if is_create_args_valid(&create_args) == 0 {
+    return ENCLAVE_ILLEGAL_ARGUMENT as enclave_ret_code;
+  }
+
+  /* set va params */
+  let params = create_args.params;
+  let pa_params = runtime_pa_params {
+    dram_base: base,
+    dram_size: size,
+    runtime_base: create_args.runtime_paddr,
+    user_base: create_args.user_paddr,
+    free_base: create_args.free_paddr,
+  };
+
+
+  // allocate eid
+  let eid_reservation = Eid::reserve();
+  let eid_reservation = if let Ok(e) = eid_reservation { e }
+                        else { return ENCLAVE_NO_FREE_RESOURCE as enclave_ret_code };
+  let eid = eid_reservation.eid as usize;
+
+  // create a PMP region bound to the enclave
+  let ret = ENCLAVE_PMP_FAILURE as enclave_ret_code;
+  let region = PmpRegion::reserve(base, size, pmp_priority_PMP_PRI_ANY);
+  let mut region = if let Ok(r) = region { r }
+                   else { return ret };
+
+  // create PMP region for shared memory
+  let shared_region = PmpRegion::reserve(utbase, utsize, pmp_priority_PMP_PRI_BOTTOM);
+  let shared_region = if let Ok(r) = shared_region { r }
+                      else { return ret };
+
+  // set pmp registers for private region (not shared)
+  if let Err(_) = region.set_global(PMP_NO_PERM as u8) {
+    return ret
+  }
+
+  // cleanup some memory regions for sanity See issue #38
+  clean_enclave_memory(utbase, utsize);
+
+  // initialize enclave metadata
+  let mut enc = enclave {
+      eid: eid as u32,
+
+      regions: [
+        enclave_region {
+          pmp_rid: zeroed(),
+          type_: 0
+        };
+        ENCLAVE_REGIONS_MAX as usize
+      ],
+
+      hash: zeroed(),
+      ped: zeroed(),
+      threads: zeroed(),
+      sign: zeroed(),
+      state: enclave_state_INVALID,
+
+      encl_satp: ((base >> RISCV_PGSHIFT) | SATP_MODE_CHOICE),
+      n_thread: 0,
+      params: params,
+      pa_params: pa_params,
+  };
+
+  enc.regions[0].pmp_rid = region.leak();
+  enc.regions[0].type_ = enclave_region_type_REGION_EPM;
+  enc.regions[1].pmp_rid = shared_region.leak();
+  enc.regions[1].type_ = enclave_region_type_REGION_UTM;
+
+  /* Init enclave state (regs etc) */
+  clean_state(&mut enc.threads[0]);
+
+  unsafe {
+    enclaves[eid] = enc;
+  }
+
+  /* Platform create happens as the last thing before hashing/etc since
+     it may modify the enclave struct */
+  let ret = platform_create_enclave(&mut enclaves[eid]);
+  if ret != ENCLAVE_SUCCESS as usize {
+    return ret;
+  }
+
+  /* Validate memory, prepare hash and signature for attestation */
+  enclave_lock();
+  enclaves[eid].state = enclave_state_FRESH;
+  let ret = validate_and_hash_enclave(&mut enclaves[eid]);
+  enclave_unlock();
+
+  if ret != ENCLAVE_SUCCESS as usize {
+      platform_destroy_enclave(&mut enclaves[eid]);
+  }
+
+  /* EIDs are unsigned int in size, copy via simple copy */
+  copy_word_to_host(eidptr, eid);
+
+  eid_reservation.leak();
+  return ENCLAVE_SUCCESS as enclave_ret_code;
+}
+
 
 
 #[no_mangle]

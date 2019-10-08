@@ -135,11 +135,10 @@ enclave_ret_code context_switch_to_enclave(uintptr_t* regs,
                                            int load_parameters);
 void context_switch_to_host(uintptr_t* encl_regs,
                             enclave_id eid);
-enclave_ret_code copy_from_enclave(struct enclave* enclave,
-                                   void* dest, void* source, size_t size);
-enclave_ret_code copy_to_enclave(struct enclave* enclave,
-                                 void* dest, void* source, size_t size);
 void enclave_lock(void);
 void enclave_unlock(void);
+enclave_ret_code encl_alloc_eid(enclave_id *eid);
+enclave_ret_code encl_free_eid(enclave_id eid);
+int is_create_args_valid(const struct keystone_sbi_create* args);
 
 #endif

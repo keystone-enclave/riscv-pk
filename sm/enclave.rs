@@ -127,12 +127,12 @@ fn buffer_in_enclave_region(enclave: &enclave, start: *const c_void, size: usize
   let start = start as usize;
   let end = start + size;
 
-  let mut enclave_iter = enclave.regions.iter()
+  let mut regions_iter = enclave.regions.iter()
       .filter(|r| r.type_ != enclave_region_type_REGION_INVALID)
       .filter(|r| r.type_ != enclave_region_type_REGION_UTM);
 
   /* Check if the source is in a valid region */
-  for region in enclave_iter {
+  for region in regions_iter {
     let region_start = unsafe { pmp_region_get_addr(region.pmp_rid) };
     let region_size = unsafe { pmp_region_get_size(region.pmp_rid) } as usize;
     let region_end = region_start + region_size;
@@ -233,7 +233,6 @@ pub extern fn attest_enclave(report_ptr: usize, data: usize, size: usize, eid: e
     report.sm.public_key = sm::sm_public_key;
     report.sm.signature = sm::sm_signature;
     report.enclave.hash = enclaves[eid].hash;
-    //memcpy(report.enclave.hash, enclaves[eid].hash, MDSIZE);
   }
 
   unsafe {
@@ -595,5 +594,76 @@ pub extern fn resume_enclave(host_regs: *mut usize, eid: enclave_id) -> enclave_
   return unsafe {
       context_switch_to_enclave(host_regs, eid as u32, 0)
   }
+}
+
+
+/*
+ * Fully destroys an enclave
+ * Deallocates EID, clears epm, etc
+ * Fails only if the enclave isn't running.
+ */
+#[no_mangle]
+pub unsafe extern fn destroy_enclave(eid: enclave_id) -> enclave_ret_code
+{
+  let enclave = unsafe {
+    &mut enclaves[eid as usize]
+  };
+
+  enclave_lock();
+  let destroyable = enclave_exists(eid)
+                 && enclave.state != enclave_state_ALLOCATED;
+  /* update the enclave state first so that
+   * no SM can run the enclave any longer */
+  if destroyable {
+    enclave.state = enclave_state_DESTROYED;
+  }
+  enclave_unlock();
+
+  if !destroyable {
+    return ENCLAVE_NOT_DESTROYABLE as enclave_ret_code;
+  }
+
+
+  // 0. Let the platform specifics do cleanup/modifications
+  platform_destroy_enclave(enclave);
+
+
+  // 1. clear all the data in the enclave pages
+  // requires no lock (single runner)
+  let mut regions_iter = enclave.regions.iter()
+      /* Check if the source is in a valid region */
+      .filter(|r| r.type_ != enclave_region_type_REGION_INVALID)
+      .filter(|r| r.type_ != enclave_region_type_REGION_UTM);
+
+  for region in regions_iter {
+    //1.a Clear all pages
+    let rid = region.pmp_rid;
+    let base = pmp_region_get_addr(rid);
+    let size = pmp_region_get_size(rid) as usize;
+    clean_enclave_memory(base, size);
+
+    //1.b free pmp region
+    pmp_unset_global(rid);
+    pmp_region_free_atomic(rid);
+  }
+
+  // 2. free pmp region for UTM
+  let rid = get_enclave_region_index(eid, enclave_region_type_REGION_UTM);
+  if rid != -1 {
+    pmp_region_free_atomic(enclave.regions[rid as usize].pmp_rid);
+  }
+
+  enclave.encl_satp = 0;
+  enclave.n_thread = 0;
+  enclave.params = zeroed();
+  enclave.pa_params = zeroed();
+  for region in enclave.regions.iter_mut() {
+    region.type_ = enclave_region_type_REGION_INVALID;
+  }
+
+  // 3. release eid
+  encl_free_eid(eid);
+
+  ENCLAVE_SUCCESS as enclave_ret_code
 }
 

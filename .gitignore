@@ -10,3 +10,4 @@ autom4te.cache/
 *.swp
 *~
 target/
+Cargo.lock

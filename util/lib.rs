@@ -1,4 +1,7 @@
+#![feature(lang_items)]
 #![no_std]
+
+pub mod bitfield;
 
 #[allow(non_camel_case_types)]
 pub mod ctypes {
@@ -60,3 +63,24 @@ macro_rules! println {
         print!($($tok)*); print!("\n");
     }};
 }
+
+
+
+extern {
+    fn poweroff(retval: i32) -> !;
+}
+
+use core::panic::PanicInfo;
+#[panic_handler]
+pub extern fn panic_impl(info: &PanicInfo) -> ! {
+    if let Some(msg) = info.payload().downcast_ref::<&str>() {
+        print!("{}", msg);
+    }
+
+    unsafe {
+        poweroff(-1);
+    }
+}
+ 
+#[lang = "eh_personality"]
+extern fn eh_personality() {}

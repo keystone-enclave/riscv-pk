@@ -130,15 +130,7 @@ uintptr_t get_enclave_region_size(enclave_id eid, int memid);
 #define ENCL_MAX  16
 extern struct enclave enclaves[ENCL_MAX];
 
-enclave_ret_code context_switch_to_enclave(uintptr_t* regs,
-                                           enclave_id eid,
-                                           int load_parameters);
-void context_switch_to_host(uintptr_t* encl_regs,
-                            enclave_id eid);
 void enclave_lock(void);
 void enclave_unlock(void);
-enclave_ret_code encl_alloc_eid(enclave_id *eid);
-enclave_ret_code encl_free_eid(enclave_id eid);
-int is_create_args_valid(const struct keystone_sbi_create* args);
 
 #endif

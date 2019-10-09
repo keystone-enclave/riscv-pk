@@ -11,7 +11,5 @@
 /* external functions */
 int cpu_is_enclave_context();
 int cpu_get_enclave_id();
-void cpu_enter_enclave_context(enclave_id eid);
-void cpu_exit_enclave_context();
 
 #endif

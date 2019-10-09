@@ -35,8 +35,7 @@ pub extern fn cpu_get_enclave_id() -> i32
   }
 }
 
-#[no_mangle]
-pub extern fn cpu_enter_enclave_context(eid: enclave_id)
+pub fn cpu_enter_enclave_context(eid: enclave_id)
 {
   unsafe {
     CPUS[csr::mhartid::read()].is_enclave = 1;
@@ -44,8 +43,7 @@ pub extern fn cpu_enter_enclave_context(eid: enclave_id)
   }
 }
 
-#[no_mangle]
-pub extern fn cpu_exit_enclave_context()
+pub fn exit_enclave_context()
 {
   unsafe {
     CPUS[csr::mhartid::read()].is_enclave = 0;

@@ -8,9 +8,13 @@ crate-type = ["staticlib"]
 path = "lib.rs"
 
 [dependencies]
-riscv = { version = "0.5", features = ["inline-asm"] }
 spin = "0.5"
 util = { path = "../util" }
+
+[dependencies.riscv]
+git = "https://github.com/rust-embedded/riscv"
+features = ["inline-asm"]
+
 
 [build-dependencies]
 bindgen = "0.50"

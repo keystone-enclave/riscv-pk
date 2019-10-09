@@ -1,12 +1,123 @@
 use core::mem::{forget, size_of, zeroed};
 use core::slice;
 
+use riscv::register as csr;
+
 use util::ctypes::*;
 use util::insert_field;
 use crate::bindings::*;
+use crate::cpu;
 use crate::sm;
 
 const SATP_MODE_CHOICE: usize = insert_field!(0, SATP64_MODE as usize, SATP_MODE_SV39 as usize);
+
+
+/****************************
+ *
+ * Enclave utility functions
+ * Internal use by SBI calls
+ *
+ ****************************/
+
+
+/* Internal function containing the core of the context switching
+ * code to the enclave.
+ *
+ * Used by resume_enclave and run_enclave.
+ *
+ * Expects that eid has already been valided, and it is OK to run this enclave
+*/
+#[no_mangle]
+pub unsafe extern fn context_switch_to_enclave(regs: *mut [usize; 32],
+                                               eid: enclave_id,
+                                               load_parameters: c_int) -> enclave_ret_code
+{
+  let enclave = unsafe { &mut enclaves[eid as usize] };
+  let regs = &mut (*regs)[..]; 
+
+  /* save host context */
+  swap_prev_state(&mut enclave.threads[0], regs.as_mut_ptr());
+  swap_prev_mepc(&mut enclave.threads[0], csr::mepc::read());
+
+  if load_parameters != 0 {
+    // passing parameters for a first run
+    // $mepc: (VA) kernel entry
+    csr::mepc::write(enclave.params.runtime_entry);
+    // $sepc: (VA) user entry
+    csr::sepc::write(enclave.params.user_entry);
+    // $a1: (PA) DRAM base,
+    regs[11] = enclave.pa_params.dram_base;
+    // $a2: (PA) DRAM size,
+    regs[12] = enclave.pa_params.dram_size;
+    // $a3: (PA) kernel location,
+    regs[13] = enclave.pa_params.runtime_base;
+    // $a4: (PA) user location,
+    regs[14] = enclave.pa_params.user_base;
+    // $a5: (PA) freemem location,
+    regs[15] = enclave.pa_params.free_base;
+    // $a6: (VA) utm base,
+    regs[16] = enclave.params.untrusted_ptr;
+    // $a7: (size_t) utm size
+    regs[17] = enclave.params.untrusted_size;
+
+    // switch to the initial enclave page table
+    csr::satp::write(enclave.encl_satp);
+  }
+
+  // disable timer set by the OS
+  csr::mie::clear_mtimer();
+
+  // Clear pending interrupts
+  csr::mip::clear_mtimer();
+  csr::mip::clear_stimer();
+  csr::mip::clear_ssoft();
+  csr::mip::clear_sext();
+
+  // set PMP
+  osm_pmp_set(PMP_NO_PERM as u8);
+  for region in enclave.regions.iter() {
+    if region.type_ != enclave_region_type_REGION_INVALID {
+      pmp_set(region.pmp_rid, PMP_ALL_PERM as u8);
+    }
+  }
+
+  // Setup any platform specific defenses
+  platform_switch_to_enclave(enclave);
+  cpu::cpu_enter_enclave_context(eid as i32);
+  return ENCLAVE_SUCCESS as enclave_ret_code;
+}
+
+
+#[no_mangle]
+pub unsafe extern fn context_switch_to_host(encl_regs: *mut usize,
+    eid: enclave_id)
+{
+  let enclave = unsafe { &mut enclaves[eid as usize] };
+  // set PMP
+  for region in enclave.regions.iter() {
+    if region.type_ != enclave_region_type_REGION_INVALID {
+      pmp_set(region.pmp_rid, PMP_NO_PERM as u8);
+    }
+  }
+  osm_pmp_set(PMP_ALL_PERM as u8);
+
+  /* restore host context */
+  swap_prev_state(&mut enclave.threads[0], encl_regs);
+  swap_prev_mepc(&mut enclave.threads[0], csr::mepc::read());
+
+  // enable timer interrupt
+  csr::mie::set_mtimer();
+
+  // Reconfigure platform specific defenses
+  platform_switch_from_enclave(enclave);
+
+  cpu::exit_enclave_context();
+  return;
+}
+
+
+
+
 
 fn enclave_exists(eid: enclave_id) -> bool {
   unsafe {
@@ -122,6 +233,63 @@ pub extern fn get_enclave_region_index(eid: enclave_id, ty: enclave_region_type)
 }
 
 
+fn is_create_args_valid(args: &keystone_sbi_create) -> bool
+{
+  /* printm("[create args info]: \r\n\tepm_addr: %llx\r\n\tepmsize: %llx\r\n\tutm_addr: %llx\r\n\tutmsize: %llx\r\n\truntime_addr: %llx\r\n\tuser_addr: %llx\r\n\tfree_addr: %llx\r\n", */
+  /*        args->epm_region.paddr, */
+  /*        args->epm_region.size, */
+  /*        args->utm_region.paddr, */
+  /*        args->utm_region.size, */
+  /*        args->runtime_paddr, */
+  /*        args->user_paddr, */
+  /*        args->free_paddr); */
+
+  // check if physical addresses are valid
+  if args.epm_region.size <= 0 {
+    return false;
+  }
+
+  // check if overflow
+  if args.epm_region.paddr >=
+      args.epm_region.paddr + args.epm_region.size {
+    return false;
+  }
+  if args.utm_region.paddr >=
+      args.utm_region.paddr + args.utm_region.size {
+    return false;
+  }
+
+  let epm_start = args.epm_region.paddr;
+  let epm_end = args.epm_region.paddr + args.epm_region.size;
+
+  // check if physical addresses are in the range
+  if args.runtime_paddr < epm_start ||
+      args.runtime_paddr >= epm_end {
+    return false;
+  }
+  if args.user_paddr < epm_start ||
+      args.user_paddr >= epm_end {
+    return false;
+  }
+  if args.free_paddr < epm_start ||
+      args.free_paddr > epm_end {
+      // note: free_paddr == epm_end if there's no free memory
+    return false;
+  }
+
+  // check the order of physical addresses
+  if args.runtime_paddr > args.user_paddr {
+    return false;
+  }
+  if args.user_paddr > args.free_paddr {
+    return false;
+  }
+
+  true
+}
+
+
+
 fn buffer_in_enclave_region(enclave: &enclave, start: *const c_void, size: usize) -> bool
 {
   let start = start as usize;
@@ -174,6 +342,37 @@ pub unsafe extern fn get_enclave_region_base(eid: enclave_id, memid: c_int) -> u
   0
 }
 
+// TODO: This function is externally used.
+// refactoring needed
+/*
+ * Init all metadata as needed for keeping track of enclaves
+ * Called once by the SM on startup
+ */
+#[no_mangle]
+pub unsafe extern fn enclave_init_metadata()
+{
+  /* Assumes eids are incrementing values, which they are for now */
+  for enclave in unsafe { enclaves.iter_mut() } {
+    enclave.state = enclave_state_INVALID;
+
+    // Clear out regions
+    for region in enclave.regions.iter_mut() {
+      region.type_ = enclave_region_type_REGION_INVALID;
+    }
+    /* Fire all platform specific init for each enclave */
+    platform_init_enclave(enclave);
+  }
+
+}
+
+
+
+/*********************************
+ *
+ * Enclave SBI functions
+ * These are exposed to S-mode via the sm-sbi interface
+ *
+ *********************************/
 
 
 #[no_mangle]
@@ -329,8 +528,7 @@ fn encl_alloc_eid() -> Result<enclave_id, enclave_ret_code>
   }
 }
 
-#[no_mangle]
-pub extern fn encl_free_eid(eid: enclave_id) -> enclave_ret_code
+fn encl_free_eid(eid: enclave_id) -> enclave_ret_code
 {
   unsafe {
     enclave_lock();
@@ -380,7 +578,7 @@ pub unsafe extern fn create_enclave(create_args: keystone_sbi_create) -> enclave
   let eidptr = create_args.eid_pptr as *mut usize;
 
   /* Runtime parameters */
-  if is_create_args_valid(&create_args) == 0 {
+  if !is_create_args_valid(&create_args) {
     return ENCLAVE_ILLEGAL_ARGUMENT as enclave_ret_code;
   }
 
@@ -483,7 +681,7 @@ pub unsafe extern fn create_enclave(create_args: keystone_sbi_create) -> enclave
 
 
 #[no_mangle]
-pub extern fn run_enclave(host_regs: *mut usize, eid: enclave_id) -> enclave_ret_code 
+pub extern fn run_enclave(host_regs: *mut [usize; 32], eid: enclave_id) -> enclave_ret_code 
 {
   let runnable = unsafe {
       enclave_lock();
@@ -574,7 +772,7 @@ pub extern fn stop_enclave(encl_regs: *mut usize, request: u64, eid: enclave_id)
 }
 
 #[no_mangle]
-pub extern fn resume_enclave(host_regs: *mut usize, eid: enclave_id) -> enclave_ret_code
+pub extern fn resume_enclave(host_regs: *mut [usize; 32], eid: enclave_id) -> enclave_ret_code
 {
   let eid = eid as usize;
 

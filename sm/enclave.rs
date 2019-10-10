@@ -2,6 +2,7 @@ use core::mem::{forget, size_of, zeroed};
 use core::slice;
 
 use riscv::register as csr;
+use spin::Mutex;
 
 use util::ctypes::*;
 use util::insert_field;
@@ -9,8 +10,13 @@ use crate::bindings::*;
 use crate::cpu;
 use crate::sm;
 
+// TODO: This really shouldn't be here
 const SATP_MODE_CHOICE: usize = insert_field!(0, SATP64_MODE as usize, SATP_MODE_SV39 as usize);
 
+const NUM_ENCL: usize = 16;
+static enclaves: Mutex<[enclave; NUM_ENCL]> = Mutex::new(unsafe {
+    core::mem::transmute([0u8; size_of::<enclave>() * NUM_ENCL])
+}); 
 
 /****************************
  *
@@ -32,59 +38,62 @@ pub unsafe extern fn context_switch_to_enclave(regs: *mut [usize; 32],
                                                eid: enclave_id,
                                                load_parameters: c_int) -> enclave_ret_code
 {
-  let enclave = unsafe { &mut enclaves[eid as usize] };
-  let regs = &mut (*regs)[..]; 
+  let mut enclave_arr = enclaves.lock();
+  {
+      let enclave = &mut enclave_arr[eid as usize];
+      let regs = &mut (*regs)[..]; 
 
-  /* save host context */
-  swap_prev_state(&mut enclave.threads[0], regs.as_mut_ptr());
-  swap_prev_mepc(&mut enclave.threads[0], csr::mepc::read());
+      /* save host context */
+      swap_prev_state(&mut enclave.threads[0], regs.as_mut_ptr());
+      swap_prev_mepc(&mut enclave.threads[0], csr::mepc::read());
 
-  if load_parameters != 0 {
-    // passing parameters for a first run
-    // $mepc: (VA) kernel entry
-    csr::mepc::write(enclave.params.runtime_entry);
-    // $sepc: (VA) user entry
-    csr::sepc::write(enclave.params.user_entry);
-    // $a1: (PA) DRAM base,
-    regs[11] = enclave.pa_params.dram_base;
-    // $a2: (PA) DRAM size,
-    regs[12] = enclave.pa_params.dram_size;
-    // $a3: (PA) kernel location,
-    regs[13] = enclave.pa_params.runtime_base;
-    // $a4: (PA) user location,
-    regs[14] = enclave.pa_params.user_base;
-    // $a5: (PA) freemem location,
-    regs[15] = enclave.pa_params.free_base;
-    // $a6: (VA) utm base,
-    regs[16] = enclave.params.untrusted_ptr;
-    // $a7: (size_t) utm size
-    regs[17] = enclave.params.untrusted_size;
+      if load_parameters != 0 {
+        // passing parameters for a first run
+        // $mepc: (VA) kernel entry
+        csr::mepc::write(enclave.params.runtime_entry);
+        // $sepc: (VA) user entry
+        csr::sepc::write(enclave.params.user_entry);
+        // $a1: (PA) DRAM base,
+        regs[11] = enclave.pa_params.dram_base;
+        // $a2: (PA) DRAM size,
+        regs[12] = enclave.pa_params.dram_size;
+        // $a3: (PA) kernel location,
+        regs[13] = enclave.pa_params.runtime_base;
+        // $a4: (PA) user location,
+        regs[14] = enclave.pa_params.user_base;
+        // $a5: (PA) freemem location,
+        regs[15] = enclave.pa_params.free_base;
+        // $a6: (VA) utm base,
+        regs[16] = enclave.params.untrusted_ptr;
+        // $a7: (size_t) utm size
+        regs[17] = enclave.params.untrusted_size;
 
-    // switch to the initial enclave page table
-    csr::satp::write(enclave.encl_satp);
+        // switch to the initial enclave page table
+        csr::satp::write(enclave.encl_satp);
+      }
+
+      // disable timer set by the OS
+      csr::mie::clear_mtimer();
+
+      // Clear pending interrupts
+      csr::mip::clear_mtimer();
+      csr::mip::clear_stimer();
+      csr::mip::clear_ssoft();
+      csr::mip::clear_sext();
+
+      // set PMP
+      osm_pmp_set(PMP_NO_PERM as u8);
+      for region in enclave.regions.iter() {
+        if region.type_ != enclave_region_type_REGION_INVALID {
+          pmp_set(region.pmp_rid, PMP_ALL_PERM as u8);
+        }
+      }
+
+      // Setup any platform specific defenses
+      platform_switch_to_enclave(enclave);
   }
-
-  // disable timer set by the OS
-  csr::mie::clear_mtimer();
-
-  // Clear pending interrupts
-  csr::mip::clear_mtimer();
-  csr::mip::clear_stimer();
-  csr::mip::clear_ssoft();
-  csr::mip::clear_sext();
-
-  // set PMP
-  osm_pmp_set(PMP_NO_PERM as u8);
-  for region in enclave.regions.iter() {
-    if region.type_ != enclave_region_type_REGION_INVALID {
-      pmp_set(region.pmp_rid, PMP_ALL_PERM as u8);
-    }
-  }
-
-  // Setup any platform specific defenses
-  platform_switch_to_enclave(enclave);
   cpu::cpu_enter_enclave_context(eid as i32);
-  return ENCLAVE_SUCCESS as enclave_ret_code;
+  ENCLAVE_SUCCESS as enclave_ret_code
 }
 
 
@@ -92,37 +101,37 @@ pub unsafe extern fn context_switch_to_enclave(regs: *mut [usize; 32],
 pub unsafe extern fn context_switch_to_host(encl_regs: *mut usize,
     eid: enclave_id)
 {
-  let enclave = unsafe { &mut enclaves[eid as usize] };
-  // set PMP
-  for region in enclave.regions.iter() {
-    if region.type_ != enclave_region_type_REGION_INVALID {
-      pmp_set(region.pmp_rid, PMP_NO_PERM as u8);
-    }
+  let mut enclave_arr = enclaves.lock();
+  {
+      let enclave = &mut enclave_arr[eid as usize];
+      // set PMP
+      for region in enclave.regions.iter() {
+        if region.type_ != enclave_region_type_REGION_INVALID {
+          pmp_set(region.pmp_rid, PMP_NO_PERM as u8);
+        }
+      }
+      osm_pmp_set(PMP_ALL_PERM as u8);
+
+      /* restore host context */
+      swap_prev_state(&mut enclave.threads[0], encl_regs);
+      swap_prev_mepc(&mut enclave.threads[0], csr::mepc::read());
+
+      // enable timer interrupt
+      csr::mie::set_mtimer();
+
+      // Reconfigure platform specific defenses
+      platform_switch_from_enclave(enclave);
   }
-  osm_pmp_set(PMP_ALL_PERM as u8);
-
-  /* restore host context */
-  swap_prev_state(&mut enclave.threads[0], encl_regs);
-  swap_prev_mepc(&mut enclave.threads[0], csr::mepc::read());
-
-  // enable timer interrupt
-  csr::mie::set_mtimer();
-
-  // Reconfigure platform specific defenses
-  platform_switch_from_enclave(enclave);
 
   cpu::exit_enclave_context();
-  return;
 }
 
 
 
 
 
-fn enclave_exists(eid: enclave_id) -> bool {
-  unsafe {
-    enclaves[eid as usize].state >= enclave_state_FRESH
-  }
+fn enclave_exists(enclave: &enclave) -> bool {
+    enclave.state >= enclave_state_FRESH
 }
 
 
@@ -141,19 +150,17 @@ unsafe fn clean_enclave_memory(utbase: usize, utsize: usize)
  */
 unsafe fn copy_word_to_host(dest_ptr: *mut usize, value: usize) -> enclave_ret_code 
 {
-  enclave_lock();
+    // lock here for functional safety
+  let _ = enclaves.lock();
+
   let region_overlap = pmp_detect_region_overlap_atomic(dest_ptr as usize,
                                                         size_of::<usize>());
-  if region_overlap == 0 {
-    *dest_ptr = value;
-  }
-  enclave_unlock();
-
   if region_overlap != 0 {
-    ENCLAVE_REGION_OVERLAPS as enclave_ret_code
-  } else {
-    ENCLAVE_SUCCESS as enclave_ret_code
+    return ENCLAVE_REGION_OVERLAPS as enclave_ret_code
   }
+
+    *dest_ptr = value;
+    ENCLAVE_SUCCESS as enclave_ret_code
 }
 
 // TODO: This function is externally used by sm-sbi.c.
@@ -165,71 +172,62 @@ unsafe fn copy_word_to_host(dest_ptr: *mut usize, value: usize) -> enclave_ret_c
 #[no_mangle]
 pub unsafe extern fn copy_from_host(source: *mut c_void, dest: *mut c_void, size: usize) -> enclave_ret_code
 {
-  enclave_lock();
-  let region_overlap = pmp_detect_region_overlap_atomic(source as usize, size);
-  // TODO: Validate that dest is inside the SM.
-  if region_overlap == 0 {
-    dest.copy_from_nonoverlapping(source, size);
-  }
-  enclave_unlock();
+    // lock here for functional safety
+    let _ = enclaves.lock();
 
+  let region_overlap = pmp_detect_region_overlap_atomic(source as usize, size);
   if region_overlap != 0 {
-    ENCLAVE_REGION_OVERLAPS as enclave_ret_code
-  } else {
-    ENCLAVE_SUCCESS as enclave_ret_code
+    return ENCLAVE_REGION_OVERLAPS as enclave_ret_code
   }
+
+  // TODO: Validate that dest is inside the SM.
+    dest.copy_from_nonoverlapping(source, size);
+    ENCLAVE_SUCCESS as enclave_ret_code
 }
 
 /* copies data from enclave, source must be inside EPM */
 unsafe fn copy_from_enclave(enclave: &enclave, dest: *mut c_void, source: *const c_void, size: usize) -> enclave_ret_code
 {
-  enclave_lock();
   let legal = buffer_in_enclave_region(&*enclave, source, size);
-
-  if legal {
-    dest.copy_from_nonoverlapping(source, size);
-  }
-  enclave_unlock();
-
   if !legal {
-    ENCLAVE_ILLEGAL_ARGUMENT as enclave_ret_code
-  } else {
-    ENCLAVE_SUCCESS as enclave_ret_code
+    return ENCLAVE_ILLEGAL_ARGUMENT as enclave_ret_code
   }
+
+    dest.copy_from_nonoverlapping(source, size);
+    ENCLAVE_SUCCESS as enclave_ret_code
 }
 
 /* copies data into enclave, destination must be inside EPM */
 unsafe fn copy_to_enclave(enclave: &enclave, dest: *mut c_void, source: *const c_void, size: usize) -> enclave_ret_code
 {
-  enclave_lock();
   let legal = buffer_in_enclave_region(enclave, dest, size);
-
-  if legal {
-    dest.copy_from_nonoverlapping(source, size);
-  }
-  enclave_unlock();
-
   if !legal {
-    ENCLAVE_ILLEGAL_ARGUMENT as enclave_ret_code
-  } else {
-    ENCLAVE_SUCCESS as enclave_ret_code
+    return ENCLAVE_ILLEGAL_ARGUMENT as enclave_ret_code
   }
+
+    dest.copy_from_nonoverlapping(source, size);
+    ENCLAVE_SUCCESS as enclave_ret_code
 }
 
 
 
 #[no_mangle]
-pub extern fn get_enclave_region_index(eid: enclave_id, ty: enclave_region_type) -> c_int
+pub extern fn get_enclave_region_index(enclave: *const enclave, ty: enclave_region_type) -> c_int
 {
-  let eid = eid as usize;
+    let enclave = unsafe { &*enclave };
+    enclave.regions.iter()
+        .enumerate()
+        .find(|(_, r)| r.type_ == ty)
+        .map(|(i, _)| i)
+        .unwrap_or(!0) as c_int
+}
 
-  for i in 0..ENCLAVE_REGIONS_MAX {
-    if unsafe { enclaves[eid] }.regions[i as usize].type_ == ty {
-      return i as c_int;
-    }
-  }
-  // No such region for this enclave
-  -1
+#[no_mangle]
+pub extern fn get_eid_region_index(eid: enclave_id, ty: enclave_region_type) -> c_int
+{
+    let enclave_arr = enclaves.lock();
+    let enclave = &enclave_arr[eid as usize];
+    get_enclave_region_index(enclave, ty)
 }
 
 
@@ -295,7 +293,7 @@ fn buffer_in_enclave_region(enclave: &enclave, start: *const c_void, size: usize
   let start = start as usize;
   let end = start + size;
 
-  let mut regions_iter = enclave.regions.iter()
+  let regions_iter = enclave.regions.iter()
       .filter(|r| r.type_ != enclave_region_type_REGION_INVALID)
       .filter(|r| r.type_ != enclave_region_type_REGION_UTM);
 
@@ -315,31 +313,31 @@ fn buffer_in_enclave_region(enclave: &enclave, start: *const c_void, size: usize
 #[no_mangle]
 pub extern fn get_enclave_region_size(eid: enclave_id, memid: c_int) -> usize
 {
-  let eid = eid as usize;
+    let enclave_arr = enclaves.lock();
+    let enclave = &enclave_arr[eid as usize];
 
-  if 0 <= memid && memid < ENCLAVE_REGIONS_MAX as c_int {
-    let size = unsafe {
-        pmp_region_get_size(enclaves[eid].regions[memid as usize].pmp_rid)
-    };
-    // TODO: u64<->usize mismatch
-    return size as usize;
+  if let Some(region) = enclave.regions.get(memid as usize) {
+    unsafe {
+        pmp_region_get_size(region.pmp_rid) as usize
+    }
+  } else {
+      0
   }
-
-  0
 }
 
 #[no_mangle]
 pub unsafe extern fn get_enclave_region_base(eid: enclave_id, memid: c_int) -> usize
 {
-  let eid = eid as usize;
+    let enclave_arr = enclaves.lock();
+    let enclave = &enclave_arr[eid as usize];
 
-  if 0 <= memid && memid < ENCLAVE_REGIONS_MAX as c_int {
-    let addr = pmp_region_get_addr(enclaves[eid].regions[memid as usize].pmp_rid);
-    // TODO: u64<->usize mismatch
-    return addr as usize;
+  if let Some(region) = enclave.regions.get(memid as usize) {
+    unsafe {
+        pmp_region_get_addr(region.pmp_rid) as usize
+    }
+  } else {
+      0
   }
-
-  0
 }
 
 // TODO: This function is externally used.
@@ -349,18 +347,23 @@ pub unsafe extern fn get_enclave_region_base(eid: enclave_id, memid: c_int) -> u
  * Called once by the SM on startup
  */
 #[no_mangle]
-pub unsafe extern fn enclave_init_metadata()
+pub extern fn enclave_init_metadata()
 {
+    let mut enclave_arr = enclaves.lock();
+
   /* Assumes eids are incrementing values, which they are for now */
-  for enclave in unsafe { enclaves.iter_mut() } {
+  for enclave in enclave_arr.iter_mut() {
     enclave.state = enclave_state_INVALID;
 
     // Clear out regions
     for region in enclave.regions.iter_mut() {
       region.type_ = enclave_region_type_REGION_INVALID;
     }
+
     /* Fire all platform specific init for each enclave */
-    platform_init_enclave(enclave);
+    unsafe {
+        platform_init_enclave(enclave);
+    }
   }
 
 }
@@ -378,7 +381,7 @@ pub unsafe extern fn enclave_init_metadata()
 #[no_mangle]
 pub extern fn attest_enclave(report_ptr: usize, data: usize, size: usize, eid: enclave_id) -> enclave_ret_code 
 {
-  let eid = eid as usize;
+    let e_idx = eid as usize;
 
   let mut report = report {
     dev_public_key: [0u8; PUBLIC_KEY_SIZE as usize],
@@ -399,11 +402,9 @@ pub extern fn attest_enclave(report_ptr: usize, data: usize, size: usize, eid: e
     return ENCLAVE_ILLEGAL_ARGUMENT as enclave_ret_code;
   }
 
-  let attestable = unsafe {
-    enclave_lock();
-    let attestable = enclaves[eid].state >= enclave_state_INITIALIZED;
-    enclave_unlock();
-    attestable
+  let attestable = {
+    let enclave_arr = enclaves.lock();
+    enclave_arr[e_idx].state >= enclave_state_INITIALIZED
   };
 
   if !attestable {
@@ -415,7 +416,8 @@ pub extern fn attest_enclave(report_ptr: usize, data: usize, size: usize, eid: e
   let src_data_ptr = data as *mut c_void;
 
   let ret = unsafe {
-    copy_from_enclave(&mut enclaves[eid],
+    let mut enclave_arr = enclaves.lock();
+    copy_from_enclave(&mut enclave_arr[e_idx],
       dst_data_ptr,
       src_data_ptr,
       size)
@@ -427,11 +429,12 @@ pub extern fn attest_enclave(report_ptr: usize, data: usize, size: usize, eid: e
   }
 
   unsafe {
+    let enclave_arr = enclaves.lock();
     report.dev_public_key = sm::dev_public_key;
     report.sm.hash = sm::sm_hash;
     report.sm.public_key = sm::sm_public_key;
     report.sm.signature = sm::sm_signature;
-    report.enclave.hash = enclaves[eid].hash;
+    report.enclave.hash = enclave_arr[e_idx].hash;
   }
 
   unsafe {
@@ -448,7 +451,8 @@ pub extern fn attest_enclave(report_ptr: usize, data: usize, size: usize, eid: e
   let src_report_ptr = &mut report as *mut report as *mut c_void;
 
   let ret = unsafe {
-    copy_to_enclave(&mut enclaves[eid],
+    let mut enclave_arr = enclaves.lock();
+    copy_to_enclave(&mut enclave_arr[e_idx],
       dst_report_ptr,
       src_report_ptr,
       size_of::<report>())
@@ -509,32 +513,24 @@ impl Drop for PmpRegion {
 
 fn encl_alloc_eid() -> Result<enclave_id, enclave_ret_code>
 {
-  unsafe {
-      enclave_lock();
+  let mut enclave_arr = enclaves.lock();
 
-      let found = enclaves.iter_mut()
-          .enumerate()
-          .find(|(_, enc)| enc.state < 0);
+  let found = enclave_arr.iter_mut()
+      .enumerate()
+      .find(|(_, enc)| enc.state < 0);
 
-      let ret = if let Some((eid, enclave)) = found {
-        enclave.state = enclave_state_ALLOCATED;
-        Ok(eid as enclave_id)
-      } else {
-        Err(ENCLAVE_NO_FREE_RESOURCE as enclave_ret_code)
-      };
-
-      enclave_unlock();
-      ret
+  if let Some((eid, enclave)) = found {
+    enclave.state = enclave_state_ALLOCATED;
+    Ok(eid as enclave_id)
+  } else {
+    Err(ENCLAVE_NO_FREE_RESOURCE as enclave_ret_code)
   }
 }
 
 fn encl_free_eid(eid: enclave_id) -> enclave_ret_code
 {
-  unsafe {
-    enclave_lock();
-    enclaves[eid as usize].state = enclave_state_DESTROYED;
-    enclave_unlock();
-  }
+  let mut enclave_arr = enclaves.lock();
+  enclave_arr[eid as usize].state = enclave_state_DESTROYED;
   ENCLAVE_SUCCESS as enclave_ret_code
 }
 
@@ -650,32 +646,32 @@ pub unsafe extern fn create_enclave(create_args: keystone_sbi_create) -> enclave
   /* Init enclave state (regs etc) */
   clean_state(&mut enc.threads[0]);
 
-  unsafe {
-    enclaves[eid] = enc;
-  }
+  {
+      let mut enclave_arr = enclaves.lock();
+      enclave_arr[eid] = enc;
 
-  /* Platform create happens as the last thing before hashing/etc since
-     it may modify the enclave struct */
-  let ret = platform_create_enclave(&mut enclaves[eid]);
-  if ret != ENCLAVE_SUCCESS as usize {
-    return ret;
-  }
+      /* Platform create happens as the last thing before hashing/etc since
+         it may modify the enclave struct */
+      let ret = platform_create_enclave(&mut enclave_arr[eid]);
+      if ret != ENCLAVE_SUCCESS as usize {
+        return ret;
+      }
 
-  /* Validate memory, prepare hash and signature for attestation */
-  enclave_lock();
-  enclaves[eid].state = enclave_state_FRESH;
-  let ret = validate_and_hash_enclave(&mut enclaves[eid]);
-  enclave_unlock();
+      /* Validate memory, prepare hash and signature for attestation */
+      enclave_arr[eid].state = enclave_state_FRESH;
+      let ret = validate_and_hash_enclave(&mut enclave_arr[eid]);
 
-  if ret != ENCLAVE_SUCCESS as usize {
-      platform_destroy_enclave(&mut enclaves[eid]);
+      if ret != ENCLAVE_SUCCESS as usize {
+          platform_destroy_enclave(&mut enclave_arr[eid]);
+          return ret;
+      }
   }
 
   /* EIDs are unsigned int in size, copy via simple copy */
   copy_word_to_host(eidptr, eid);
 
   eid_reservation.leak();
-  return ENCLAVE_SUCCESS as enclave_ret_code;
+  ENCLAVE_SUCCESS as enclave_ret_code
 }
 
 
@@ -683,41 +679,32 @@ pub unsafe extern fn create_enclave(create_args: keystone_sbi_create) -> enclave
 #[no_mangle]
 pub extern fn run_enclave(host_regs: *mut [usize; 32], eid: enclave_id) -> enclave_ret_code 
 {
-  let runnable = unsafe {
-      enclave_lock();
+    {
+      let mut enclave_arr = enclaves.lock();
+      let enclave = &mut enclave_arr[eid as usize];
       
-      enclave_exists(eid)
-          && enclaves[eid as usize].n_thread < MAX_ENCL_THREADS
-  };
-
-  unsafe {
-      if runnable {
-        enclaves[eid as usize].state = enclave_state_RUNNING;
-        enclaves[eid as usize].n_thread += 1;
+      let runnable = enclave_exists(enclave)
+          && enclave.n_thread < MAX_ENCL_THREADS;
+      if !runnable {
+        return ENCLAVE_NOT_RUNNABLE as enclave_ret_code;
       }
-      enclave_unlock();
-  }
 
-  if !runnable {
-    return ENCLAVE_NOT_RUNNABLE as enclave_ret_code;
-  }
+      enclave.state = enclave_state_RUNNING;
+      enclave.n_thread += 1;
+    }
 
   // Enclave is OK to run, context switch to it
   unsafe {
-      context_switch_to_enclave(host_regs, eid as u32, 1)
+      context_switch_to_enclave(host_regs, eid, 1)
   }
 }
 
 #[no_mangle]
 pub extern fn exit_enclave(encl_regs: *mut usize, retval: c_ulong, eid: enclave_id) -> enclave_ret_code
 {
-  let eid = eid as usize;
-
-  let exitable = unsafe {
-    enclave_lock();
-    let out = enclaves[eid].state == enclave_state_RUNNING;
-    enclave_unlock();
-    out
+  let exitable = {
+      let enclave_arr = enclaves.lock();
+    enclave_arr[eid as usize].state == enclave_state_RUNNING
   };
 
   if !exitable {
@@ -725,17 +712,16 @@ pub extern fn exit_enclave(encl_regs: *mut usize, retval: c_ulong, eid: enclave_
   }
 
   unsafe {
-    context_switch_to_host(encl_regs, eid as u32);
+    context_switch_to_host(encl_regs, eid);
   }
 
   // update enclave state
-  unsafe {
-      enclave_lock();
-      enclaves[eid].n_thread -= 1;
-      if enclaves[eid].n_thread == 0 {
-        enclaves[eid].state = enclave_state_INITIALIZED;
-      }
-      enclave_unlock();
+  let mut enclave_arr = enclaves.lock();
+  let enclave = &mut enclave_arr[eid as usize];
+
+  enclave.n_thread -= 1;
+  if enclave.n_thread == 0 {
+    enclave.state = enclave_state_INITIALIZED;
   }
 
   return ENCLAVE_SUCCESS as enclave_ret_code;
@@ -744,13 +730,9 @@ pub extern fn exit_enclave(encl_regs: *mut usize, retval: c_ulong, eid: enclave_
 #[no_mangle]
 pub extern fn stop_enclave(encl_regs: *mut usize, request: u64, eid: enclave_id) -> enclave_ret_code
 {
-  let eid = eid as usize;
-
-  let stoppable = unsafe {
-      enclave_lock();
-      let out = enclaves[eid].state == enclave_state_RUNNING;
-      enclave_unlock();
-      out
+  let stoppable = {
+      let enclave_arr = enclaves.lock();
+    enclave_arr[eid as usize].state == enclave_state_RUNNING
   };
 
   if !stoppable {
@@ -758,7 +740,7 @@ pub extern fn stop_enclave(encl_regs: *mut usize, request: u64, eid: enclave_id)
   }
 
   unsafe {
-    context_switch_to_host(encl_regs, eid as u32);
+    context_switch_to_host(encl_regs, eid);
   }
 
   match request {
@@ -774,14 +756,12 @@ pub extern fn stop_enclave(encl_regs: *mut usize, request: u64, eid: enclave_id)
 #[no_mangle]
 pub extern fn resume_enclave(host_regs: *mut [usize; 32], eid: enclave_id) -> enclave_ret_code
 {
-  let eid = eid as usize;
+  let resumable = {
+      let enclave_arr = enclaves.lock();
+      let enclave = &enclave_arr[eid as usize];
 
-  let resumable = unsafe {
-      enclave_lock();
-      let out = enclaves[eid].state == enclave_state_RUNNING // not necessary?
-               && enclaves[eid].n_thread > 0; // not necessary
-      enclave_unlock();
-      out
+      enclave.state == enclave_state_RUNNING // not necessary?
+               && enclave.n_thread > 0 // not necessary
   };
 
   if !resumable {
@@ -790,7 +770,7 @@ pub extern fn resume_enclave(host_regs: *mut [usize; 32], eid: enclave_id) -> en
 
   // Enclave is OK to resume, context switch to it
   return unsafe {
-      context_switch_to_enclave(host_regs, eid as u32, 0)
+      context_switch_to_enclave(host_regs, eid, 0)
   }
 }
 
@@ -803,60 +783,55 @@ pub extern fn resume_enclave(host_regs: *mut [usize; 32], eid: enclave_id) -> en
 #[no_mangle]
 pub unsafe extern fn destroy_enclave(eid: enclave_id) -> enclave_ret_code
 {
-  let enclave = unsafe {
-    &mut enclaves[eid as usize]
-  };
+  {
+      let mut enclave_arr = enclaves.lock();
+      let enclave = &mut enclave_arr[eid as usize];
 
-  enclave_lock();
-  let destroyable = enclave_exists(eid)
-                 && enclave.state != enclave_state_ALLOCATED;
-  /* update the enclave state first so that
-   * no SM can run the enclave any longer */
-  if destroyable {
-    enclave.state = enclave_state_DESTROYED;
-  }
-  enclave_unlock();
+      let destroyable = enclave_exists(enclave)
+                     && enclave.state != enclave_state_ALLOCATED;
+      if !destroyable {
+        return ENCLAVE_NOT_DESTROYABLE as enclave_ret_code;
+      }
 
-  if !destroyable {
-    return ENCLAVE_NOT_DESTROYABLE as enclave_ret_code;
-  }
+      /* update the enclave state first so that
+       * no SM can run the enclave any longer */
+      enclave.state = enclave_state_DESTROYED;
 
+      // 0. Let the platform specifics do cleanup/modifications
+      platform_destroy_enclave(enclave);
 
-  // 0. Let the platform specifics do cleanup/modifications
-  platform_destroy_enclave(enclave);
+      // 1. clear all the data in the enclave pages
+      // requires no lock (single runner)
+      let regions_iter = enclave.regions.iter()
+          /* Check if the source is in a valid region */
+          .filter(|r| r.type_ != enclave_region_type_REGION_INVALID)
+          .filter(|r| r.type_ != enclave_region_type_REGION_UTM);
 
+      for region in regions_iter {
+        //1.a Clear all pages
+        let rid = region.pmp_rid;
+        let base = pmp_region_get_addr(rid);
+        let size = pmp_region_get_size(rid) as usize;
+        clean_enclave_memory(base, size);
 
-  // 1. clear all the data in the enclave pages
-  // requires no lock (single runner)
-  let mut regions_iter = enclave.regions.iter()
-      /* Check if the source is in a valid region */
-      .filter(|r| r.type_ != enclave_region_type_REGION_INVALID)
-      .filter(|r| r.type_ != enclave_region_type_REGION_UTM);
+        //1.b free pmp region
+        pmp_unset_global(rid);
+        pmp_region_free_atomic(rid);
+      }
 
-  for region in regions_iter {
-    //1.a Clear all pages
-    let rid = region.pmp_rid;
-    let base = pmp_region_get_addr(rid);
-    let size = pmp_region_get_size(rid) as usize;
-    clean_enclave_memory(base, size);
+      // 2. free pmp region for UTM
+      let rid = get_enclave_region_index(enclave, enclave_region_type_REGION_UTM);
+      if rid != -1 {
+        pmp_region_free_atomic(enclave.regions[rid as usize].pmp_rid);
+      }
 
-    //1.b free pmp region
-    pmp_unset_global(rid);
-    pmp_region_free_atomic(rid);
-  }
-
-  // 2. free pmp region for UTM
-  let rid = get_enclave_region_index(eid, enclave_region_type_REGION_UTM);
-  if rid != -1 {
-    pmp_region_free_atomic(enclave.regions[rid as usize].pmp_rid);
-  }
-
-  enclave.encl_satp = 0;
-  enclave.n_thread = 0;
-  enclave.params = zeroed();
-  enclave.pa_params = zeroed();
-  for region in enclave.regions.iter_mut() {
-    region.type_ = enclave_region_type_REGION_INVALID;
+      enclave.encl_satp = 0;
+      enclave.n_thread = 0;
+      enclave.params = zeroed();
+      enclave.pa_params = zeroed();
+      for region in enclave.regions.iter_mut() {
+        region.type_ = enclave_region_type_REGION_INVALID;
+      }
   }
 
   // 3. release eid

@@ -6,7 +6,6 @@ sm_c_srcs = \
   sm-sbi.c \
   thread.c \
   pmp.c \
-  enclave.c \
   crypto.c \
   attest.c \
   sha3/sha3.c \

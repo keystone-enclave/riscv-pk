@@ -1,4 +1,5 @@
 #![no_std]
+#![feature(const_transmute)]
 
 pub mod cpu;
 pub mod sm;

@@ -121,16 +121,11 @@ enclave_ret_code attest_enclave(uintptr_t report, uintptr_t data, uintptr_t size
 enclave_ret_code validate_and_hash_enclave(struct enclave* enclave);
 // TODO: These functions are supposed to be internal functions.
 void enclave_init_metadata();
+int get_enclave_region_index(struct enclave *enclave, enum enclave_region_type type);
+int get_eid_region_index(enclave_id eid, enum enclave_region_type type);
+
 enclave_ret_code copy_from_host(void* source, void* dest, size_t size);
-int get_enclave_region_index(enclave_id eid, enum enclave_region_type type);
 uintptr_t get_enclave_region_base(enclave_id eid, int memid);
 uintptr_t get_enclave_region_size(enclave_id eid, int memid);
-
-// Here follow definitions for Rust interop; don't use these directly.
-#define ENCL_MAX  16
-extern struct enclave enclaves[ENCL_MAX];
-
-void enclave_lock(void);
-void enclave_unlock(void);
 
 #endif

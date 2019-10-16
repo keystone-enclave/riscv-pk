@@ -1,17 +1,22 @@
-language: minimal
+language: rust
+rust:
+  - nightly
+
 dist: xenial
 cache:
   apt: true
+  cargo: true
   timeout: 1000 #In seconds
   directories:
     - $TRAVIS_BUILD_DIR/riscv
+    - $TRAVIS_BUILD_DIR/llvm-9
 
 git:
   submodules: false
   depth: 1
 
 env:
-  - RISCV=$TRAVIS_BUILD_DIR/riscv PATH=$PATH:$RISCV/bin
+  - RISCV=$TRAVIS_BUILD_DIR/riscv PATH=$PATH:$RISCV/bin PATH=$PATH:TRAVIS_BUILD_DIR/llvm-9
 
 addons:
   apt:
@@ -28,6 +33,7 @@ branches:
     - keystone
 
 before_install:
+  - rustup target add riscv64gc-unknown-none-elf
   - ./.fast-setup.sh
 
 jobs:

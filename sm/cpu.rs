@@ -5,7 +5,7 @@
 
 use riscv::register as csr;
 
-type enclave_id = i32;
+use crate::bindings::*;
 
 /* hart state for regulating SBI */
 #[derive(Copy, Clone)]
@@ -31,7 +31,7 @@ pub extern fn cpu_is_enclave_context() -> i32
 pub extern fn cpu_get_enclave_id() -> i32
 {
   unsafe {
-    return CPUS[csr::mhartid::read()].eid;
+    return CPUS[csr::mhartid::read()].eid as i32;
   }
 }
 

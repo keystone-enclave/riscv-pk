@@ -60,52 +60,7 @@ struct enclave_region
   enum enclave_region_type type;
 };
 
-/* enclave metadata */
-struct enclave
-{
-  //spinlock_t lock; //local enclave lock. we don't need this until we have multithreaded enclave
-  enclave_id eid; //enclave id
-  unsigned long encl_satp; // enclave's page table base
-  enclave_state state; // global state of the enclave
-
-  /* Physical memory regions associate with this enclave */
-  struct enclave_region regions[ENCLAVE_REGIONS_MAX];
-
-  /* measurement */
-  byte hash[MDSIZE];
-  byte sign[SIGNATURE_SIZE];
-
-  /* parameters */
-  struct runtime_va_params_t params;
-  struct runtime_pa_params pa_params;
-
-  /* enclave execution context */
-  unsigned int n_thread;
-  struct thread_state threads[MAX_ENCL_THREADS];
-
-  struct platform_enclave_data ped;
-};
-
-/* attestation reports */
-struct enclave_report
-{
-  byte hash[MDSIZE];
-  uint64_t data_len;
-  byte data[ATTEST_DATA_MAXLEN];
-  byte signature[SIGNATURE_SIZE];
-};
-struct sm_report
-{
-  byte hash[MDSIZE];
-  byte public_key[PUBLIC_KEY_SIZE];
-  byte signature[SIGNATURE_SIZE];
-};
-struct report
-{
-  struct enclave_report enclave;
-  struct sm_report sm;
-  byte dev_public_key[PUBLIC_KEY_SIZE];
-};
+struct enclave;
 
 /*** SBI functions & external functions ***/
 // callables from the host
@@ -121,7 +76,7 @@ enclave_ret_code attest_enclave(uintptr_t report, uintptr_t data, uintptr_t size
 enclave_ret_code validate_and_hash_enclave(struct enclave* enclave);
 // TODO: These functions are supposed to be internal functions.
 void enclave_init_metadata();
-int get_enclave_region_index(struct enclave *enclave, enum enclave_region_type type);
+int get_enclave_region_index(const struct enclave *enclave, enum enclave_region_type type);
 int get_eid_region_index(enclave_id eid, enum enclave_region_type type);
 
 enclave_ret_code copy_from_host(void* source, void* dest, size_t size);

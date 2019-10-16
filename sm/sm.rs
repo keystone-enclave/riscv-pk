@@ -7,6 +7,8 @@ use spin::RwLock;
 use util::ctypes::*;
 use crate::bindings::*;
 
+use crate::crypto;
+
 struct InitData {
   init_done: bool,
   sm_region_id: region_id,
@@ -86,12 +88,10 @@ pub extern fn osm_init() -> c_int
 
 pub type Signature = [u8; SIGNATURE_SIZE as usize];
 
-pub fn sm_sign(signature: &mut Signature, data: &[u8])
+pub fn sign(signature: &mut Signature, data: &[u8])
 {
-  let sig_ptr = signature.as_mut_ptr() as *mut c_void;
-  let data_ptr = data.as_ptr() as *const c_void;
   unsafe {
-    sign(sig_ptr, data_ptr, data.len(), sm_public_key.as_ptr(), sm_private_key.as_ptr());
+    crypto::sign_bytes(signature, data, &sm_public_key, &sm_private_key);
   }
 }
 

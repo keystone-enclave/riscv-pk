@@ -4,25 +4,26 @@ use core::slice;
 use crate::bindings::*;
 use util::ctypes::*;
 
+use crate::enclave::Enclave;
+use crate::crypto::Hasher;
+
 /* This will walk the entire vaddr space in the enclave, validating
 linear at-most-once paddr mappings, and then hashing valid pages */
 unsafe fn validate_and_hash_epm(
-    hash_ctx: *mut hash_ctx,
+    hasher: &mut Hasher,
     level: c_int,
     tb: *mut pte_t,
     vaddr: usize,
     mut contiguous: c_int,
-    encl: *mut enclave,
-    runtime_max_seen: *mut usize,
-    user_max_seen: *mut usize,
+    encl: &mut Enclave,
+    runtime_max_seen: &mut usize,
+    user_max_seen: &mut usize,
 ) -> c_int {
-    let encl = &mut *encl;
-
     //TODO check for failures
-    let idx = get_enclave_region_index(encl, enclave_region_type_REGION_EPM) as usize;
+    let idx = get_enclave_region_index(encl.to_ffi(), enclave_region_type_REGION_EPM) as usize;
     let epm_start = pmp_region_get_addr(encl.regions[idx].pmp_rid);
     let epm_size = pmp_region_get_size(encl.regions[idx].pmp_rid) as usize;
-    let idx = get_enclave_region_index(encl, enclave_region_type_REGION_UTM) as usize;
+    let idx = get_enclave_region_index(encl.to_ffi(), enclave_region_type_REGION_UTM) as usize;
     let utm_start = pmp_region_get_addr(encl.regions[idx].pmp_rid);
     let utm_size = pmp_region_get_size(encl.regions[idx].pmp_rid) as usize;
 
@@ -61,11 +62,7 @@ unsafe fn validate_and_hash_epm(
 
         /* include the first virtual address of a contiguous range */
         if level == 1 && contiguous == 0 {
-            hash_extend(
-                hash_ctx,
-                &va_start as *const usize as *const c_void,
-                size_of::<usize>(),
-            );
+            hasher.hash(&va_start);
             //printm("VA hashed: 0x%lx\n", va_start);
             contiguous = 1;
         }
@@ -125,13 +122,15 @@ unsafe fn validate_and_hash_epm(
             /* Page is valid, add it to the hash */
 
             /* if PTE is leaf, extend hash for the page */
-            hash_extend_page(hash_ctx, phys_addr as *mut c_void);
+            unsafe {
+                hasher.hash_page(phys_addr as *mut c_void);
+            }
 
         //printm("PAGE hashed: 0x%lx (pa: 0x%lx)\n", vpn << RISCV_PGSHIFT, phys_addr);
         } else {
             /* otherwise, recurse on a lower level */
             contiguous = validate_and_hash_epm(
-                hash_ctx,
+                hasher,
                 level - 1,
                 phys_addr as *mut usize,
                 vpn,
@@ -162,25 +161,20 @@ unsafe fn validate_and_hash_epm(
 
 #[no_mangle]
 pub unsafe extern "C" fn validate_and_hash_enclave(enclave: *mut enclave) -> enclave_ret_code {
-    let enclave = &mut *enclave;
+    let enclave = Enclave::from_ffi_mut(enclave);
     let ptlevel = RISCV_PGLEVEL_TOP as i32;
 
-    let mut hash_ctx = zeroed();
-    hash_init(&mut hash_ctx);
+    let mut hasher = Hasher::new();
 
     // hash the runtime parameters
-    hash_extend(
-        &mut hash_ctx,
-        &enclave.params as *const runtime_va_params_t as *const c_void,
-        size_of::<runtime_va_params_t>(),
-    );
+    hasher.hash(&enclave.params);
 
     let mut runtime_max_seen = 0;
     let mut user_max_seen = 0;
 
     // hash the epm contents including the virtual addresses
     let valid = validate_and_hash_epm(
-        &mut hash_ctx,
+        &mut hasher,
         ptlevel,
         (enclave.encl_satp << RISCV_PGSHIFT) as *mut pte_t,
         0,
@@ -194,7 +188,7 @@ pub unsafe extern "C" fn validate_and_hash_enclave(enclave: *mut enclave) -> enc
         return ENCLAVE_ILLEGAL_PTE as enclave_ret_code;
     }
 
-    hash_finalize(enclave.hash.as_mut_ptr() as *mut c_void, &mut hash_ctx);
+    hasher.finalize(&mut enclave.hash);
 
     return ENCLAVE_SUCCESS as enclave_ret_code;
 }

@@ -23,10 +23,4 @@ extern byte sm_signature[SIGNATURE_SIZE];
 extern byte sm_public_key[PUBLIC_KEY_SIZE];
 extern byte sm_private_key[PRIVATE_KEY_SIZE];
 
-void hash_init(hash_ctx* hash_ctx);
-void hash_extend(hash_ctx* hash_ctx, const void* ptr, size_t len);
-void hash_extend_page(hash_ctx* hash_ctx, const void* ptr);
-void hash_finalize(void* md, hash_ctx* hash_ctx);
-
-void sign(void* sign, const void* data, size_t len, const byte* public_key, const byte* private_key);
 #endif /* crypto.h */

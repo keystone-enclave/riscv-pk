@@ -7,7 +7,6 @@ sm_c_srcs = \
   thread.c \
   pmp.c \
   crypto.c \
-  attest.c \
   sha3/sha3.c \
   ed25519/keypair.c \
   ed25519/sign.c \

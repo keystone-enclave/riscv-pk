@@ -3,4 +3,5 @@
 #include "pmp.h"
 #include "crypto.h"
 #include "enclave.h"
+#include "page.h"
 #include "platform.h"

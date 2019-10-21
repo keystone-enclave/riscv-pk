@@ -8,6 +8,7 @@ use util::ctypes::*;
 use crate::bindings::*;
 
 use crate::crypto;
+use crate::pmp;
 
 struct InitData {
   init_done: bool,
@@ -58,18 +59,14 @@ pub extern fn osm_pmp_set(perm: u8) -> c_int
   };
 }
 
-#[no_mangle]
-pub extern fn smm_init() -> c_int
+pub fn smm_init() -> c_int
 {
-  let mut region = -1;
-  let ret = unsafe {
-      pmp_region_init_atomic(SMM_BASE as usize, SMM_SIZE as u64, pmp_priority_PMP_PRI_TOP, &mut region, 0)
-  };
-  if ret != 0 {
-    return -1;
+  let region = pmp::PmpRegion::reserve(SMM_BASE as usize, SMM_SIZE as usize, pmp::Priority::Top); 
+  if let Ok(region) = region {
+      region.leak()
+  } else {
+      return -1
   }
-
-  return region;
 }
 
 #[no_mangle]

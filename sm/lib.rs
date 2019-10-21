@@ -1,5 +1,8 @@
-#![no_std]
+#![cfg_attr(not(test), no_std)]
 #![feature(const_transmute)]
+
+#[cfg(test)]
+extern crate core;
 
 pub mod attest;
 pub mod cpu;

@@ -159,9 +159,7 @@ unsafe fn validate_and_hash_epm(
     return contiguous;
 }
 
-#[no_mangle]
-pub unsafe extern "C" fn validate_and_hash_enclave(enclave: *mut enclave) -> enclave_ret_code {
-    let enclave = Enclave::from_ffi_mut(enclave);
+pub fn validate_and_hash_enclave(enclave: &mut Enclave) -> enclave_ret_code {
     let ptlevel = RISCV_PGLEVEL_TOP as i32;
 
     let mut hasher = Hasher::new();
@@ -173,16 +171,18 @@ pub unsafe extern "C" fn validate_and_hash_enclave(enclave: *mut enclave) -> enc
     let mut user_max_seen = 0;
 
     // hash the epm contents including the virtual addresses
-    let valid = validate_and_hash_epm(
-        &mut hasher,
-        ptlevel,
-        (enclave.encl_satp << RISCV_PGSHIFT) as *mut pte_t,
-        0,
-        0,
-        enclave,
-        &mut runtime_max_seen,
-        &mut user_max_seen,
-    );
+    let valid = unsafe {
+        validate_and_hash_epm(
+            &mut hasher,
+            ptlevel,
+            (enclave.encl_satp << RISCV_PGSHIFT) as *mut pte_t,
+            0,
+            0,
+            enclave,
+            &mut runtime_max_seen,
+            &mut user_max_seen,
+        )
+    };
 
     if valid == -1 {
         return ENCLAVE_ILLEGAL_PTE as enclave_ret_code;

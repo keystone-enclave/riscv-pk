@@ -72,8 +72,6 @@ enclave_ret_code resume_enclave(uintptr_t* regs, enclave_id eid);
 enclave_ret_code exit_enclave(uintptr_t* regs, unsigned long retval, enclave_id eid);
 enclave_ret_code stop_enclave(uintptr_t* regs, uint64_t request, enclave_id eid);
 enclave_ret_code attest_enclave(uintptr_t report, uintptr_t data, uintptr_t size, enclave_id eid);
-/* attestation and virtual mapping validation */
-enclave_ret_code validate_and_hash_enclave(struct enclave* enclave);
 // TODO: These functions are supposed to be internal functions.
 void enclave_init_metadata();
 int get_enclave_region_index(const struct enclave *enclave, enum enclave_region_type type);

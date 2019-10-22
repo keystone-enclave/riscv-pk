@@ -24,15 +24,6 @@
 /* TODO: does not support multithreaded enclave yet */
 #define MAX_ENCL_THREADS 1
 
-typedef enum {
-  DESTROYED = -2,
-  INVALID = -1,
-  FRESH = 0,
-  INITIALIZED,
-  RUNNING,
-  ALLOCATED,
-} enclave_state;
-
 /* Enclave stop reasons requested */
 #define STOP_TIMER_INTERRUPT  0
 #define STOP_EDGE_CALL_HOST   1
@@ -47,17 +38,10 @@ typedef unsigned int enclave_id;
  * OTHER is managed by some other component (e.g. platform_)
  * INVALID is an unused index
  */
-enum enclave_region_type{
-  REGION_INVALID,
+enum enclave_region_type {
   REGION_EPM,
   REGION_UTM,
   REGION_OTHER,
-};
-
-struct enclave_region
-{
-  region_id pmp_rid;
-  enum enclave_region_type type;
 };
 
 struct enclave;

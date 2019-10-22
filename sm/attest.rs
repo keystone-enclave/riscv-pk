@@ -19,13 +19,18 @@ unsafe fn validate_and_hash_epm(
     runtime_max_seen: &mut usize,
     user_max_seen: &mut usize,
 ) -> c_int {
-    //TODO check for failures
-    let idx = get_enclave_region_index(encl.to_ffi(), enclave_region_type_REGION_EPM) as usize;
-    let epm_start = pmp_region_get_addr(encl.regions[idx].pmp_rid);
-    let epm_size = pmp_region_get_size(encl.regions[idx].pmp_rid) as usize;
-    let idx = get_enclave_region_index(encl.to_ffi(), enclave_region_type_REGION_UTM) as usize;
-    let utm_start = pmp_region_get_addr(encl.regions[idx].pmp_rid);
-    let utm_size = pmp_region_get_size(encl.regions[idx].pmp_rid) as usize;
+    let (epm_start, epm_size) = {
+        match encl.region_bytype(enclave_region_type_REGION_EPM) {
+            Some(region) => (region.pmp.addr(), region.pmp.size()),
+            None => return -1
+        }
+    };
+    let (utm_start, utm_size) = {
+        match encl.region_bytype(enclave_region_type_REGION_UTM) {
+            Some(region) => (region.pmp.addr(), region.pmp.size()),
+            None => return -1
+        }
+    };
 
     let num_ptes = RISCV_PGSIZE as usize / size_of::<pte_t>();
     let ptes = slice::from_raw_parts_mut(tb, num_ptes);

@@ -1,4 +1,5 @@
-#![feature(lang_items)]
+#![feature(lang_items, custom_test_frameworks)]
+
 #![no_std]
 
 pub mod bitfield;
@@ -34,7 +35,7 @@ use core::fmt;
 pub struct LogWriter;
 
 impl fmt::Write for LogWriter {
-    #[inline(never)]
+    #[cfg(target_os = "none")]
     fn write_str(&mut self, s: &str) -> Result<(), fmt::Error> {
         extern {
             fn mcall_console_putchar(ch: u8) -> u32;
@@ -46,7 +47,24 @@ impl fmt::Write for LogWriter {
         }
         Ok(())
     }
-} 
+
+    #[cfg(target_os = "linux")]
+    fn write_str(&mut self, s: &str) -> Result<(), fmt::Error> {
+        extern {
+            fn putchar(ch: u8) -> c_int;
+        }
+
+        for c in s.bytes() {
+            let ret = unsafe {
+                putchar(c)
+            };
+            if ret != (c as c_int) {
+                return Err(fmt::Error)
+            }
+        }
+        Ok(())
+    }
+}
 
 #[macro_export]
 macro_rules! print {

@@ -15,6 +15,11 @@ util = { path = "../util" }
 git = "https://github.com/rust-embedded/riscv"
 features = ["inline-asm"]
 
-
 [build-dependencies]
 bindgen = "0.50"
+
+
+[dev-dependencies]
+test = { git = "https://github.com/keystone-enclave/utest", branch = "fix-interface" }
+utest-macros = { git = "https://github.com/keystone-enclave/utest", branch = "fix-interface" }
+mock = { path = "./tests/mock" }

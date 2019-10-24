@@ -38,6 +38,8 @@ impl Hasher {
     }
 }
 
+
+
 const SIGN_SIZE: usize = SIGNATURE_SIZE as usize;
 const PUBKEY_SIZE: usize = PUBLIC_KEY_SIZE as usize;
 const PRIVKEY_SIZE: usize = PRIVATE_KEY_SIZE as usize;
@@ -56,5 +58,45 @@ pub fn sign_bytes(sig_out: &mut [u8; SIGN_SIZE], data: &[u8], pubkey: &[u8], pri
 
     unsafe {
         ed25519_sign(sig_out.as_mut_ptr(), data.as_ptr(), data.len(), pubkey.as_ptr(), privkey.as_ptr());
+    }
+}
+
+
+#[cfg(test)]
+mod test {
+    use super::*;
+
+    fn check_hash(hash: &[u8], s: &'static str) {
+        let chunk_iter = s.as_bytes()
+            .chunks(2)
+            .map(|c| core::str::from_utf8(c).unwrap())
+            .map(|s| u8::from_str_radix(s, 16).unwrap());
+
+        for (expected, byte) in chunk_iter.zip(hash.iter()) {
+            assert_eq!(*byte, expected);
+        }
+    }
+
+    #[test]
+    fn test_hasher_empty() {
+        let mut out = [0u8; HASH_SIZE];
+
+        let mut hasher = Hasher::new();
+        let expected = "a69f73cca23a9ac5c8b567dc185a756e97c982164fe25859e0d1dcc1475c80a615b2123af1f5f94c11e3e9402c3ac558f500199d95b6d3e301758586281dcd26";
+        hasher.finalize(&mut out);
+
+        check_hash(&out, expected);
+    }
+
+    #[test]
+    fn test_hasher_strbuf() {
+        let mut out = [0u8; HASH_SIZE];
+
+        let mut hasher = Hasher::new();
+        let expected = "75d527c368f2efe848ecf6b073a36767800805e9eef2b1857d5f984f036eb6df891d75f72d9b154518c1cd58835286d1da9a38deba3de98b5a53e5ed78a84976";
+        hasher.hash(b"hello");
+        hasher.finalize(&mut out);
+
+        check_hash(&out, expected);
     }
 }

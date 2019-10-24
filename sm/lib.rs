@@ -1,8 +1,7 @@
-#![cfg_attr(not(test), no_std)]
-#![feature(const_transmute)]
+#![no_std]
 
 #[cfg(test)]
-extern crate core;
+extern crate mock;
 
 pub mod attest;
 pub mod cpu;
@@ -14,4 +13,16 @@ mod pmp;
 #[allow(warnings)]
 pub mod bindings {
     include!(concat!(env!("OUT_DIR"), "/bindings.rs"));
+}
+
+
+#[cfg(test)]
+#[macro_use]
+extern crate utest_macros;
+
+#[cfg(test)]
+macro_rules! panic {
+    ($($tt:tt)*) => {
+        upanic!($($tt)*);
+    };
 }

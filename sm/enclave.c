@@ -68,14 +68,37 @@ static inline enclave_ret_code context_switch_to_enclave(uintptr_t* regs,
     write_csr(satp, enclaves[eid].encl_satp);
   }
 
-  // disable timer set by the OS
-  clear_csr(mie, MIP_MTIP);
+  extern void switch_vector_enclave();
+  switch_vector_enclave(); 
 
-  // Clear pending interrupts
-  clear_csr(mip, MIP_MTIP);
+  //*HLS()->timecmp = 10000;
+  hls_t* hls = HLS(); 
+
+  *hls->timecmp = -1ULL; 
+  
+ //   clear_csr(mip, MIP_MTIP);
   clear_csr(mip, MIP_STIP);
   clear_csr(mip, MIP_SSIP);
   clear_csr(mip, MIP_SEIP);
+
+  set_csr(mie, MIP_MTIP);
+
+  // disable timer set by the OS
+  //clear_csr(mie, MIP_MTIP);
+
+  uintptr_t interrupts = MIP_SSIP | MIP_SEIP;
+  write_csr(mideleg, interrupts);
+
+
+  // Clear pending interrupts
+//  clear_csr(mip, MIP_MTIP);
+//  clear_csr(mip, MIP_STIP);
+//  clear_csr(mip, MIP_SSIP);
+//  clear_csr(mip, MIP_SEIP);
+
+  printm("%b", read_csr(mip));
+  printm("%b", read_csr(mie));
+
 
   // set PMP
   osm_pmp_set(PMP_NO_PERM);
@@ -108,8 +131,17 @@ static inline void context_switch_to_host(uintptr_t* encl_regs,
   swap_prev_state(&enclaves[eid].threads[0], encl_regs);
   swap_prev_mepc(&enclaves[eid].threads[0], read_csr(mepc));
 
+  extern void switch_vector_host();
+  switch_vector_host(); 
+
+  uintptr_t interrupts = MIP_SSIP | MIP_STIP | MIP_SEIP;
+  write_csr(mideleg, interrupts);
+
   // enable timer interrupt
-  set_csr(mie, MIP_MTIP);
+ // set_csr(mie, MIP_MTIP);
+  clear_csr(mie, MIP_MTIP);
+  clear_csr(mip, MIP_STIP); 
+  clear_csr(mip, MIP_MTIP); 
 
   // Reconfigure platform specific defenses
   platform_switch_from_enclave(&(enclaves[eid]));

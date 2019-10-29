@@ -7,6 +7,11 @@ edition = "2018"
 crate-type = ["staticlib"]
 path = "lib.rs"
 
+[profile.dev]
+overflow-checks = false
+[profile.test]
+overflow-checks = false
+
 [dependencies]
 spin = "0.5"
 util = { path = "../util" }

@@ -1,4 +1,4 @@
-#![feature(lang_items, custom_test_frameworks)]
+#![feature(lang_items, custom_test_frameworks, panic_info_message)]
 
 #![no_std]
 
@@ -61,10 +61,28 @@ impl fmt::Write for LogWriter {
             if ret != (c as c_int) {
                 return Err(fmt::Error)
             }
+            if c == b'\n' {
+                log_flush();
+            }
         }
         Ok(())
     }
 }
+
+#[cfg(target_os = "none")]
+pub fn log_flush() { }
+#[cfg(target_os = "linux")]
+pub fn log_flush() {
+    extern {
+        static mut stdout: *mut c_void;
+        fn fflush(file: *mut c_void) -> c_int;
+    }
+    
+    unsafe {
+        fflush(stdout);
+    }
+}
+
 
 #[macro_export]
 macro_rules! print {
@@ -91,10 +109,20 @@ extern {
 use core::panic::PanicInfo;
 #[panic_handler]
 pub extern fn panic_impl(info: &PanicInfo) -> ! {
-    if let Some(msg) = info.payload().downcast_ref::<&str>() {
-        print!("{}", msg);
+    println!("");
+
+    if let Some(loc) = info.location() {
+        println!("Panicked at `{}` L{}:{}!", loc.file(), loc.line(), loc.column());
+    } else {
+        println!("Panicked!");
+    }
+    if let Some(msg) = info.message() {
+        print!("    ");
+        let _ = fmt::write(&mut LogWriter, *msg);
     }
 
+    println!("");
+    log_flush();
     unsafe {
         poweroff(-1);
     }

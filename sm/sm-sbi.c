@@ -13,6 +13,7 @@
 
 uintptr_t mcall_sm_create_enclave(uintptr_t create_args)
 {
+  // printm("[%d] sm_create_enclave\r\n", read_csr(mhartid));
   struct keystone_sbi_create create_args_local;
   enclave_ret_code ret;
 
@@ -34,6 +35,7 @@ uintptr_t mcall_sm_create_enclave(uintptr_t create_args)
 
 uintptr_t mcall_sm_destroy_enclave(unsigned long eid)
 {
+  // printm("[%d][%d] sm_destroy_enclave\r\n", read_csr(mhartid), eid);
   enclave_ret_code ret;
 
   /* an enclave cannot call this SBI */
@@ -42,10 +44,12 @@ uintptr_t mcall_sm_destroy_enclave(unsigned long eid)
   }
 
   ret = destroy_enclave((unsigned int)eid);
+  // printm("[%d][%d] sm_destroy_enclave_done\r\n", read_csr(mhartid), eid);
   return ret;
 }
 uintptr_t mcall_sm_run_enclave(uintptr_t* regs, unsigned long eid)
 {
+  // printm("[%d][%d] sm_run_enclave\r\n", read_csr(mhartid), eid);
   enclave_ret_code ret;
 
   /* an enclave cannot call this SBI */
@@ -60,6 +64,7 @@ uintptr_t mcall_sm_run_enclave(uintptr_t* regs, unsigned long eid)
 
 uintptr_t mcall_sm_resume_enclave(uintptr_t* host_regs, unsigned long eid)
 {
+  // printm("[%d][%d] sm_resume_enclave\r\n", read_csr(mhartid), eid);
   enclave_ret_code ret;
 
   /* an enclave cannot call this SBI */
@@ -73,6 +78,7 @@ uintptr_t mcall_sm_resume_enclave(uintptr_t* host_regs, unsigned long eid)
 
 uintptr_t mcall_sm_exit_enclave(uintptr_t* encl_regs, unsigned long retval)
 {
+  // printm("[%d][%d] sm_exit_enclave\r\n", read_csr(mhartid), cpu_get_enclave_id());
   enclave_ret_code ret;
   /* only an enclave itself can call this SBI */
   if (!cpu_is_enclave_context()) {
@@ -80,11 +86,13 @@ uintptr_t mcall_sm_exit_enclave(uintptr_t* encl_regs, unsigned long retval)
   }
 
   ret = exit_enclave(encl_regs, (unsigned long) retval, cpu_get_enclave_id());
+  // printm("[%d][%d] sm_exit_enclave_done\r\n", read_csr(mhartid), cpu_get_enclave_id());
   return ret;
 }
 
 uintptr_t mcall_sm_stop_enclave(uintptr_t* encl_regs, unsigned long request)
 {
+  // printm("[%d][%d] sm_stop_enclave\r\n", read_csr(mhartid), cpu_get_enclave_id());
   enclave_ret_code ret;
   /* only an enclave itself can call this SBI */
   if (!cpu_is_enclave_context()) {
@@ -97,6 +105,7 @@ uintptr_t mcall_sm_stop_enclave(uintptr_t* encl_regs, unsigned long request)
 
 uintptr_t mcall_sm_attest_enclave(uintptr_t report, uintptr_t data, uintptr_t size)
 {
+  // printm("[%d][%d] sm_attest_enclave\r\n", read_csr(mhartid), cpu_get_enclave_id());
   enclave_ret_code ret;
   /* only an enclave itself can call this SBI */
   if (!cpu_is_enclave_context()) {
@@ -110,12 +119,13 @@ uintptr_t mcall_sm_attest_enclave(uintptr_t report, uintptr_t data, uintptr_t si
 uintptr_t mcall_sm_random()
 {
   /* Anyone may call this interface. */
-
+// printm("[%d] mcall_sm_random\r\n", read_csr(mhartid));
   return platform_random();
 }
 
 uintptr_t mcall_sm_call_plugin(uintptr_t plugin_id, uintptr_t call_id, uintptr_t arg0, uintptr_t arg1)
 {
+  // printm("[%d][%d] sm_call_plugin\r\n", read_csr(mhartid), cpu_get_enclave_id());
   if(!cpu_is_enclave_context()) {
     return ENCLAVE_SBI_PROHIBITED;
   }
@@ -126,6 +136,7 @@ uintptr_t mcall_sm_call_plugin(uintptr_t plugin_id, uintptr_t call_id, uintptr_t
 /* TODO: this should be removed in the future. */
 uintptr_t mcall_sm_not_implemented(uintptr_t* encl_regs, unsigned long cause)
 {
+  // printm("[%d][%d] sm_not_implemented\r\n", read_csr(mhartid), cpu_get_enclave_id());
   /* only an enclave itself can call this SBI */
   if (!cpu_is_enclave_context()) {
     return ENCLAVE_SBI_PROHIBITED;

@@ -193,28 +193,36 @@ $$($(2)_asm_objs) : %.o : %.S
 	$(COMPILE) -c $$<
 
 
-$(2)_crate_asm := $$(addsuffix .S, $$($(2)_crates))
-$(2)_crate_objs := $$(patsubst %.S, %.o, $$($(2)_crate_asm))
+$(2)_crate_libs := $$(addprefix lib, $$(addsuffix .a, $$($(2)_crates)))
 
 .PHONY: $$($(2)_crates)
 
-$$($(2)_crate_asm) : %.S : %
+ifneq ($(RUST_TARGET),)
+	 RUST_TARGET_ARG := --target $(RUST_TARGET)
+endif
+
+$$($(2)_crate_libs) : lib%.a : %
 	mkdir -p $$<
 	$(eval _PWD := $(shell pwd))
 	cd $(src_dir)/$(2) ;\
 	  export CFLAGS=$(PLATFORM_FLAG) ;\
-	  cargo rustc --target-dir $(_PWD)/$$< -- --emit=llvm-bc -Clto
-	llc -march=riscv64 -target-abi=lp64d -mattr="+64bit,+m,+a,+f,+d,+c" -code-model=medium $$</riscv64gc-unknown-none-elf/debug/deps/*.bc -o $$@
-
-$$($(2)_crate_objs) : %.o : %.S
-	$(COMPILE) -c $$<
+	  cargo +nightly xrustc $(RUST_TARGET_ARG) --target-dir $(_PWD)/$$< -- -Clto
+	cp $$</riscv64gc-unknown-none-elfhf/debug/lib$$(subst -,_,$$<).a $$@
 
 $(2)_junk += $$($(2)_c_objs) $$($(2)_c_deps) $$($(2)_asm_objs)
 
 # Build a library for this subproject
 
-lib$(1).a : $$($(2)_c_objs) $$($(2)_asm_objs) $$($(2)_crate_objs)
+lib$(1)_Clib.a : $$($(2)_c_objs) $$($(2)_asm_objs)
 	$(AR) rcv $$@ $$(notdir $$^)
+	$(RANLIB) $$@
+
+lib$(1)_Rlib.a : $$($(2)_crate_libs)
+	$(AR) rcvT $$@ $$(notdir $$^)
+	$(RANLIB) $$@
+
+lib$(1).a : lib$(1)_Clib.a lib$(1)_Rlib.a
+	$(AR) rcvT $$@ $$(notdir $$^)
 	$(RANLIB) $$@
 
 $(2)_junk += lib$(1).a

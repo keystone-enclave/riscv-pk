@@ -19,22 +19,19 @@
   "data-layout": "e-m:e-p:64:64-i64:64-i128:128-n64-S128",
   "eliminate-frame-pointer": false,
   "emit-debug-gdb-scripts": false,
-  "env": "gnu",
+  "env": "",
   "executables": true,
   "features": "+m,+a,+f,+d,+c",
-  "linker": "riscv64-unknown-linux-gnu-gcc",
-  "linker-flavor": "gcc",
+  "linker": "rust-lld",
+  "linker-flavor": "ld.lld",
   "llvm-target": "riscv64",
   "max-atomic-width": 64,
-  "os": "linux",
-  "target-family": "unix",
+  "os": "none",
   "panic-strategy": "abort",
   "relocation-model": "static",
   "target-c-int-width": "32",
   "target-endian": "little",
   "target-pointer-width": "64",
   "vendor": "unknown",
-  "pre-link-args": {
-    "gcc": ["-mabi=lp64"]
-  }
+  "llvm-abiname": "lp64d"
 }

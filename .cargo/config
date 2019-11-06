@@ -1,2 +1,5 @@
 [build]
-target = "riscv64gc-unknown-none-elf"
+target = "riscv64gc-unknown-none-elfhf.json"
+
+[target.riscv64gc-unknown-linux-gnuhf]
+runner = "./scripts/qemu-riscv64"

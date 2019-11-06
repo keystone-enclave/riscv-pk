@@ -34,13 +34,14 @@ branches:
 
 before_install:
   - rustup target add riscv64gc-unknown-none-elf
+  - rustup component add rust-src
+  - cargo install cargo-xbuild || true
   - ./.fast-setup.sh
 
 jobs:
   include:
-    - stage: build everything & test
+    - stage: build everything
       script:
-        - if [ -f riscv/bin/qemu-riscv64 ]; then ls riscv; else ./.build-qemu.sh; fi
         - mkdir build
         - cd build
         - ../configure
@@ -48,11 +49,9 @@ jobs:
           --host=riscv64-unknown-elf
           --enable-sm
         - make
-        - cd $TRAVIS_BUILD_DIR
-        - cd sm/tests
-        - mkdir build
-        - cd build
-        - cmake ..; make
-        - make test CTEST_OUTPUT_ON_FAILURE=TRUE ARGS="--verbose"
-        - cd $TRAVIS_BUILD_DIR
+
+    - stage: test
+      script:
+        - if [ -f riscv/bin/qemu-riscv64 ]; then ls riscv; else ./.build-qemu.sh; fi
+        - ./test-sm.sh
 

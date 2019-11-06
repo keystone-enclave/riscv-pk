@@ -130,3 +130,15 @@ pub extern fn panic_impl(info: &PanicInfo) -> ! {
  
 #[lang = "eh_personality"]
 extern fn eh_personality() {}
+
+#[cfg(target_os = "none")]
+#[no_mangle]
+extern fn abort() -> ! {
+    loop {}
+}
+
+#[cfg_attr(target_os = "linux", link(name = "c"))]
+#[cfg_attr(target_os = "linux", link(name = "m"))]
+#[cfg_attr(target_os = "linux", link(name = "rt"))]
+#[cfg_attr(target_os = "linux", link(name = "pthread"))]
+extern {}

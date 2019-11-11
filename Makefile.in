@@ -197,17 +197,19 @@ $(2)_crate_libs := $$(addprefix lib, $$(addsuffix .a, $$($(2)_crates)))
 
 .PHONY: $$($(2)_crates)
 
-ifneq ($(RUST_TARGET),)
-	 RUST_TARGET_ARG := --target $(RUST_TARGET)
+ifeq (@RUST_OPT@,release)
+	RUST_OPT_FLAG := --release
 endif
 
 $$($(2)_crate_libs) : lib%.a : %
 	mkdir -p $$<
 	$(eval _PWD := $(shell pwd))
+	$(eval RUST_TARGET := $(if $(RUST_TARGET),$(RUST_TARGET),$(src_dir)/riscv64gc-unknown-none-elfhf.json))
+	$(eval RUST_TARGET_NAME := $(shell basename $(RUST_TARGET) .json))
 	cd $(src_dir)/$(2) ;\
 	  export CFLAGS=$(PLATFORM_FLAG) ;\
-	  cargo +nightly xrustc $(RUST_TARGET_ARG) --target-dir $(_PWD)/$$< -- -Clto
-	cp $$</riscv64gc-unknown-none-elfhf/debug/lib$$(subst -,_,$$<).a $$@
+	  cargo +nightly xrustc --verbose --target $(RUST_TARGET) $(RUST_OPT_FLAG) --target-dir $(_PWD)/$$< -- -Clto
+	cp $$</$(RUST_TARGET_NAME)/@RUST_OPT@/lib$$(subst -,_,$$<).a $$@
 
 $(2)_junk += $$($(2)_c_objs) $$($(2)_c_deps) $$($(2)_asm_objs)
 

@@ -1,7 +1,6 @@
 pk_subproject_deps = \
 	sm \
 	util \
-	softfloat \
 	machine \
 
 pk_hdrs = \

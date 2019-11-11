@@ -15,6 +15,10 @@ overflow-checks = false
 [dependencies]
 spin = "0.5"
 util = { path = "../util" }
+libc = { git = "https://github.com/rust-lang/libc" }
+
+[patch.crates-io]
+cc = { git = "https://github.com/alexcrichton/cc-rs" }
 
 [dependencies.riscv]
 git = "https://github.com/rust-embedded/riscv"

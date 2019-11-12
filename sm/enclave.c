@@ -39,6 +39,8 @@ static inline enclave_ret_code context_switch_to_enclave(uintptr_t* regs,
                                                 enclave_id eid,
                                                 int load_parameters){
 
+
+printm("IN ENCLAVE: enclave satp: %p, curr satp: %p\n", enclaves[eid].encl_satp, read_csr(satp));
   /* save host context */
   swap_prev_state(&enclaves[eid].threads[0], regs);
   swap_prev_mepc(&enclaves[eid].threads[0], read_csr(mepc));
@@ -70,21 +72,16 @@ static inline enclave_ret_code context_switch_to_enclave(uintptr_t* regs,
 
   extern void switch_vector_enclave();
   switch_vector_enclave(); 
-
-  //*HLS()->timecmp = 10000;
-  hls_t* hls = HLS(); 
-
-  *hls->timecmp = -1ULL; 
   
- //   clear_csr(mip, MIP_MTIP);
+  hls_t* hls = HLS(); 
+  *hls->timecmp = *mtime + 1000000; 
+ 
+  clear_csr(mip, MIP_MTIP); 
   clear_csr(mip, MIP_STIP);
   clear_csr(mip, MIP_SSIP);
   clear_csr(mip, MIP_SEIP);
 
   set_csr(mie, MIP_MTIP);
-
-  // disable timer set by the OS
-  //clear_csr(mie, MIP_MTIP);
 
   uintptr_t interrupts = MIP_SSIP | MIP_SEIP;
   write_csr(mideleg, interrupts);
@@ -110,7 +107,8 @@ static inline enclave_ret_code context_switch_to_enclave(uintptr_t* regs,
   }
 
   // Setup any platform specific defenses
-  platform_switch_to_enclave(&(enclaves[eid]));
+	platform_switch_to_enclave(&(enclaves[eid]));
+  printm("IN ENCLAVE: enclave satp: %p, curr satp: %p\n", enclaves[eid].encl_satp, read_csr(satp));
   cpu_enter_enclave_context(eid);
   return ENCLAVE_SUCCESS;
 }
@@ -126,6 +124,9 @@ static inline void context_switch_to_host(uintptr_t* encl_regs,
     }
   }
   osm_pmp_set(PMP_ALL_PERM);
+
+  printm("IN HOST: enclave satp: %p, host: satp: %p\n", encl.encl_satp, read_csr(satp));
+  printm("encl_regs in host: %p\n", encl_regs); 
 
   /* restore host context */
   swap_prev_state(&enclaves[eid].threads[0], encl_regs);
@@ -146,6 +147,9 @@ static inline void context_switch_to_host(uintptr_t* encl_regs,
   // Reconfigure platform specific defenses
   platform_switch_from_enclave(&(enclaves[eid]));
 
+  printm("after encl_regs in host: %p\n", encl_regs);
+
+  printm("IN HOST: enclave satp: %p, host: satp: %p\n", encl.encl_satp, read_csr(satp)); 
   cpu_exit_enclave_context();
   return;
 }

@@ -58,7 +58,7 @@ switch_vector_enclave:
   la t0, trap_vector_enclave
   csrw mtvec, t0
 
-  li t0, -1
+//  li t0, -1
   //sw t0, mtimecmp 
   //csrr t0, mtimecmp
   ret

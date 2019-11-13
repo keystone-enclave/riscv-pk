@@ -15,7 +15,8 @@ sm_c_srcs = \
   platform/@TARGET_PLATFORM@/@TARGET_PLATFORM@.c \
 	plugins/plugins.c \
 
-sm_asm_srcs =
+sm_asm_srcs = \
+  enclave_copy.S \
 
 sm_test_srcs =
 

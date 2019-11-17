@@ -7,7 +7,7 @@ use util::{println, print, LogWriter};
 use util::ctypes::*;
 
 #[lang = "start"]
-pub extern "C" fn start<T>(main: fn() -> T, _argc: isize, _argv: *const *const u8) -> isize
+pub fn start<T>(main: fn() -> T, _argc: isize, _argv: *const *const u8) -> isize
 where
     T: Termination,
 {
@@ -55,7 +55,7 @@ pub fn __test_panic_fmt(args: ::core::fmt::Arguments,
                         file: &'static str,
                         line: u32) {
     print!("\npanicked at '");
-    LogWriter.write_fmt(args);
+    let _ = LogWriter.write_fmt(args);
     println!("', {}:{}", file, line);
 }
 
@@ -103,11 +103,11 @@ pub static mut sanctum_sm_secret_key: [u8; PUBLIC_KEY_SIZE] = [0u8; PUBLIC_KEY_S
 pub static mut sanctum_dev_public_key: [u8; PUBLIC_KEY_SIZE] = [0u8; PUBLIC_KEY_SIZE];
 
 #[no_mangle]
-pub extern fn boot_loader(dtb: usize) {
+pub extern fn boot_loader(_dtb: usize) {
     unreachable!();
 }
 
 #[no_mangle]
-pub extern fn boot_other_hart(dtb: usize) {
+pub extern fn boot_other_hart(_dtb: usize) {
     unreachable!();
 }

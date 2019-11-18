@@ -11,6 +11,7 @@
 #include "platform.h"
 
 #define ENCL_MAX  16
+#define ENCL_TIME_SLICE 1000000
 
 struct enclave enclaves[ENCL_MAX];
 #define ENCLAVE_EXISTS(eid) (enclaves[eid].state >= 0)
@@ -74,7 +75,7 @@ static inline enclave_ret_code context_switch_to_enclave(uintptr_t* regs,
   switch_vector_enclave(); 
   
   hls_t* hls = HLS(); 
-  *hls->timecmp = *mtime + 1000000; 
+  *hls->timecmp = *mtime + ENCL_TIME_SLICE; 
  
   clear_csr(mip, MIP_MTIP); 
   clear_csr(mip, MIP_STIP);

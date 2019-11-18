@@ -1,4 +1,4 @@
-use core::mem::{size_of, zeroed};
+use core::mem::size_of;
 use core::slice;
 
 use crate::bindings::*;
@@ -7,12 +7,20 @@ use util::ctypes::*;
 use crate::enclave::Enclave;
 use crate::crypto::Hasher;
 
+unsafe fn ptes_from_page(page: usize) -> &'static [pte_t] {
+    assert!(page % (RISCV_PGSIZE as usize) == 0);
+
+    let pte_ptr = page as *const pte_t;
+    const NUM_PTES: usize = RISCV_PGSIZE as usize / size_of::<pte_t>();
+    slice::from_raw_parts(pte_ptr, NUM_PTES)
+}
+
 /* This will walk the entire vaddr space in the enclave, validating
 linear at-most-once paddr mappings, and then hashing valid pages */
-unsafe fn validate_and_hash_epm(
+fn validate_and_hash_epm(
     hasher: &mut Hasher,
     level: c_int,
-    tb: *mut pte_t,
+    ptes: &[pte_t],
     vaddr: usize,
     mut contiguous: c_int,
     encl: &mut Enclave,
@@ -32,11 +40,8 @@ unsafe fn validate_and_hash_epm(
         }
     };
 
-    let num_ptes = RISCV_PGSIZE as usize / size_of::<pte_t>();
-    let ptes = slice::from_raw_parts_mut(tb, num_ptes);
-
     /* iterate over PTEs */
-    for (i, walk) in ptes.iter_mut().enumerate() {
+    for (i, walk) in ptes.iter().enumerate() {
         if *walk == 0 {
             contiguous = 0;
             continue;
@@ -86,8 +91,8 @@ unsafe fn validate_and_hash_epm(
              *
              * We also validate that all utm vaddrs -> utm paddrs
              */
-            let in_runtime = ((phys_addr >= encl.pa_params.runtime_base)
-                && (phys_addr < encl.pa_params.user_base));
+            let in_runtime = (phys_addr >= encl.pa_params.runtime_base)
+                && (phys_addr < encl.pa_params.user_base);
             let in_user =
                 (phys_addr >= encl.pa_params.user_base) && (phys_addr < encl.pa_params.free_base);
 
@@ -133,11 +138,15 @@ unsafe fn validate_and_hash_epm(
 
         //printm("PAGE hashed: 0x%lx (pa: 0x%lx)\n", vpn << RISCV_PGSHIFT, phys_addr);
         } else {
+            let next_ptes = unsafe {
+                ptes_from_page(phys_addr)
+            };
+
             /* otherwise, recurse on a lower level */
             contiguous = validate_and_hash_epm(
                 hasher,
                 level - 1,
-                phys_addr as *mut usize,
+                next_ptes,
                 vpn,
                 contiguous,
                 encl,
@@ -176,18 +185,20 @@ pub fn validate_and_hash_enclave(enclave: &mut Enclave) -> enclave_ret_code {
     let mut user_max_seen = 0;
 
     // hash the epm contents including the virtual addresses
-    let valid = unsafe {
-        validate_and_hash_epm(
-            &mut hasher,
-            ptlevel,
-            (enclave.encl_satp << RISCV_PGSHIFT) as *mut pte_t,
-            0,
-            0,
-            enclave,
-            &mut runtime_max_seen,
-            &mut user_max_seen,
-        )
+    let ptes = unsafe {
+        ptes_from_page(enclave.encl_satp << RISCV_PGSHIFT)
     };
+
+    let valid = validate_and_hash_epm(
+        &mut hasher,
+        ptlevel,
+        ptes,
+        0,
+        0,
+        enclave,
+        &mut runtime_max_seen,
+        &mut user_max_seen,
+    );
 
     if valid == -1 {
         return ENCLAVE_ILLEGAL_PTE as enclave_ret_code;

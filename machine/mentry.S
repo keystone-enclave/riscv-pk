@@ -39,7 +39,7 @@ enclave_trap_table:
   .word misaligned_store_trap
   .word pmp_trap
   .word bad_trap
-  .word mcall_trap // 9 --> ECALL from S-mode
+  .word mcall_trap_enclave // 9 --> ECALL from S-mode
   .word bad_trap
   .word bad_trap
   .word bad_trap
@@ -171,13 +171,18 @@ trap_vector_enclave:
 
 .Lhandle_timer_int_machine_mode:
   li a1, 9 # set mcause <- 9 (mcall_trap)
-  #li a7, 106 #set n <- SBI_SM_STOP_ENCLAVE  
-
+  
+  csrr a7, mstatus #load mstatus in t1
+  li t1, 0x800
+  and t1, t1, a7
+  slti t1, t1, 1
+  STORE t1, (sp) 
+ 
   STORE ra, 1*REGBYTES(sp)
   STORE gp, 3*REGBYTES(sp)
   STORE tp, 4*REGBYTES(sp)
   STORE t0, 5*REGBYTES(sp)
-1:auipc t0, %pcrel_hi(trap_table)  # t0 <- %hi(trap_table)
+1:auipc t0, %pcrel_hi(enclave_trap_table)  # t0 <- %hi(trap_table)
   STORE t1, 6*REGBYTES(sp)
   sll t1, a1, 2                    # t1 <- mcause << 2
   STORE t2, 7*REGBYTES(sp)
@@ -216,19 +221,35 @@ trap_vector_enclave:
   STORE t0, 2*REGBYTES(sp)         # sp
 
 
-  LOAD a7, 17*REGBYTES(sp) 
+  li a7, 106 #set n <- SBI_SM_STOP_ENCLAVE
+  STORE a7, (17)*REGBYTES(sp)
 
-  addi sp, sp, -1*REGBYTES
+  #LOAD a7, 17*REGBYTES(sp) 
 
-  STORE a7, (sp) # save previous a7 (used for the SBI call) 
+  #addi sp, sp, -1*REGBYTES
+
+  #STORE a7, (sp) # save previous a7 (used for the SBI call) 
   
-  li a7, 106 #set n <- SBI_SM_STOP_ENCLAVE  
-  STORE a7, (17 + 1)*REGBYTES(sp)
+  //STORE a7, (17 + 1)*REGBYTES(sp)
 
   jalr t1  
-  
-  LOAD a7, (sp) #load previous a7 (used for the SBI call)
-  addi sp, sp, REGBYTES #increment sp to its original value (we actually don't need to do this since sp is restored anyways...)
+
+  LOAD t1, (sp)
+
+  bne t1, x0, 1f
+  csrr a7, mstatus
+  li t1, 0x800
+  or a7, t1, a7
+  csrw mstatus, a7
+  j exit  
+1: 
+  csrr a7, mstatus #load mstatus in t1
+  li t1, 0xFFFFF7FF
+  and a7, t1, a7
+  csrw mstatus, a7
+exit: 
+  //LOAD a7, (sp) #load previous a7 (used for the SBI call)
+  #addi sp, sp, REGBYTES #increment sp to its original value (we actually don't need to do this since sp is restored anyways...)
 
   j restore_mscratch
   
@@ -281,6 +302,15 @@ trap_vector_enclave:
   # Invoke the handler.
   jalr t1
 
+  LOAD t1, (sp)
+
+  beq t1, x0, 1f
+  csrr a7, mstatus #load mstatus in t1
+  li t1, 0xFFFFF7FF
+  and a7, t1, a7
+  csrw mstatus, a7
+1:   
+
 #ifndef __riscv_flen
   sw tp, (sp) # Move the emulated FCSR from tp into x0's save slot.
 #endif
@@ -290,6 +320,7 @@ restore_mscratch:
   csrw mscratch, sp
 
 restore_regs:
+
   # Restore all of the registers.
   LOAD ra, 1*REGBYTES(sp)
   LOAD gp, 3*REGBYTES(sp)

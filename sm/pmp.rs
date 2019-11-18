@@ -28,20 +28,6 @@ impl PmpRegion {
         Ok(Self { region, should_free: true })
     }
 
-    pub unsafe fn wrap_id(region_id: c_int) -> Self {
-        Self {
-            region: region_id,
-            should_free: false,
-        }
-    }
-
-    pub unsafe fn own_id(region_id: c_int) -> Self {
-        Self {
-            region: region_id,
-            should_free: true,
-        }
-    }
-
     pub fn leak(self) -> c_int {
         let out = self.region;
         forget(self);
@@ -57,6 +43,7 @@ impl PmpRegion {
         }
     }
 
+    #[allow(dead_code)]
     pub fn unset_perm(&mut self) -> Result<(), c_int> {
         let err = unsafe { pmp_unset(self.region) };
         if err == 0 {

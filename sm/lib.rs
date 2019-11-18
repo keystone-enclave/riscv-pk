@@ -1,4 +1,5 @@
 #![no_std]
+#[deny(warnings)]
 
 #[cfg(test)]
 extern crate mock;
@@ -17,12 +18,12 @@ pub mod bindings {
 
 
 #[cfg(test)]
-#[macro_use]
 extern crate utest_macros;
 
 #[cfg(test)]
+#[allow(unused_macros)]
 macro_rules! panic {
     ($($tt:tt)*) => {
-        upanic!($($tt)*);
+        utest_macros::upanic!($($tt)*);
     };
 }

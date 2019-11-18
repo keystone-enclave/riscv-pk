@@ -108,7 +108,7 @@ extern {
 
 use core::panic::PanicInfo;
 #[panic_handler]
-pub extern fn panic_impl(info: &PanicInfo) -> ! {
+pub fn panic_impl(info: &PanicInfo) -> ! {
     println!("");
 
     if let Some(loc) = info.location() {

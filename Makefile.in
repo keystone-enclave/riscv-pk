@@ -220,10 +220,12 @@ lib$(1)_Clib.a : $$($(2)_c_objs) $$($(2)_asm_objs)
 	$(RANLIB) $$@
 
 lib$(1)_Rlib.a : $$($(2)_crate_libs)
+	@rm -f $$@
 	$(AR) rcvT $$@ $$(notdir $$^)
 	$(RANLIB) $$@
 
 lib$(1).a : lib$(1)_Clib.a lib$(1)_Rlib.a
+	@rm -f $$@
 	$(AR) rcvT $$@ $$(notdir $$^)
 	$(RANLIB) $$@
 

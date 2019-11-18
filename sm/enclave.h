@@ -64,5 +64,6 @@ int get_eid_region_index(enclave_id eid, enum enclave_region_type type);
 enclave_ret_code copy_from_host(void* source, void* dest, size_t size);
 uintptr_t get_enclave_region_base(enclave_id eid, int memid);
 uintptr_t get_enclave_region_size(enclave_id eid, int memid);
+struct platform_enclave_data *get_enclave_ped(struct enclave *enclave);
 
 #endif

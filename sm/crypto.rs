@@ -44,7 +44,7 @@ const SIGN_SIZE: usize = SIGNATURE_SIZE as usize;
 const PUBKEY_SIZE: usize = PUBLIC_KEY_SIZE as usize;
 const PRIVKEY_SIZE: usize = PRIVATE_KEY_SIZE as usize;
 
-pub fn sign<T: Copy>(sig_out: &mut [u8; SIGN_SIZE], data: &T, pubkey: &[u8], privkey: &[u8]) {
+pub fn _sign<T: Copy>(sig_out: &mut [u8; SIGN_SIZE], data: &T, pubkey: &[u8], privkey: &[u8]) {
     let data_bytes_ptr = data as *const T as *const u8;
     let data_bytes = unsafe {
         slice::from_raw_parts(data_bytes_ptr, size_of::<T>())

@@ -11,7 +11,7 @@
 #include "platform.h"
 
 #define ENCL_MAX  16
-#define ENCL_TIME_SLICE 1000000
+#define ENCL_TIME_SLICE 10000
 
 struct enclave enclaves[ENCL_MAX];
 #define ENCLAVE_EXISTS(eid) (enclaves[eid].state >= 0)

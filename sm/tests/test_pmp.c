@@ -42,28 +42,6 @@ static void test_search_rightmost_unset()
   expect_assert_failure(search_rightmost_unset(0x0, 16, 0x5));
 }
 
-static void test_get_free_region_idx()
-{
-  region_def_bitmap = 0x20;
-  assert_int_equal(get_free_region_idx(), 0);
-  region_def_bitmap = 0x3f;
-  assert_int_equal(get_free_region_idx(), 6);
-
-  // tear down
-  region_def_bitmap = 0x0;
-}
-
-static void test_get_free_reg_idx()
-{
-  reg_bitmap = 0x20;
-  assert_int_equal(get_free_reg_idx(), 0);
-  reg_bitmap = 0x3f;
-  assert_int_equal(get_free_reg_idx(), 6);
-
-  // tear down
-  reg_bitmap = 0x0;
-}
-
 static void test_get_conseq_free_reg_idx()
 {
   reg_bitmap = 0x1;

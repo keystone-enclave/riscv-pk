@@ -1,7 +1,7 @@
 use core::mem::forget;
 
-use util::ctypes::*;
 use crate::bindings::*;
+use util::ctypes::*;
 
 pub enum Priority {
     Any = pmp_priority_PMP_PRI_ANY as isize,
@@ -25,7 +25,10 @@ impl PmpRegion {
             region
         };
 
-        Ok(Self { region, should_free: true })
+        Ok(Self {
+            region,
+            should_free: true,
+        })
     }
 
     pub fn leak(self) -> c_int {
@@ -92,8 +95,37 @@ impl Drop for PmpRegion {
     }
 }
 
-
 pub fn detect_region_overlap(base: usize, size: usize) -> bool {
     1 == unsafe { pmp_detect_region_overlap_atomic(base, size) }
 }
 
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn test_get_free_region_idx() {
+        unsafe {
+            region_def_bitmap = 0x20;
+            assert_eq!(get_free_region_idx(), 0);
+            region_def_bitmap = 0x3f;
+            assert_eq!(get_free_region_idx(), 6);
+
+            // tear down
+            region_def_bitmap = 0x0;
+        }
+    }
+
+    #[test]
+    fn test_get_free_reg_idx() {
+        unsafe {
+            reg_bitmap = 0x20;
+            assert_eq!(get_free_reg_idx(), 0);
+            reg_bitmap = 0x3f;
+            assert_eq!(get_free_reg_idx(), 6);
+
+            // tear down
+            reg_bitmap = 0x0;
+        }
+    }
+}

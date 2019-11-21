@@ -102,4 +102,11 @@ int pmp_detect_region_overlap_atomic(uintptr_t base, uintptr_t size);
 uintptr_t pmp_region_get_addr(region_id i);
 uint64_t pmp_region_get_size(region_id i);
 
+// Interfaces for testing
+extern uint32_t reg_bitmap;
+extern uint32_t region_def_bitmap;
+region_id get_free_reg_idx();
+region_id get_free_region_idx();
+
 #endif
+

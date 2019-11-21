@@ -16,8 +16,8 @@ static spinlock_t pmp_lock = SPINLOCK_INIT;
 
 /* PMP region getter/setters */
 static struct pmp_region regions[PMP_MAX_N_REGION];
-static uint32_t reg_bitmap = 0;
-static uint32_t region_def_bitmap = 0;
+uint32_t reg_bitmap = 0;
+uint32_t region_def_bitmap = 0;
 
 static inline int region_register_idx(region_id i)
 {
@@ -121,12 +121,12 @@ static int search_rightmost_unset(uint32_t bitmap, int max, uint32_t mask)
   return -1;
 }
 
-static region_id get_free_region_idx()
+region_id get_free_region_idx()
 {
   return search_rightmost_unset(region_def_bitmap, PMP_MAX_N_REGION, 0x1);
 }
 
-static pmpreg_id get_free_reg_idx()
+pmpreg_id get_free_reg_idx()
 {
   return search_rightmost_unset(reg_bitmap, PMP_N_REG, 0x1);
 }

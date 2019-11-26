@@ -28,46 +28,17 @@ trap_table:
 # define HANDLE_IPI_PMP_VECTOR 16
   .word handle_pmp_ipi
 #endif
-
-enclave_trap_table:
-  .word bad_trap
-  .word pmp_trap
-  .word illegal_insn_trap
-  .word bad_trap
-  .word misaligned_load_trap
-  .word pmp_trap
-  .word misaligned_store_trap
-  .word pmp_trap
-  .word bad_trap
-  .word mcall_trap_enclave // 9 --> ECALL from S-mode
-  .word bad_trap
-  .word bad_trap
-  .word bad_trap
-
-
-  .option norvc
-  .section .text.init,"ax",@progbits
-  .globl reset_vector
-  .globl switch_vector_enclave
+  .globl trap_table
   .globl switch_vector_host
+  .globl reset_vector
 
 reset_vector:
   j do_reset
-
-switch_vector_enclave:
-  la t0, trap_vector_enclave
-  csrw mtvec, t0
-
-//  li t0, -1
-  //sw t0, mtimecmp 
-  //csrr t0, mtimecmp
-  ret
 
 switch_vector_host:
   la t0, trap_vector
   csrw mtvec, t0
   ret
-
 
 trap_vector:
   csrrw sp, mscratch, sp
@@ -141,105 +112,6 @@ trap_vector:
 #endif
 1:
   j .Lmret
-
-
-trap_vector_enclave:
-  csrrw sp, mscratch, sp
-  beqz sp, .Ltrap_from_machine_mode
-
-  STORE a0, 10*REGBYTES(sp)
-  STORE a1, 11*REGBYTES(sp)
-  csrr a1, mcause
-
-  bgez a1, .Lhandle_trap_in_machine_mode
-
-  # This is an interrupt.  Discard the mcause MSB and decode the rest.
-  sll a1, a1, 1
-
-  # Is it a machine timer interrupt?
-  li a0, IRQ_M_TIMER * 2
-  bne a0, a1, .Lmret
-
-  # Yes.  Simply clear MSIE and raise SSIP.
-  li a0, MIP_MTIP
-  csrc mie, a0
-  
-  li a0, MIP_MTIP
-  csrc mip, a0
-
-  j .Lhandle_timer_int_machine_mode 
-
-.Lhandle_timer_int_machine_mode:
-  li a1, 9 # set mcause <- 9 (mcall_trap)
-
-  // Timer interrupts can occur when enclave is on U-Mode or S-Mode
-  // $t1 contains prev privledge mode and will be stored in sp slot of x0  
-  // $t1 == 1 if previous priviledge is in U-mode, otherwise S-mode
-  csrr a7, mstatus #load mstatus in t1
-  li t1, 0x800
-  and t1, t1, a7
-  slti t1, t1, 1
-  STORE t1, (sp) 
- 
-  STORE ra, 1*REGBYTES(sp)
-  STORE gp, 3*REGBYTES(sp)
-  STORE tp, 4*REGBYTES(sp)
-  STORE t0, 5*REGBYTES(sp)
-1:auipc t0, %pcrel_hi(enclave_trap_table)  # t0 <- %hi(trap_table)
-  STORE t1, 6*REGBYTES(sp)
-  sll t1, a1, 2                    # t1 <- mcause << 2
-  STORE t2, 7*REGBYTES(sp)
-  add t1, t0, t1                   # t1 <- %hi(trap_table)[mcause]
-  STORE s0, 8*REGBYTES(sp)
-  LWU t1, %pcrel_lo(1b)(t1)         # t1 <- trap_table[mcause]
-  STORE s1, 9*REGBYTES(sp)
- 
-  li a0, 0  # a0 <- REQUEST = TIMER_INTERRUPT
-  STORE x0, 10*REGBYTES(sp) 
-
-  mv a0, sp                        # a0 <- regs  
-  STORE a2,12*REGBYTES(sp)
-  csrr a2, mepc                    # a2 <- mepc
-  STORE a3,13*REGBYTES(sp)
-  csrrw t0, mscratch, x0           # t0 <- user sp
-  STORE a4,14*REGBYTES(sp)
-  STORE a5,15*REGBYTES(sp)
-  STORE a6,16*REGBYTES(sp)
-  STORE a7,17*REGBYTES(sp)
-
-  STORE s2,18*REGBYTES(sp)
-  STORE s3,19*REGBYTES(sp)
-  STORE s4,20*REGBYTES(sp)
-  STORE s5,21*REGBYTES(sp)
-  STORE s6,22*REGBYTES(sp)
-  STORE s7,23*REGBYTES(sp)
-  STORE s8,24*REGBYTES(sp)
-  STORE s9,25*REGBYTES(sp)
-  STORE s10,26*REGBYTES(sp)
-  STORE s11,27*REGBYTES(sp)
-  STORE t3,28*REGBYTES(sp)
-  STORE t4,29*REGBYTES(sp)
-  STORE t5,30*REGBYTES(sp)
-  STORE t6,31*REGBYTES(sp)
-  STORE t0, 2*REGBYTES(sp)         # sp
-
-
-  li a7, 106 #set n <- SBI_SM_STOP_ENCLAVE
-  STORE a7, (17)*REGBYTES(sp)
-
-  jalr t1  
-
-  //Load prev priv mode 
-  LOAD t1, (sp)
-  //If prev priv mode is S-MODE
-  bne t1, x0, 1f
-  csrr a7, mstatus
-  li t1, 0x800
-  or a7, t1, a7
-  csrw mstatus, a7
-1: 
-  j restore_mscratch
-  
 
 
 .Lhandle_trap_in_machine_mode:

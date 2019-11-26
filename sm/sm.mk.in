@@ -19,7 +19,8 @@ sm_c_srcs = \
   ed25519/sc.c \
   platform/@TARGET_PLATFORM@/@TARGET_PLATFORM@.c \
 
-sm_asm_srcs =
+sm_asm_srcs = \
+   trap.S \
 
 sm_test_srcs =
 

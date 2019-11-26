@@ -29,6 +29,18 @@ extern byte dev_public_key[PUBLIC_KEY_SIZE];
  *
  ****************************/
 
+
+
+static inline void switch_vector_enclave(){
+  extern void trap_vector_enclave(); 
+  write_csr(mtvec, &trap_vector_enclave); 
+}
+
+static inline void switch_vector_host(){
+  extern void trap_vector(); 
+  write_csr(mtvec, &trap_vector);
+}
+
 /* Internal function containing the core of the context switching
  * code to the enclave.
  *
@@ -70,7 +82,6 @@ static inline enclave_ret_code context_switch_to_enclave(uintptr_t* regs,
     write_csr(satp, enclaves[eid].encl_satp);
   }
 
-  extern void switch_vector_enclave();
   switch_vector_enclave(); 
   
   hls_t* hls = HLS(); 
@@ -117,7 +128,6 @@ static inline void context_switch_to_host(uintptr_t* encl_regs,
   swap_prev_state(&enclaves[eid].threads[0], encl_regs);
   swap_prev_mepc(&enclaves[eid].threads[0], read_csr(mepc));
 
-  extern void switch_vector_host();
   switch_vector_host(); 
 
   uintptr_t interrupts = MIP_SSIP | MIP_STIP | MIP_SEIP;

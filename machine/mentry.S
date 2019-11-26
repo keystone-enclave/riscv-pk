@@ -29,16 +29,17 @@ trap_table:
   .word handle_pmp_ipi
 #endif
   .globl trap_table
-  .globl switch_vector_host
   .globl reset_vector
-
-reset_vector:
-  j do_reset
+  .globl trap_vector
+#  .globl switch_vector_host
 
 switch_vector_host:
   la t0, trap_vector
   csrw mtvec, t0
   ret
+
+reset_vector:
+  j do_reset
 
 trap_vector:
   csrrw sp, mscratch, sp

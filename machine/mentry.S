@@ -28,16 +28,13 @@ trap_table:
 # define HANDLE_IPI_PMP_VECTOR 16
   .word handle_pmp_ipi
 #endif
+
+  .option norvc
+  .section .text.init,"ax",@progbits
   .globl trap_table
   .globl reset_vector
   .globl trap_vector
- // .globl switch_vector_host
 
-/*switch_vector_host:
-  la t0, trap_vector
-  csrw mtvec, t0
-  ret
-*/
 reset_vector:
   j do_reset
 

@@ -31,13 +31,13 @@ trap_table:
   .globl trap_table
   .globl reset_vector
   .globl trap_vector
-#  .globl switch_vector_host
+ // .globl switch_vector_host
 
-switch_vector_host:
+/*switch_vector_host:
   la t0, trap_vector
   csrw mtvec, t0
   ret
-
+*/
 reset_vector:
   j do_reset
 

@@ -38,6 +38,7 @@ static inline void switch_vector_enclave(){
 
 static inline void switch_vector_host(){
   extern void trap_vector(); 
+  printm("trap_vector: %p\n", (void*) &trap_vector);
   write_csr(mtvec, &trap_vector);
 }
 

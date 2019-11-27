@@ -32,79 +32,12 @@ enclave_trap_table:
 reset_vector:
   j do_reset
 
-trap_vector:
-  csrrw sp, mscratch, sp
-  beqz sp, .Ltrap_from_machine_mode
-
-  STORE a0, 10*REGBYTES(sp)
-  STORE a1, 11*REGBYTES(sp)
-  csrr a1, mcause
-
-  bgez a1, .Lhandle_trap_in_machine_mode
-
-  # This is an interrupt.  Discard the mcause MSB and decode the rest.
-  sll a1, a1, 1
-
-  # Is it a machine timer interrupt?
-  li a0, IRQ_M_TIMER * 2
-  bne a0, a1, 1f
-
-  # Yes.  Simply clear MSIE and raise SSIP.
-  li a0, MIP_MTIP
-  csrc mie, a0
-  li a0, MIP_STIP
-  csrs mip, a0
-
 .Lmret:
   # Go back whence we came.
   LOAD a0, 10*REGBYTES(sp)
   LOAD a1, 11*REGBYTES(sp)
   csrrw sp, mscratch, sp # sp <- mscratch 
   mret
-
-1:
-  # Is it an IPI?
-  li a0, IRQ_M_SOFT * 2
-  bne a0, a1, .Lbad_trap
-
-  # Yes.  First, clear the MIPI bit.
-  LOAD a0, MENTRY_IPI_OFFSET(sp)
-  sw x0, (a0)
-  fence
-
-  # Now, decode the cause(s).
-#ifdef __riscv_atomic
-  addi a0, sp, MENTRY_IPI_PENDING_OFFSET
-  amoswap.w a0, x0, (a0)
-#else
-  lw a0, MENTRY_IPI_PENDING_OFFSET(a0)
-  sw x0, MENTRY_IPI_PENDING_OFFSET(a0)
-#endif
-
-  and a1, a0, IPI_SOFT
-  beqz a1, 1f
-  csrs mip, MIP_SSIP
-1:
-  andi a1, a0, IPI_FENCE_I
-  beqz a1, 1f
-  fence.i
-1:
-  andi a1, a0, IPI_SFENCE_VMA
-  beqz a1, 1f
-  sfence.vma
-1:
-  andi a1, a0, IPI_HALT
-  beqz a1, 1f
-  wfi
-  j 1b
-#ifdef SM_ENABLED
-1:
-  andi a1, a0, IPI_PMP
-  bnez a1, .Lipi_pmp
-#endif
-1:
-  j .Lmret
-
 
 trap_vector_enclave:
   csrrw sp, mscratch, sp

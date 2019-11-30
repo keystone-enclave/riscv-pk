@@ -68,15 +68,6 @@ trap_vector_enclave:
 .Lhandle_timer_int_machine_mode:
   li a1, 9 # set mcause <- 9 (mcall_trap)
 
-  // Timer interrupts can occur when enclave is on U-Mode or S-Mode
-  // $t1 contains prev privledge mode and will be stored in sp slot of x0  
-  // $t1 == 1 if previous priviledge is in U-mode, otherwise S-mode
-  csrr a7, mstatus #load mstatus in t1
-  li t1, 0x800
-  and t1, t1, a7
-  slti t1, t1, 1
-  STORE t1, (sp) 
- 
   STORE ra, 1*REGBYTES(sp)
   STORE gp, 3*REGBYTES(sp)
   STORE tp, 4*REGBYTES(sp)
@@ -124,16 +115,7 @@ trap_vector_enclave:
   STORE a7, (17)*REGBYTES(sp)
 
   jalr t1  
-
-  //Load prev priv mode 
-  LOAD t1, (sp)
-  //If prev priv mode is S-MODE
-  bne t1, x0, 1f
-  csrr a7, mstatus
-  li t1, 0x800
-  or a7, t1, a7
-  csrw mstatus, a7
-1: 
+  
   j restore_mscratch
   
 
@@ -185,7 +167,7 @@ trap_vector_enclave:
   # Invoke the handler.
   jalr t1
 
-  LOAD t1, (sp)
+/*  LOAD t1, (sp)
   //Revert back mstatus to usermode if t1 == 1
   beq t1, x0, 1f
   csrr a7, mstatus #load mstatus in t1
@@ -193,7 +175,7 @@ trap_vector_enclave:
   and a7, t1, a7
   csrw mstatus, a7
 1:   
-
+*/
 #ifndef __riscv_flen
   sw tp, (sp) # Move the emulated FCSR from tp into x0's save slot.
 #endif

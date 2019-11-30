@@ -5,6 +5,22 @@
 #include "thread.h"
 #include "mtrap.h"
 
+
+void swap_prev_mpp(struct thread_state* thread, uintptr_t* regs){
+  //Time interrupts can occur in either user mode or supervisor mode
+
+  int old_mpp = thread->prev_mpp;
+  int mstatus = read_csr(mstatus);
+  thread->prev_mpp = mstatus & 0x800;
+
+  if(old_mpp != 0) {
+     set_csr(mstatus, 0x800);
+ } else{
+     clear_csr(mstatus, 0x800);
+}
+
+}
+
 /* Swaps the entire s-mode visible state, general registers and then csrs */
 void swap_prev_state(struct thread_state* thread, uintptr_t* regs)
 {
@@ -18,6 +34,7 @@ void swap_prev_state(struct thread_state* thread, uintptr_t* regs)
     prev[i] = regs[i];
     regs[i] = tmp;
   }
+
 
   swap_prev_smode_csrs(thread);
 
@@ -70,6 +87,8 @@ void clean_state(struct thread_state* state){
   {
     prev[i] = 0;
   }
+
+  state->prev_mpp = 1;   
 
   clean_smode_csrs(state);
 }

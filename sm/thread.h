@@ -67,6 +67,7 @@ struct csrs
 /* enclave thread state */
 struct thread_state
 {
+  int prev_mpp; 
   uintptr_t prev_mepc;
   struct csrs prev_csrs;
   struct ctx prev_state;
@@ -76,6 +77,7 @@ struct thread_state
 void swap_prev_state(struct thread_state* state, uintptr_t* regs);
 void swap_prev_mepc(struct thread_state* state, uintptr_t mepc);
 void swap_prev_smode_csrs(struct thread_state* thread);
+void swap_prev_mpp(struct thread_state* thread, uintptr_t* regs); 
 
 /* Clean state generation */
 void clean_state(struct thread_state* state);

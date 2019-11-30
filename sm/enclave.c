@@ -38,7 +38,6 @@ static inline void switch_vector_enclave(){
 
 static inline void switch_vector_host(){
   extern void trap_vector(); 
-  printm("trap_vector: %p\n", (void*) &trap_vector);
   write_csr(mtvec, &trap_vector);
 }
 
@@ -106,6 +105,8 @@ static inline enclave_ret_code context_switch_to_enclave(uintptr_t* regs,
   // Setup any platform specific defenses
   platform_switch_to_enclave(&(enclaves[eid].ped));
   cpu_enter_enclave_context(eid);
+
+  swap_prev_mpp(&enclaves[eid].threads[0], regs);
   return ENCLAVE_SUCCESS;
 }
 
@@ -135,6 +136,7 @@ static inline void context_switch_to_host(uintptr_t* encl_regs,
   // Reconfigure platform specific defenses
   platform_switch_from_enclave(&(enclaves[eid].ped));
   cpu_exit_enclave_context();
+  swap_prev_mpp(&enclaves[eid].threads[0], encl_regs);
   return;
 }
 

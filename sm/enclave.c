@@ -52,7 +52,6 @@ static inline enclave_ret_code context_switch_to_enclave(uintptr_t* regs,
                                                 enclave_id eid,
                                                 int load_parameters){
 
-
   /* save host context */
   swap_prev_state(&enclaves[eid].threads[0], regs);
   swap_prev_mepc(&enclaves[eid].threads[0], read_csr(mepc));
@@ -109,7 +108,6 @@ static inline enclave_ret_code context_switch_to_enclave(uintptr_t* regs,
   // Setup any platform specific defenses
   platform_switch_to_enclave(&(enclaves[eid]));
   cpu_enter_enclave_context(eid);
-
   swap_prev_mpp(&enclaves[eid].threads[0], regs);
   return ENCLAVE_SUCCESS;
 }

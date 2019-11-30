@@ -44,6 +44,7 @@ trap_vector:
 
   STORE a0, 10*REGBYTES(sp)
   STORE a1, 11*REGBYTES(sp)
+
   csrr a1, mcause
 
   bgez a1, .Lhandle_trap_in_machine_mode
@@ -65,7 +66,7 @@ trap_vector:
   # Go back whence we came.
   LOAD a0, 10*REGBYTES(sp)
   LOAD a1, 11*REGBYTES(sp)
-  csrrw sp, mscratch, sp # sp <- mscratch 
+  csrrw sp, mscratch, sp 
   mret
 
 1:
@@ -168,7 +169,6 @@ restore_mscratch:
   csrw mscratch, sp
 
 restore_regs:
-
   # Restore all of the registers.
   LOAD ra, 1*REGBYTES(sp)
   LOAD gp, 3*REGBYTES(sp)

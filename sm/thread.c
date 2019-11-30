@@ -27,7 +27,7 @@ void swap_prev_state(struct thread_state* thread, uintptr_t* regs)
   int i;
 
   uintptr_t* prev = (uintptr_t*) &thread->prev_state;
-  for(i=0; i<32; i++)
+  for(i=1; i<32; i++)
   {
     /* swap state */
     uintptr_t tmp = prev[i];
@@ -89,7 +89,6 @@ void clean_state(struct thread_state* state){
   }
 
   state->prev_mpp = 1;   
-
   clean_smode_csrs(state);
 }
 

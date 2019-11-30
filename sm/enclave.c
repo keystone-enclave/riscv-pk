@@ -140,6 +140,7 @@ static inline void context_switch_to_host(uintptr_t* encl_regs,
 
   // Reconfigure platform specific defenses
   platform_switch_from_enclave(&(enclaves[eid]));
+
   cpu_exit_enclave_context();
   swap_prev_mpp(&enclaves[eid].threads[0], encl_regs);
   return;

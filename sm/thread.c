@@ -35,7 +35,6 @@ void swap_prev_state(struct thread_state* thread, uintptr_t* regs)
     regs[i] = tmp;
   }
 
-
   swap_prev_smode_csrs(thread);
 
   return;

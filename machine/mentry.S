@@ -66,7 +66,7 @@ trap_vector:
   # Go back whence we came.
   LOAD a0, 10*REGBYTES(sp)
   LOAD a1, 11*REGBYTES(sp)
-  csrrw sp, mscratch, sp 
+  csrrw sp, mscratch, sp
   mret
 
 1:

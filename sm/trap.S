@@ -167,15 +167,6 @@ trap_vector_enclave:
   # Invoke the handler.
   jalr t1
 
-/*  LOAD t1, (sp)
-  //Revert back mstatus to usermode if t1 == 1
-  beq t1, x0, 1f
-  csrr a7, mstatus #load mstatus in t1
-  li t1, 0xFFFFF7FF
-  and a7, t1, a7
-  csrw mstatus, a7
-1:   
-*/
 #ifndef __riscv_flen
   sw tp, (sp) # Move the emulated FCSR from tp into x0's save slot.
 #endif

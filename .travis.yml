@@ -40,7 +40,7 @@ before_install:
 
 jobs:
   include:
-    - stage: build everything
+    - stage: build everything (C)
       script:
         - mkdir build
         - cd build
@@ -50,8 +50,31 @@ jobs:
           --enable-sm
         - make
 
-    - stage: test
+    - stage: build everything (Rust)
       script:
+        - ln -snf sm_rs sm
+        - mkdir build
+        - cd build
+        - ../configure
+          --enable-logo
+          --host=riscv64-unknown-elf
+          --enable-sm
+        - make
+
+    - stage: test (Rust)
+      script:
+        - ln -snf sm_rs sm
         - if [ -f riscv/bin/qemu-riscv64 ]; then ls riscv; else ./.build-qemu.sh; fi
         - ./test-sm.sh
 
+    - stage: test (C)
+      script:
+        - mkdir build
+        - cd build
+        - ../configure
+        - cd ../sm/tests
+        - mkdir build
+        - cd build
+        - cmake ..; make
+        - make test CTEST_OUTPUT_ON_FAILURE=TRUE ARGS="--verbose"
+        - cd $TRAVIS_BUILD_DIR

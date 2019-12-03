@@ -16,8 +16,8 @@ sm_rs_c_srcs = \
 	plugins/plugins.c \
 
 sm_rs_asm_srcs = \
-  enclave_copy.S \
   trap.S \
+  mprv.S \
 
 sm_rs_test_srcs =
 

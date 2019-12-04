@@ -34,6 +34,7 @@ trap_table:
   .globl trap_table
   .globl reset_vector
   .globl trap_vector
+  .globl do_reset
 
 reset_vector:
   j do_reset

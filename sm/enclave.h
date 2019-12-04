@@ -121,6 +121,10 @@ enclave_ret_code attest_enclave(uintptr_t report, uintptr_t data, uintptr_t size
 enclave_ret_code validate_and_hash_enclave(struct enclave* enclave);
 // TODO: These functions are supposed to be internal functions.
 void enclave_init_metadata();
+static inline void switch_vector_enclave(); 
+static inline void switch_vector_host(); 
+extern void trap_vector_enclave();
+extern void trap_vector();
 enclave_ret_code copy_from_host(void* source, void* dest, size_t size);
 int get_enclave_region_index(enclave_id eid, enum enclave_region_type type);
 uintptr_t get_enclave_region_base(enclave_id eid, int memid);

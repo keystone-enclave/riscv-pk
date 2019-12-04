@@ -29,9 +29,6 @@ enclave_trap_table:
   .globl enclave_trap_table
   .globl trap_vector_enclave
 
-reset_vector:
-  j do_reset
-
 .Lmret:
   # Go back whence we came.
   LOAD a0, 10*REGBYTES(sp)

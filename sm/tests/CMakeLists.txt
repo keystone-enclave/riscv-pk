@@ -45,6 +45,7 @@ add_executable(test_enclave
                 ../crypto.c
                 ../thread.c
                 ../sm.c
+		../trap.S
                 )
 target_link_libraries(test_enclave cmocka)
 add_test(test_enclave

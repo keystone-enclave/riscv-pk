@@ -22,7 +22,7 @@ void __attribute__((noreturn)) bad_trap(uintptr_t* regs, uintptr_t dummy, uintpt
   die("machine mode: unhandlable trap %d @ %p", read_csr(mcause), mepc);
 }
 
-static uintptr_t mcall_console_putchar(uint8_t ch)
+uintptr_t mcall_console_putchar(uint8_t ch)
 {
   if (uart) {
     uart_putchar(ch);

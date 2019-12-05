@@ -593,6 +593,7 @@ subprojects
 TARGET_PLATFORM
 BBL_LOGO_FILE
 BBL_PAYLOAD
+RUST_OPT
 install_subdir
 RISCV
 EGREP
@@ -671,6 +672,7 @@ ac_user_opts='
 enable_option_checking
 enable_stow
 enable_32bit
+enable_opt
 enable_print_device_tree
 enable_optional_subprojects
 enable_vm
@@ -1323,6 +1325,7 @@ Optional Features:
   --enable-FEATURE[=ARG]  include FEATURE [ARG=yes]
   --enable-stow           Enable stow-based install
   --enable-32bit          Build a 32-bit pk
+  --enable-opt            Build with optimizations
   --enable-print-device-tree
                           Print DTS when booting
   --enable-optional-subprojects
@@ -4078,7 +4081,7 @@ fi
 # Set compiler flags
 #-------------------------------------------------------------------------
 
-default_CFLAGS="-Wall -Werror -D__NO_INLINE__ -mcmodel=medany -O2 -std=gnu99 -Wno-unused -Wno-attributes -fno-delete-null-pointer-checks"
+default_CFLAGS="-Wall -Werror -D__NO_INLINE__ -mcmodel=medany -std=gnu99 -Wno-unused -Wno-attributes -fno-delete-null-pointer-checks -fno-strict-aliasing"
 
 # Check whether --enable-32bit was given.
 if test "${enable_32bit+set}" = set; then :
@@ -4102,6 +4105,28 @@ case "${BUILD_32BIT}" in
 	;;
 esac
 
+
+# Check whether --enable-opt was given.
+if test "${enable_opt+set}" = set; then :
+  enableval=$enable_opt; BUILD_OPT=$enableval
+else
+  BUILD_OPT=no
+fi
+
+
+case "${BUILD_OPT}" in
+  no|default|0)
+	echo "Building without optimizations"
+	CFLAGS="$CFLAGS -O0"
+	RUST_OPT="debug"
+	;;
+  *)
+	echo "Building at optimization level ${BUILD_OPT}"
+	CFLAGS="$CFLAGS -O${BUILD_OPT}"
+	RUST_OPT="release"
+	;;
+esac
+
 LDFLAGS="$LDFLAGS -Wl,--build-id=none"
 
 # Check whether --enable-print-device-tree was given.
@@ -4120,6 +4145,7 @@ fi
 
 
 LIBS="-lgcc"
+
 
 
 
@@ -4383,51 +4409,6 @@ fi
        eval "_mpbp_sm_configure"
 
 fi
-
-
-
-
-
-    # Determine if this is a required or an optional subproject
-
-
-
-    # Determine if there is a group with the same name
-
-
-
-    # Create variations of the subproject name suitable for use as a CPP
-    # enabled define, a shell enabled variable, and a shell function
-
-
-
-
-
-
-
-
-
-
-
-    # Add subproject to our running list
-
-    subprojects="$subprojects softfloat"
-
-    # Process the subproject appropriately. If enabled add it to the
-    # $enabled_subprojects running shell variable, set a
-    # SUBPROJECT_ENABLED C define, and include the appropriate
-    # 'subproject.ac'.
-
-
-      { $as_echo "$as_me:${as_lineno-$LINENO}: configuring default subproject : softfloat" >&5
-$as_echo "$as_me: configuring default subproject : softfloat" >&6;}
-      ac_config_files="$ac_config_files softfloat.mk:softfloat/softfloat.mk.in"
-
-      enable_softfloat_sproj="yes"
-      subprojects_enabled="$subprojects_enabled softfloat"
-
-$as_echo "#define SOFTFLOAT_ENABLED /**/" >>confdefs.h
-
 
 
 
@@ -5299,7 +5280,6 @@ do
     "pk.mk") CONFIG_FILES="$CONFIG_FILES pk.mk:pk/pk.mk.in" ;;
     "bbl.mk") CONFIG_FILES="$CONFIG_FILES bbl.mk:bbl/bbl.mk.in" ;;
     "sm.mk") CONFIG_FILES="$CONFIG_FILES sm.mk:sm/sm.mk.in" ;;
-    "softfloat.mk") CONFIG_FILES="$CONFIG_FILES softfloat.mk:softfloat/softfloat.mk.in" ;;
     "dummy_payload.mk") CONFIG_FILES="$CONFIG_FILES dummy_payload.mk:dummy_payload/dummy_payload.mk.in" ;;
     "machine.mk") CONFIG_FILES="$CONFIG_FILES machine.mk:machine/machine.mk.in" ;;
     "util.mk") CONFIG_FILES="$CONFIG_FILES util.mk:util/util.mk.in" ;;

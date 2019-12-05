@@ -27,3 +27,19 @@ else
   cd ..
   echo "Toolchain has been installed in $RISCV"
 fi
+
+if (llvm-as --version | grep "LLVM version 9") >/dev/null ;
+then
+    echo "LLVM 9 already installed"
+else
+    echo "Downloading Prebuilt LLVM 9 Tools... "
+    
+    LLVM_XZ='clang+llvm-9.0.0-x86_64-linux-gnu-ubuntu-16.04'
+    wget 'http://releases.llvm.org/9.0.0/' ${LLVM_XZ}.tar.xz
+    tar -xvf ${LLVM_XZ}.tar.xz
+
+    mv ${LLVM_XZ} llvm-9
+    rm -rf ${LLVM_XZ}.tar.xz
+
+    echo "LLVM 9 has been installed in $(pwd)/llvm-9"
+fi

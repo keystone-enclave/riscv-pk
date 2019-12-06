@@ -8,6 +8,7 @@ use spin::Mutex;
 use crate::attest;
 use crate::bindings::*;
 use crate::cpu;
+use crate::crypto;
 use crate::pmp;
 use crate::sm;
 use util::ctypes::*;
@@ -54,7 +55,7 @@ pub struct Enclave {
     pub(crate) regions: [Option<EnclaveRegion>; ENCLAVE_REGIONS_MAX as usize],
 
     /* measurement */
-    pub(crate) hash: [u8; MDSIZE as usize],
+    pub(crate) hash: [u8; crypto::HASH_SIZE],
 
     /* parameters */
     pub(crate) params: runtime_va_params_t,
@@ -103,10 +104,10 @@ impl Enclave {
 /* attestation reports */
 #[repr(C)]
 pub struct EnclaveReport {
-    hash: [u8; MDSIZE as usize],
+    hash: [u8; crypto::HASH_SIZE],
     data_len: u64,
     data: [u8; ATTEST_DATA_MAXLEN as usize],
-    signature: [u8; SIGNATURE_SIZE as usize],
+    signature: [u8; crypto::SIGNATURE_SIZE],
 }
 
 impl EnclaveReport {
@@ -122,16 +123,29 @@ impl EnclaveReport {
 
 #[repr(C)]
 pub struct SmReport {
-    hash: [u8; MDSIZE as usize],
-    public_key: [u8; PUBLIC_KEY_SIZE as usize],
-    signature: [u8; SIGNATURE_SIZE as usize],
+    hash: [u8; crypto::HASH_SIZE],
+    public_key: [u8; crypto::PUBKEY_SIZE],
+    signature: [u8; crypto::SIGNATURE_SIZE],
 }
 
 #[repr(C)]
 pub struct Report {
     enclave: EnclaveReport,
     sm: SmReport,
-    dev_public_key: [u8; PUBLIC_KEY_SIZE as usize],
+    dev_public_key: [u8; crypto::PUBKEY_SIZE],
+}
+
+impl Report {
+    fn copy_keys(&mut self) -> EResult<()> {
+        let key_data = sm::INIT_DATA.read();
+        let key_data = key_data.as_ref().ok_or(encl_ret!(SM_NOT_READY))?;
+        
+        self.dev_public_key = key_data.dev_public_key;
+        self.sm.hash = key_data.sm_hash;
+        self.sm.public_key = key_data.sm_public_key;
+        self.sm.signature = key_data.sm_signature;
+        Ok(())
+    }
 }
 
 /****************************
@@ -422,8 +436,7 @@ pub unsafe extern "C" fn get_enclave_region_base(eid: enclave_id, memid: c_int) 
  * Called once by the SM on startup
  */
 // TODO: There's nothing for platform_init_enclave to do with an enclave that hasn't been created yet... refactoring needed
-#[no_mangle]
-pub extern "C" fn enclave_init_metadata() {
+pub fn init_metadata() {
     /*let mut enclave_arr = ENCLAVES.lock();
 
     /* Assumes eids are incrementing values, which they are for now */
@@ -442,17 +455,17 @@ fn attest_enclave(
     size: usize,
 ) -> EResult<()> {
     let mut report = Report {
-        dev_public_key: [0u8; PUBLIC_KEY_SIZE as usize],
+        dev_public_key: [0u8; crypto::PUBKEY_SIZE],
         enclave: EnclaveReport {
             data: [0u8; 1024],
             data_len: 0,
-            hash: [0u8; MDSIZE as usize],
-            signature: [0u8; SIGNATURE_SIZE as usize],
+            hash: [0u8; crypto::HASH_SIZE],
+            signature: [0u8; crypto::SIGNATURE_SIZE],
         },
         sm: SmReport {
-            hash: [0u8; MDSIZE as usize],
-            public_key: [0u8; PUBLIC_KEY_SIZE as usize],
-            signature: [0u8; SIGNATURE_SIZE as usize],
+            hash: [0u8; crypto::HASH_SIZE],
+            public_key: [0u8; crypto::PUBKEY_SIZE],
+            signature: [0u8; crypto::SIGNATURE_SIZE],
         },
     };
 
@@ -473,13 +486,9 @@ fn attest_enclave(
 
     unsafe {
         copy_from_enclave(enclave, dst_data_ptr, src_data_ptr, size)?;
-
-        report.dev_public_key = sm::dev_public_key;
-        report.sm.hash = sm::sm_hash;
-        report.sm.public_key = sm::sm_public_key;
-        report.sm.signature = sm::sm_signature;
     }
 
+    report.copy_keys();
     report.enclave.sign();
 
     /* copy report to the enclave */
@@ -575,7 +584,7 @@ fn create_enclave(create_args: keystone_sbi_create) -> EResult<()> {
 
         regions: Default::default(),
 
-        hash: [0u8; MDSIZE as usize],
+        hash: [0u8; crypto::HASH_SIZE],
         ped: unsafe { zeroed() },
         threads: unsafe { zeroed() },
         state: EnclaveState::Fresh,

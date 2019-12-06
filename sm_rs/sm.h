@@ -43,6 +43,7 @@
 #define ENCLAVE_NO_FREE_RESOURCE            13
 #define ENCLAVE_SBI_PROHIBITED              14
 #define ENCLAVE_ILLEGAL_PTE                 15
+#define ENCLAVE_SM_NOT_READY                16
 
 #define PMP_UNKNOWN_ERROR                   -1U
 #define PMP_SUCCESS                         0

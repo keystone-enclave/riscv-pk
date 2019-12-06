@@ -8,34 +8,21 @@ use spin::RwLock;
 use util::ctypes::*;
 
 use crate::crypto;
+use crate::enclave;
 use crate::pmp;
 
-struct InitData {
+pub(crate) struct InitData {
     sm_region: pmp::PmpRegion,
     os_region: pmp::PmpRegion,
+
+    pub(crate) sm_hash: [u8; crypto::HASH_SIZE],
+    pub(crate) sm_signature: [u8; crypto::SIGNATURE_SIZE],
+    pub(crate) sm_public_key: [u8; crypto::PUBKEY_SIZE],
+    pub(crate) dev_public_key: [u8; crypto::PUBKEY_SIZE],
+    sm_private_key: [u8; crypto::PRIVKEY_SIZE],
 }
 
-static INIT_DATA: RwLock<Option<InitData>> = RwLock::new(None);
-
-/* from Sanctum BootROM */
-extern "C" {
-    static mut sanctum_sm_hash: [u8; MDSIZE as usize];
-    static mut sanctum_sm_signature: [u8; SIGNATURE_SIZE as usize];
-    static mut sanctum_sm_secret_key: [u8; PRIVATE_KEY_SIZE as usize];
-    static mut sanctum_sm_public_key: [u8; PUBLIC_KEY_SIZE as usize];
-    static mut sanctum_dev_public_key: [u8; PUBLIC_KEY_SIZE as usize];
-}
-
-#[no_mangle]
-pub static mut sm_hash: [u8; MDSIZE as usize] = [0; MDSIZE as usize];
-#[no_mangle]
-pub static mut sm_signature: [u8; SIGNATURE_SIZE as usize] = [0; SIGNATURE_SIZE as usize];
-#[no_mangle]
-pub static mut sm_public_key: [u8; PUBLIC_KEY_SIZE as usize] = [0; PUBLIC_KEY_SIZE as usize];
-#[no_mangle]
-pub static mut sm_private_key: [u8; PRIVATE_KEY_SIZE as usize] = [0; PRIVATE_KEY_SIZE as usize];
-#[no_mangle]
-pub static mut dev_public_key: [u8; PUBLIC_KEY_SIZE as usize] = [0; PUBLIC_KEY_SIZE as usize];
+pub(crate) static INIT_DATA: RwLock<Option<InitData>> = RwLock::new(None);
 
 #[no_mangle]
 pub extern "C" fn osm_pmp_set(perm: u8) -> c_int {
@@ -61,21 +48,32 @@ fn osm_init() -> Result<pmp::PmpRegion, c_int> {
     pmp::PmpRegion::reserve(0, !0, pmp::Priority::Bottom, true)
 }
 
-pub type Signature = [u8; SIGNATURE_SIZE as usize];
+pub type Signature = [u8; crypto::SIGNATURE_SIZE];
 
 pub fn sign(signature: &mut Signature, data: &[u8]) {
-    unsafe {
-        crypto::sign_bytes(signature, data, &sm_public_key, &sm_private_key);
-    }
+    let init_data = INIT_DATA.read();
+    let init_data = init_data.as_ref()
+        .expect("[SM] Tried to sign before initialization!");
+
+    crypto::sign_bytes(signature, data, &init_data.sm_public_key, &init_data.sm_private_key);
 }
 
-fn sm_copy_key() {
+fn copy_keys(init_data: &mut InitData) {
+    /* from Sanctum BootROM */
+    extern "C" {
+        static mut sanctum_sm_hash: [u8; crypto::HASH_SIZE];
+        static mut sanctum_sm_signature: [u8; crypto::SIGNATURE_SIZE];
+        static mut sanctum_sm_secret_key: [u8; crypto::PRIVKEY_SIZE];
+        static mut sanctum_sm_public_key: [u8; crypto::PUBKEY_SIZE];
+        static mut sanctum_dev_public_key: [u8; crypto::PUBKEY_SIZE];
+    }
+
     unsafe {
-        sm_hash = sanctum_sm_hash;
-        sm_signature = sanctum_sm_signature;
-        sm_public_key = sanctum_sm_public_key;
-        sm_private_key = sanctum_sm_secret_key;
-        dev_public_key = sanctum_dev_public_key;
+        init_data.sm_hash = sanctum_sm_hash;
+        init_data.sm_signature = sanctum_sm_signature;
+        init_data.sm_public_key = sanctum_sm_public_key;
+        init_data.sm_private_key = sanctum_sm_secret_key;
+        init_data.dev_public_key = sanctum_dev_public_key;
     }
 }
 
@@ -125,6 +123,11 @@ pub extern "C" fn sm_init() {
         InitData {
             sm_region,
             os_region,
+            dev_public_key: [0; crypto::PUBKEY_SIZE],
+            sm_public_key: [0; crypto::PUBKEY_SIZE],
+            sm_private_key: [0; crypto::PRIVKEY_SIZE],
+            sm_signature: [0; crypto::SIGNATURE_SIZE],
+            sm_hash: [0; crypto::HASH_SIZE],
         }
     });
 
@@ -142,13 +145,11 @@ pub extern "C" fn sm_init() {
         panic!("[SM] platform global init fatal error");
     }
 
-    unsafe {
-        // Copy the keypair from the root of trust
-        sm_copy_key();
+    // Copy the keypair from the root of trust
+    copy_keys(init_inner);
 
-        // Init the enclave metadata
-        enclave_init_metadata();
-    }
+    // Init the enclave metadata
+    enclave::init_metadata();
 
     // for debug
     // sm_print_cert();

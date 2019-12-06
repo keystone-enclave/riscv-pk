@@ -13,18 +13,16 @@ use crate::sm;
 use util::ctypes::*;
 use util::insert_field;
 
-macro_rules! encl_unwrap_opt {
-    ($what:expr, $ret:expr) => {
-        if let Some(val) = $what {
-            val
-        } else {
-            return $ret as enclave_ret_code;
-        }
-    };
-}
-
 // TODO: This really shouldn't be here
 const SATP_MODE_CHOICE: usize = insert_field!(0, SATP64_MODE as usize, SATP_MODE_SV39 as usize);
+
+type EResult<T> = Result<T, enclave_ret_code>;
+
+macro_rules! encl_ret {
+    ($what:ident) => {{
+        concat_idents!(ENCLAVE_, $what) as enclave_ret_code
+    }};
+}
 
 const NUM_ENCL: usize = 16;
 static ENCLAVES: Mutex<[Option<Enclave>; NUM_ENCL]> = Mutex::new([
@@ -104,22 +102,33 @@ impl Enclave {
 
 /* attestation reports */
 #[repr(C)]
-struct EnclaveReport {
+pub struct EnclaveReport {
     hash: [u8; MDSIZE as usize],
     data_len: u64,
     data: [u8; ATTEST_DATA_MAXLEN as usize],
     signature: [u8; SIGNATURE_SIZE as usize],
 }
 
+impl EnclaveReport {
+    fn sign(&mut self) {
+        let sig_data = unsafe {
+            let start = self as *const Self as *const u8;
+            let end = &self.data[self.data_len as usize] as *const u8;
+            slice::from_raw_parts(start, (end as usize) - (start as usize))
+        };
+        sm::sign(&mut self.signature, sig_data);
+    }
+}
+
 #[repr(C)]
-struct SmReport {
+pub struct SmReport {
     hash: [u8; MDSIZE as usize],
     public_key: [u8; PUBLIC_KEY_SIZE as usize],
     signature: [u8; SIGNATURE_SIZE as usize],
 }
 
 #[repr(C)]
-struct Report {
+pub struct Report {
     enclave: EnclaveReport,
     sm: SmReport,
     dev_public_key: [u8; PUBLIC_KEY_SIZE as usize],
@@ -141,7 +150,7 @@ struct Report {
 */
 pub unsafe fn context_switch_to_enclave(
     enclave: &mut Enclave,
-    regs: *mut [usize; 32],
+    regs: &mut [usize; 32],
     load_parameters: c_int,
 ) -> enclave_ret_code {
     let regs = &mut (*regs)[..];
@@ -195,10 +204,10 @@ pub unsafe fn context_switch_to_enclave(
     // Setup any platform specific defenses
     platform_switch_to_enclave(enclave.to_ffi_mut());
     cpu::cpu_enter_enclave_context(enclave.eid.eid);
-    ENCLAVE_SUCCESS as enclave_ret_code
+    encl_ret!(SUCCESS)
 }
 
-unsafe fn context_switch_to_host(enclave: &mut Enclave, encl_regs: *mut usize) {
+unsafe fn context_switch_to_host(enclave: &mut Enclave, encl_regs: &mut [usize; 32]) {
     // set PMP
     for region in enclave.regions_iter_mut() {
         let ret = region.pmp.set_perm(PMP_NO_PERM as u8);
@@ -207,7 +216,7 @@ unsafe fn context_switch_to_host(enclave: &mut Enclave, encl_regs: *mut usize) {
     osm_pmp_set(PMP_ALL_PERM as u8);
 
     /* restore host context */
-    swap_prev_state(&mut enclave.threads[0], encl_regs);
+    swap_prev_state(&mut enclave.threads[0], encl_regs.as_mut_ptr());
     swap_prev_mepc(&mut enclave.threads[0], csr::mepc::read());
 
     // enable timer interrupt
@@ -236,7 +245,7 @@ unsafe fn copy_word_to_host(
     // lock here for functional safety
     let region_overlap = pmp::detect_region_overlap(dest_ptr as usize, size_of::<usize>());
     if region_overlap {
-        return Err(ENCLAVE_REGION_OVERLAPS as enclave_ret_code);
+        Err(encl_ret!(REGION_OVERLAPS))?;
     }
 
     *dest_ptr = value;
@@ -260,12 +269,12 @@ pub unsafe extern "C" fn copy_from_host(
 
     let region_overlap = pmp::detect_region_overlap(source as usize, size);
     if region_overlap {
-        return ENCLAVE_REGION_OVERLAPS as enclave_ret_code;
+        return encl_ret!(REGION_OVERLAPS);
     }
 
     // TODO: Validate that dest is inside the SM.
     dest.copy_from_nonoverlapping(source, size);
-    ENCLAVE_SUCCESS as enclave_ret_code
+    encl_ret!(SUCCESS)
 }
 
 /* copies data from enclave, source must be inside EPM */
@@ -274,14 +283,14 @@ unsafe fn copy_from_enclave(
     dest: *mut c_void,
     source: *const c_void,
     size: usize,
-) -> enclave_ret_code {
+) -> EResult<()> {
     let legal = buffer_in_enclave_region(&*enclave, source, size);
     if !legal {
-        return ENCLAVE_ILLEGAL_ARGUMENT as enclave_ret_code;
+        return Err(encl_ret!(ILLEGAL_ARGUMENT));
     }
 
     dest.copy_from_nonoverlapping(source, size);
-    ENCLAVE_SUCCESS as enclave_ret_code
+    Ok(())
 }
 
 /* copies data into enclave, destination must be inside EPM */
@@ -290,14 +299,14 @@ unsafe fn copy_to_enclave(
     dest: *mut c_void,
     source: *const c_void,
     size: usize,
-) -> enclave_ret_code {
+) -> EResult<()> {
     let legal = buffer_in_enclave_region(enclave, dest, size);
     if !legal {
-        return ENCLAVE_ILLEGAL_ARGUMENT as enclave_ret_code;
+        return Err(encl_ret!(ILLEGAL_ARGUMENT));
     }
 
     dest.copy_from_nonoverlapping(source, size);
-    ENCLAVE_SUCCESS as enclave_ret_code
+    Ok(())
 }
 
 #[no_mangle]
@@ -426,22 +435,12 @@ pub extern "C" fn enclave_init_metadata() {
     }*/
 }
 
-/*********************************
- *
- * Enclave SBI functions
- * These are exposed to S-mode via the sm-sbi interface
- *
- *********************************/
-
-#[no_mangle]
-pub extern "C" fn attest_enclave(
-    report_ptr: usize,
+fn attest_enclave(
+    enclave: &Enclave,
+    report_out: &mut Report,
     data: usize,
     size: usize,
-    eid: enclave_id,
-) -> enclave_ret_code {
-    let e_idx = eid as usize;
-
+) -> EResult<()> {
     let mut report = Report {
         dev_public_key: [0u8; PUBLIC_KEY_SIZE as usize],
         enclave: EnclaveReport {
@@ -458,63 +457,40 @@ pub extern "C" fn attest_enclave(
     };
 
     if size > ATTEST_DATA_MAXLEN as usize {
-        return ENCLAVE_ILLEGAL_ARGUMENT as enclave_ret_code;
+        Err(encl_ret!(ILLEGAL_ARGUMENT))?;
     }
 
-    {
-        let enclave_arr = ENCLAVES.lock();
-        let enclave = encl_unwrap_opt!(enclave_arr[e_idx].as_ref(), ENCLAVE_NOT_INITIALIZED);
-
-        let attestable = enclave.state >= EnclaveState::Initialized;
-        if !attestable {
-            return ENCLAVE_NOT_INITIALIZED as enclave_ret_code;
-        }
-
-        /* copy data to be signed */
-        let dst_data_ptr = report.enclave.data.as_mut_ptr() as *mut c_void;
-        let src_data_ptr = data as *mut c_void;
-
-        report.enclave.data_len = size as u64;
-        report.enclave.hash = enclave.hash;
-
-        unsafe {
-            let ret = copy_from_enclave(enclave, dst_data_ptr, src_data_ptr, size);
-            if ret != 0 {
-                return ret;
-            }
-
-            report.dev_public_key = sm::dev_public_key;
-            report.sm.hash = sm::sm_hash;
-            report.sm.public_key = sm::sm_public_key;
-            report.sm.signature = sm::sm_signature;
-        };
+    if enclave.state < EnclaveState::Initialized {
+        Err(encl_ret!(NOT_INITIALIZED))?;
     }
+
+    /* copy data to be signed */
+    let dst_data_ptr = report.enclave.data.as_mut_ptr() as *mut c_void;
+    let src_data_ptr = data as *mut c_void;
+
+    report.enclave.data_len = size as u64;
+    report.enclave.hash = enclave.hash;
 
     unsafe {
-        let enclave = &report.enclave as *const EnclaveReport as *const u8;
-        let enclave_slice = slice::from_raw_parts(enclave, size_of::<EnclaveReport>());
-        let enclave_slice = &enclave_slice[..enclave_slice.len() - SIGNATURE_SIZE as usize];
-        let enclave_slice =
-            &enclave_slice[..enclave_slice.len() - (ATTEST_DATA_MAXLEN as usize) + size];
+        copy_from_enclave(enclave, dst_data_ptr, src_data_ptr, size)?;
 
-        sm::sign(&mut report.enclave.signature, enclave_slice);
+        report.dev_public_key = sm::dev_public_key;
+        report.sm.hash = sm::sm_hash;
+        report.sm.public_key = sm::sm_public_key;
+        report.sm.signature = sm::sm_signature;
     }
 
+    report.enclave.sign();
+
     /* copy report to the enclave */
-    let dst_report_ptr = report_ptr as *mut c_void;
+    let dst_report_ptr = report_out as *mut Report as *mut c_void;
     let src_report_ptr = &mut report as *mut Report as *mut c_void;
 
-    if let Some(ref mut enclave) = ENCLAVES.lock()[e_idx] {
-        let ret = unsafe {
-            copy_to_enclave(enclave, dst_report_ptr, src_report_ptr, size_of::<Report>())
-        };
+    unsafe {
+        copy_to_enclave(enclave, dst_report_ptr, src_report_ptr, size_of::<Report>())?;
+    }
 
-        if ret != 0 {
-            return ret;
-        }
-    };
-
-    return ENCLAVE_SUCCESS as enclave_ret_code;
+    Ok(())
 }
 
 struct Eid {
@@ -528,13 +504,12 @@ impl Eid {
             if prev & (1 << i) == 0 {
                 // we succeeded!
                 return Ok(Self {
-                    eid: i as enclave_id
-                })
+                    eid: i as enclave_id,
+                });
             }
         }
 
-        Err(ENCLAVE_NO_FREE_RESOURCE as enclave_ret_code)
-
+        Err(encl_ret!(NO_FREE_RESOURCE))
     }
 }
 
@@ -549,8 +524,7 @@ impl Drop for Eid {
  *
  * This may fail if: it cannot allocate PMP regions, EIDs, etc
  */
-#[no_mangle]
-pub extern "C" fn create_enclave(create_args: keystone_sbi_create) -> enclave_ret_code {
+fn create_enclave(create_args: keystone_sbi_create) -> EResult<()> {
     /* EPM and UTM parameters */
     let base = create_args.epm_region.paddr;
     let size = create_args.epm_region.size;
@@ -560,7 +534,7 @@ pub extern "C" fn create_enclave(create_args: keystone_sbi_create) -> enclave_re
 
     /* Runtime parameters */
     if !is_create_args_valid(&create_args) {
-        return ENCLAVE_ILLEGAL_ARGUMENT as enclave_ret_code;
+        Err(encl_ret!(ILLEGAL_ARGUMENT))?;
     }
 
     /* set va params */
@@ -574,31 +548,21 @@ pub extern "C" fn create_enclave(create_args: keystone_sbi_create) -> enclave_re
     };
 
     // allocate eid
-    let eid_reservation = Eid::reserve();
-    let eid_reservation = if let Ok(e) = eid_reservation {
-        e
-    } else {
-        return ENCLAVE_NO_FREE_RESOURCE as enclave_ret_code;
-    };
+    let eid_reservation = Eid::reserve()?;
     let eid = eid_reservation.eid as usize;
 
     // create a PMP region bound to the enclave
-    let ret = ENCLAVE_PMP_FAILURE as enclave_ret_code;
-    let region = pmp::PmpRegion::reserve(base, size, pmp::Priority::Any);
-    let mut region = if let Ok(r) = region { r } else { return ret };
+    let mut region = pmp::PmpRegion::reserve(base, size, pmp::Priority::Any)
+        .map_err(|_| encl_ret!(PMP_FAILURE))?;
 
     // create PMP region for shared memory
-    let shared_region = pmp::PmpRegion::reserve(utbase, utsize, pmp::Priority::Bottom);
-    let shared_region = if let Ok(r) = shared_region {
-        r
-    } else {
-        return ret;
-    };
+    let shared_region = pmp::PmpRegion::reserve(utbase, utsize, pmp::Priority::Bottom)
+        .map_err(|_| encl_ret!(PMP_FAILURE))?;
 
     // set pmp registers for private region (not shared)
-    if let Err(_) = region.set_global(PMP_NO_PERM as u8) {
-        return ret;
-    }
+    region
+        .set_global(PMP_NO_PERM as u8)
+        .map_err(|_| encl_ret!(PMP_FAILURE))?;
 
     // cleanup some memory regions for sanity See issue #38
     unsafe {
@@ -639,7 +603,7 @@ pub extern "C" fn create_enclave(create_args: keystone_sbi_create) -> enclave_re
         it may modify the enclave struct */
         let ret = platform_create_enclave(enc.to_ffi_mut());
         if ret != ENCLAVE_SUCCESS as usize {
-            return ret;
+            Err(ret)?;
         }
     }
 
@@ -650,52 +614,42 @@ pub extern "C" fn create_enclave(create_args: keystone_sbi_create) -> enclave_re
         unsafe {
             platform_destroy_enclave(enc.to_ffi_mut());
         }
-        return ret;
+        Err(ret)?;
     }
 
     /* EIDs are unsigned int in size, copy via simple copy */
     unsafe {
-        let ret = copy_word_to_host(&mut enc, eidptr, eid);
-        if let Err(ret) = ret {
-            return ret as enclave_ret_code;
-        }
+        copy_word_to_host(&mut enc, eidptr, eid)?;
     }
 
     let mut enclave_arr = ENCLAVES.lock();
     enclave_arr[eid] = Some(enc);
 
-    ENCLAVE_SUCCESS as enclave_ret_code
+    Ok(())
 }
 
-#[no_mangle]
-pub extern "C" fn run_enclave(host_regs: *mut [usize; 32], eid: enclave_id) -> enclave_ret_code {
-    let mut enclave_arr = ENCLAVES.lock();
-    let enclave = encl_unwrap_opt!(enclave_arr[eid as usize].as_mut(), ENCLAVE_NOT_RUNNING);
-
-    let runnable = enclave.n_thread < MAX_ENCL_THREADS;
-    if !runnable {
-        return ENCLAVE_NOT_RUNNABLE as enclave_ret_code;
+fn run_enclave(enclave: &mut Enclave, host_regs: &mut [usize; 32]) -> EResult<()> {
+    if enclave.n_thread > MAX_ENCL_THREADS {
+        Err(encl_ret!(NOT_RUNNABLE))?;
     }
 
     enclave.state = EnclaveState::Running;
     enclave.n_thread += 1;
 
     // Enclave is OK to run, context switch to it
-    unsafe { context_switch_to_enclave(enclave, host_regs, 1) }
+    unsafe {
+        context_switch_to_enclave(enclave, &mut *host_regs, 1);
+    }
+    Ok(())
 }
 
-#[no_mangle]
-pub extern "C" fn exit_enclave(
-    encl_regs: *mut usize,
+fn exit_enclave(
+    enclave: &mut Enclave,
+    encl_regs: &mut [usize; 32],
     _retval: c_ulong,
-    eid: enclave_id,
-) -> enclave_ret_code {
-    let mut enclave_arr = ENCLAVES.lock();
-    let enclave = encl_unwrap_opt!(enclave_arr[eid as usize].as_mut(), ENCLAVE_NOT_RUNNING);
-
-    let exitable = enclave.state == EnclaveState::Running;
-    if !exitable {
-        return ENCLAVE_NOT_RUNNING as enclave_ret_code;
+) -> EResult<()> {
+    if enclave.state != EnclaveState::Running {
+        Err(encl_ret!(NOT_RUNNING))?;
     }
 
     unsafe {
@@ -708,43 +662,40 @@ pub extern "C" fn exit_enclave(
         enclave.state = EnclaveState::Initialized;
     }
 
-    return ENCLAVE_SUCCESS as enclave_ret_code;
+    Ok(())
 }
 
-#[no_mangle]
-pub extern "C" fn stop_enclave(
-    encl_regs: *mut usize,
+fn stop_enclave(
+    enclave: &mut Enclave,
+    encl_regs: &mut [usize; 32],
     request: u64,
-    eid: enclave_id,
-) -> enclave_ret_code {
-    let mut enclave_arr = ENCLAVES.lock();
-    let enclave = encl_unwrap_opt!(enclave_arr[eid as usize].as_mut(), ENCLAVE_NOT_RUNNING);
-
-    let stoppable = enclave.state == EnclaveState::Running;
-    if !stoppable {
-        return ENCLAVE_NOT_RUNNING as enclave_ret_code;
+) -> EResult<()> {
+    if enclave.state != EnclaveState::Running {
+        Err(encl_ret!(NOT_RUNNING))?;
     }
 
     unsafe {
         context_switch_to_host(enclave, encl_regs);
     }
 
-    match request {
-        n if n == STOP_TIMER_INTERRUPT as u64 => ENCLAVE_INTERRUPTED as enclave_ret_code,
-        n if n == STOP_EDGE_CALL_HOST as u64 => ENCLAVE_EDGE_CALL_HOST as enclave_ret_code,
-        _ => ENCLAVE_UNKNOWN_ERROR as enclave_ret_code,
-    }
+    Err(match request {
+        n if n == STOP_TIMER_INTERRUPT as u64 => encl_ret!(INTERRUPTED),
+        n if n == STOP_EDGE_CALL_HOST as u64 => encl_ret!(EDGE_CALL_HOST),
+        _ => encl_ret!(UNKNOWN_ERROR),
+    })
 }
 
-#[no_mangle]
-pub extern "C" fn resume_enclave(host_regs: *mut [usize; 32], eid: enclave_id) -> enclave_ret_code {
-    ENCLAVES
-        .lock()
-        .get_mut(eid as usize)
-        .and_then(|e| e.as_mut())
-        .filter(|enc| enc.state == EnclaveState::Running && enc.n_thread > 0)
-        .map(|enc| unsafe { context_switch_to_enclave(enc, host_regs, 0) })
-        .unwrap_or(ENCLAVE_NOT_RESUMABLE as enclave_ret_code)
+fn resume_enclave(
+    enclave: &mut Enclave,
+    host_regs: &mut [usize; 32],
+) -> EResult<()> {
+    if enclave.state != EnclaveState::Running || enclave.n_thread == 0 {
+        Err(encl_ret!(NOT_RESUMABLE))?;
+    }
+    unsafe {
+        context_switch_to_enclave(enclave, host_regs, 0);
+    }
+    Ok(())
 }
 
 /*
@@ -752,11 +703,7 @@ pub extern "C" fn resume_enclave(host_regs: *mut [usize; 32], eid: enclave_id) -
  * Deallocates EID, clears epm, etc
  * Fails only if the enclave isn't running.
  */
-#[no_mangle]
-pub extern "C" fn destroy_enclave(eid: enclave_id) -> enclave_ret_code {
-    let mut enclave_arr = ENCLAVES.lock();
-    let mut enclave = encl_unwrap_opt!(enclave_arr[eid as usize].take(), ENCLAVE_NOT_DESTROYABLE);
-
+fn destroy_enclave(enclave: &mut Enclave) -> EResult<()> {
     // 0. Let the platform specifics do cleanup/modifications
     unsafe {
         platform_destroy_enclave(enclave.to_ffi_mut());
@@ -779,7 +726,107 @@ pub extern "C" fn destroy_enclave(eid: enclave_id) -> enclave_ret_code {
         let _ = region.pmp.unset_global();
     }
 
-    ENCLAVE_SUCCESS as enclave_ret_code
+    Ok(())
+}
+
+/*********************************
+ *
+ * Enclave SBI functions
+ * These are exposed to S-mode via the sm-sbi interface
+ *
+ *********************************/
+
+pub mod sbi_functions {
+    use super::*;
+
+    macro_rules! with_enclave {
+        ($eid:expr, $err:ident, $closure:expr) => {
+            ENCLAVES
+                .lock()
+                .get_mut($eid as usize)
+                .and_then(|e| e.as_mut())
+                .ok_or(encl_ret!($err))
+                .and_then($closure)
+                .err()
+                .unwrap_or(encl_ret!(SUCCESS))
+        };
+    }
+
+    #[no_mangle]
+    pub extern "C" fn create_enclave(create_args: keystone_sbi_create) -> enclave_ret_code {
+        super::create_enclave(create_args)
+            .err()
+            .unwrap_or(encl_ret!(SUCCESS))
+    }
+
+    #[no_mangle]
+    pub extern "C" fn attest_enclave(
+        report_ptr: *mut Report,
+        data: usize,
+        size: usize,
+        eid: enclave_id,
+    ) -> enclave_ret_code {
+        let report_out = unsafe { &mut *report_ptr };
+        with_enclave!(eid, NOT_INITIALIZED, |enclave| {
+            super::attest_enclave(enclave, report_out, data, size)
+        })
+    }
+
+    #[no_mangle]
+    pub extern "C" fn run_enclave(
+        host_regs: *mut [usize; 32],
+        eid: enclave_id,
+    ) -> enclave_ret_code {
+        let host_regs = unsafe { &mut *host_regs };
+        with_enclave!(eid, NOT_RUNNABLE, |enclave| {
+            super::run_enclave(enclave, host_regs)
+        })
+    }
+
+    #[no_mangle]
+    pub extern "C" fn stop_enclave(
+        encl_regs: *mut [usize; 32],
+        request: u64,
+        eid: enclave_id,
+    ) -> enclave_ret_code {
+        let encl_regs = unsafe { &mut *encl_regs };
+        with_enclave!(eid, NOT_RUNNING, |enclave| {
+            super::stop_enclave(enclave, encl_regs, request)
+        })
+    }
+
+    #[no_mangle]
+    pub extern "C" fn resume_enclave(
+        host_regs: *mut [usize; 32],
+        eid: enclave_id,
+    ) -> enclave_ret_code {
+        let host_regs = unsafe { &mut *host_regs };
+        with_enclave!(eid, NOT_RESUMABLE, |enclave| {
+            super::resume_enclave(enclave, host_regs)
+        })
+    }
+
+    #[no_mangle]
+    pub extern "C" fn exit_enclave(
+        encl_regs: *mut [usize; 32],
+        retval: c_ulong,
+        eid: enclave_id,
+    ) -> enclave_ret_code {
+        let encl_regs = unsafe { &mut *encl_regs };
+        with_enclave!(eid, NOT_RUNNING, |enclave| {
+            super::exit_enclave(enclave, encl_regs, retval)
+        })
+    }
+
+    #[no_mangle]
+    pub extern "C" fn destroy_enclave(eid: enclave_id) -> enclave_ret_code {
+        ENCLAVES.lock()[eid as usize]
+            .take()
+            .ok_or(encl_ret!(NOT_DESTROYABLE))
+            .and_then(|mut e| super::destroy_enclave(&mut e))
+            .err()
+            .unwrap_or(encl_ret!(SUCCESS))
+    }
 }
 
 #[cfg(test)]

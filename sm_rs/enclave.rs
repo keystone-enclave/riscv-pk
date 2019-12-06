@@ -552,11 +552,11 @@ fn create_enclave(create_args: keystone_sbi_create) -> EResult<()> {
     let eid = eid_reservation.eid as usize;
 
     // create a PMP region bound to the enclave
-    let mut region = pmp::PmpRegion::reserve(base, size, pmp::Priority::Any)
+    let mut region = pmp::PmpRegion::reserve(base, size, pmp::Priority::Any, false)
         .map_err(|_| encl_ret!(PMP_FAILURE))?;
 
     // create PMP region for shared memory
-    let shared_region = pmp::PmpRegion::reserve(utbase, utsize, pmp::Priority::Bottom)
+    let shared_region = pmp::PmpRegion::reserve(utbase, utsize, pmp::Priority::Bottom, false)
         .map_err(|_| encl_ret!(PMP_FAILURE))?;
 
     // set pmp registers for private region (not shared)

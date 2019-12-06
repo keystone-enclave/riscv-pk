@@ -3,6 +3,8 @@ project(keystone_test C)
 
 SET(CMAKE_C_COMPILER riscv64-unknown-linux-gnu-gcc)
 SET(CMAKE_C_FLAGS -static)
+#SET(CMAKE_ASM_COMPILER riscv64-unknown-linux-gnu-gcc)
+#set_source_files_properties(foo.s PROPERTIES COMPILE_FLAGS "-x assembler-with-cpp")
 include_directories(
     ${CMAKE_BINARY_DIR}
     ${CMAKE_CURRENT_SOURCE_DIR}
@@ -45,7 +47,6 @@ add_executable(test_enclave
                 ../crypto.c
                 ../thread.c
                 ../sm.c
-		../trap.S
                 )
 target_link_libraries(test_enclave cmocka)
 add_test(test_enclave
@@ -55,8 +56,9 @@ set_target_properties(test_enclave
         COMPILE_FLAGS -DTARGET_PLATFORM_HEADER=\\"..\/platform\/default\/default.h\\"
         LINK_FLAGS
           "-Wl,--wrap=printm \
-          -Wl,--wrap=poweroff \
+	  -Wl,--wrap=poweroff \
           -Wl,--wrap=disabled_hart_mask \
+	  -Wl,--wrap=switch_vector_enclave \
           -Wl,--wrap=hart_mask \
           -Wl,--wrap=sanctum_sm_hash \
           -Wl,--wrap=sanctum_sm_signature \

@@ -13,5 +13,10 @@ void __wrap_poweroff(uint16_t code)
   mock_assert(0, "poweroff", __FILE__, __LINE__);
 }
 
+
+void __wrap_switch_vector_enclave(){
+  return; 
+}
+
 long __wrap_disabled_hart_mask;
 uint64_t __wrap_hart_mask;

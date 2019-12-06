@@ -31,12 +31,12 @@ extern byte dev_public_key[PUBLIC_KEY_SIZE];
 
 
 
-static inline void switch_vector_enclave(){
+void switch_vector_enclave(){
   extern void trap_vector_enclave(); 
   write_csr(mtvec, &trap_vector_enclave); 
 }
 
-static inline void switch_vector_host(){
+void switch_vector_host(){
   extern void trap_vector(); 
   write_csr(mtvec, &trap_vector);
 }

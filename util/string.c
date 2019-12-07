@@ -2,7 +2,7 @@
 #include <stdint.h>
 #include <ctype.h>
 
-void* memcpy(void* dest, const void* src, size_t len)
+void* __attribute__((weak)) memcpy(void* dest, const void* src, size_t len)
 {
   const char* s = src;
   char *d = dest;
@@ -21,7 +21,7 @@ void* memcpy(void* dest, const void* src, size_t len)
   return dest;
 }
 
-void* memset(void* dest, int byte, size_t len)
+void* __attribute__((weak)) memset(void* dest, int byte, size_t len)
 {
   if ((((uintptr_t)dest | len) & (sizeof(uintptr_t)-1)) == 0) {
     uintptr_t word = byte & 0xFF;

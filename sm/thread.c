@@ -6,6 +6,20 @@
 #include "mtrap.h"
 
 
+void switch_vector_enclave(){
+  extern void trap_vector_enclave();
+  write_csr(mtvec, &trap_vector_enclave);
+}
+
+void switch_vector_host(){
+  extern void trap_vector();
+  write_csr(mtvec, &trap_vector);
+}
+
+uint64_t getRTC(){
+	return *mtime; 
+}
+
 void swap_prev_mpp(struct thread_state* thread, uintptr_t* regs){
   //Time interrupts can occur in either user mode or supervisor mode
 

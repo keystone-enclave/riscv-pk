@@ -29,7 +29,7 @@ extern byte dev_public_key[PUBLIC_KEY_SIZE];
  *
  ****************************/
 
-
+/*
 
 void switch_vector_enclave(){
   extern void trap_vector_enclave(); 
@@ -40,7 +40,7 @@ void switch_vector_host(){
   extern void trap_vector(); 
   write_csr(mtvec, &trap_vector);
 }
-
+*/
 /* Internal function containing the core of the context switching
  * code to the enclave.
  *
@@ -84,7 +84,7 @@ static inline enclave_ret_code context_switch_to_enclave(uintptr_t* regs,
   switch_vector_enclave(); 
   
   hls_t* hls = HLS(); 
-  *hls->timecmp = *mtime + ENCL_TIME_SLICE; 
+  *hls->timecmp = getRTC() + ENCL_TIME_SLICE; 
  
   clear_csr(mip, MIP_MTIP); 
   clear_csr(mip, MIP_STIP);

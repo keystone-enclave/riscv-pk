@@ -1,0 +1,34 @@
+[package]
+name = "sm-rs"
+version = "0.1.0"
+edition = "2018"
+
+[lib]
+crate-type = ["staticlib"]
+path = "lib.rs"
+
+[profile.dev]
+overflow-checks = false
+[profile.test]
+overflow-checks = false
+
+[dependencies]
+spin = "0.5"
+util = { path = "../util" }
+libc = { git = "https://github.com/rust-lang/libc" }
+
+[patch.crates-io]
+cc = { git = "https://github.com/alexcrichton/cc-rs" }
+
+[dependencies.riscv]
+git = "https://github.com/rust-embedded/riscv"
+features = ["inline-asm"]
+
+[build-dependencies]
+bindgen = "0.50"
+
+
+[dev-dependencies]
+test = { git = "https://github.com/keystone-enclave/utest", branch = "fix-interface" }
+utest-macros = { git = "https://github.com/keystone-enclave/utest", branch = "fix-interface" }
+mock = { path = "./tests/mock" }

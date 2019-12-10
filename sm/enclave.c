@@ -110,8 +110,15 @@ static inline void context_switch_to_host(uintptr_t* encl_regs,
   swap_prev_state(&enclaves[eid].threads[0], encl_regs);
   swap_prev_mepc(&enclaves[eid].threads[0], read_csr(mepc));
 // printm("[%d][%d] csth [%x]\r\n", read_csr(mhartid), eid, read_csr(sstatus));
+
+  // clear_csr(mip, MIP_MTIP);
+  // clear_csr(mip, MIP_STIP);
+  // clear_csr(mip, MIP_SSIP);
+  // clear_csr(mip, MIP_SEIP);
+
   // enable timer interrupt
   // set_csr(mie, MIP_MTIP);
+
 
   // Reconfigure platform specific defenses
   platform_switch_from_enclave(&(enclaves[eid]));

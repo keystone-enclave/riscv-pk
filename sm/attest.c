@@ -27,10 +27,10 @@ int validate_and_hash_epm(hash_ctx* hash_ctx, int level,
   utm_start = pmp_region_get_addr(encl->regions[idx].pmp_rid);
   utm_size = pmp_region_get_size(encl->regions[idx].pmp_rid);
 
-
+  pte_t* cond = tb + (RISCV_PGSIZE/sizeof(pte_t));
 
   /* iterate over PTEs */
-  for (walk=tb, i=0; walk < tb + (RISCV_PGSIZE/sizeof(pte_t)); walk += 1,i++)
+  for (walk=tb, i=0; walk < cond; walk += 1,i++)
   {
     if (*walk == 0) {
       contiguous = 0;

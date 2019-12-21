@@ -134,7 +134,6 @@ static inline void context_switch_to_host(uintptr_t* encl_regs,
   write_csr(mideleg, interrupts);
 
   // enable timer interrupt
-  clear_csr(mie, MIP_MTIP);
   clear_csr(mip, MIP_STIP); 
   clear_csr(mip, MIP_MTIP); 
 

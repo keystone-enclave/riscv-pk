@@ -24,14 +24,16 @@ void swap_prev_mpp(struct thread_state* thread, uintptr_t* regs){
   //Time interrupts can occur in either user mode or supervisor mode
 
   int old_mpp = thread->prev_mpp;
-  int mstatus = read_csr(mstatus);
-  thread->prev_mpp = mstatus & 0x800;
+  int curr_mstatus = read_csr(mstatus);
+  thread->prev_mpp = curr_mstatus & 0x800;
+  int new_mstatus = (curr_mstatus & ~0x800) | old_mpp;
+  write_csr(mstatus, new_mstatus); 
 
-  if(old_mpp != 0) {
+  /*if(old_mpp != 0) {
      set_csr(mstatus, 0x800);
  } else{
      clear_csr(mstatus, 0x800);
-}
+} */
 
 }
 
@@ -101,7 +103,7 @@ void clean_state(struct thread_state* state){
     prev[i] = 0;
   }
 
-  state->prev_mpp = 1;   
+  state->prev_mpp = 0x800;   
   clean_smode_csrs(state);
 }
 

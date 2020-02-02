@@ -3,7 +3,7 @@
 // All Rights Reserved. See LICENSE for license details.
 //------------------------------------------------------------------------------
 #include "enclave.h"
-#include "enclave_copy.h"
+#include "mprv.h"
 #include "pmp.h"
 #include "page.h"
 #include "cpu.h"
@@ -263,17 +263,11 @@ static enclave_ret_code copy_word_to_host(uintptr_t* dest_ptr, uintptr_t value)
  * Does NOT do verification of dest, assumes caller knows what that is.
  * Dest should be inside the SM memory.
  */
-enclave_ret_code copy_from_host(void* source, void* dest, size_t size){
+enclave_ret_code copy_enclave_create_args(uintptr_t src, struct keystone_sbi_create* dest){
 
-  int region_overlap = 0;
-  spinlock_lock(&encl_lock);
-  region_overlap = pmp_detect_region_overlap_atomic((uintptr_t) source, size);
-  // TODO: Validate that dest is inside the SM.
-  if(!region_overlap)
-    memcpy(dest, source, size);
-  spinlock_unlock(&encl_lock);
+  int region_overlap = copy_to_sm(dest, src, sizeof(struct keystone_sbi_create));
 
-  if(region_overlap)
+  if (region_overlap)
     return ENCLAVE_REGION_OVERLAPS;
   else
     return ENCLAVE_SUCCESS;

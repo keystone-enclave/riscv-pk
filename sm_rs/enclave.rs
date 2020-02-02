@@ -302,26 +302,19 @@ unsafe fn copy_word_to_host(
     mprv::copy_out(dest_ptr, &value).map_err(|_| encl_ret!(ILLEGAL_ARGUMENT))
 }
 
-// TODO: This function is externally used by sm-sbi.c.
-// Change it to be internal (remove from the enclave.h and make static)
 /* Internal function enforcing a copy source is from the untrusted world.
  * Does NOT do verification of dest, assumes caller knows what that is.
  * Dest should be inside the SM memory.
  */
-#[no_mangle]
-pub unsafe extern "C" fn copy_from_host(
-    source: *mut c_void,
-    dest: *mut c_void,
-    size: usize,
-) -> enclave_ret_code {
-    let region_overlap = pmp::detect_region_overlap(source as usize, size);
-    if region_overlap {
-        return encl_ret!(REGION_OVERLAPS);
-    }
+fn copy_create_args(
+    source: sptr<keystone_sbi_create>,
+) -> EResult<keystone_sbi_create> {
+    
+    let mut out: keystone_sbi_create = unsafe { zeroed() };
 
-    // TODO: Validate that dest is inside the SM.
-    dest.copy_from_nonoverlapping(source, size);
-    encl_ret!(SUCCESS)
+    mprv::copy_in(&mut out, source)
+        .map(|_| out)
+        .map_err(|_| encl_ret!(REGION_OVERLAPS))
 }
 
 /* copies data from enclave, source must be inside EPM */
@@ -805,8 +798,9 @@ pub mod sbi_functions {
     }
 
     #[no_mangle]
-    pub extern "C" fn create_enclave(create_args: keystone_sbi_create) -> enclave_ret_code {
-        super::create_enclave(create_args)
+    pub extern "C" fn create_enclave(create_args: sptr<keystone_sbi_create>) -> enclave_ret_code {
+        copy_create_args(create_args)
+            .and_then(super::create_enclave)
             .err()
             .unwrap_or(encl_ret!(SUCCESS))
     }

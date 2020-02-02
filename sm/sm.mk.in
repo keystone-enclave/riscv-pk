@@ -22,7 +22,7 @@ sm_c_srcs = \
 
 sm_asm_srcs = \
   trap.S \
-  enclave_copy.S \
+  mprv.S \
 
 sm_test_srcs =
 

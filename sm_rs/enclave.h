@@ -48,7 +48,7 @@ struct enclave;
 
 /*** SBI functions & external functions ***/
 // callables from the host
-enclave_ret_code create_enclave(struct keystone_sbi_create create_args);
+enclave_ret_code create_enclave(uintptr_t create_args_vptr);
 enclave_ret_code destroy_enclave(enclave_id eid);
 enclave_ret_code run_enclave(uintptr_t* host_regs, enclave_id eid);
 enclave_ret_code resume_enclave(uintptr_t* regs, enclave_id eid);

@@ -67,5 +67,8 @@ set_target_properties(test_enclave
           -Wl,--wrap=sanctum_sm_public_key \
           -Wl,--wrap=sanctum_sm_secret_key \
           -Wl,--wrap=sanctum_dev_public_key \
+          -Wl,--wrap=copy1_to_sm \
+          -Wl,--wrap=copy8_to_sm \
+          -Wl,--wrap=copy64_to_sm \
           -Wl,--wrap=copy8_from_sm"
          )

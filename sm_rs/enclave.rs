@@ -118,6 +118,7 @@ impl Enclave {
 
 /* attestation reports */
 #[repr(C)]
+#[derive(Copy, Clone)]
 pub struct EnclaveReport {
     hash: [u8; crypto::HASH_SIZE],
     data_len: u64,
@@ -137,6 +138,7 @@ impl EnclaveReport {
 }
 
 #[repr(C)]
+#[derive(Copy, Clone)]
 pub struct SmReport {
     hash: [u8; crypto::HASH_SIZE],
     public_key: [u8; crypto::PUBKEY_SIZE],
@@ -144,6 +146,7 @@ pub struct SmReport {
 }
 
 #[repr(C)]
+#[derive(Copy, Clone)]
 pub struct Report {
     enclave: EnclaveReport,
     sm: SmReport,
@@ -318,35 +321,25 @@ fn copy_create_args(
 }
 
 /* copies data from enclave, source must be inside EPM */
-unsafe fn copy_from_enclave(
+fn copy_enclave_data(
     enclave: &Enclave,
-    dest: *mut c_void,
-    source: *const c_void,
-    size: usize,
+    dest: &mut [u8],
+    source: sptr<u8>
 ) -> EResult<()> {
-    let legal = buffer_in_enclave_region(&*enclave, source, size);
-    if !legal {
-        return Err(encl_ret!(ILLEGAL_ARGUMENT));
-    }
 
-    dest.copy_from_nonoverlapping(source, size);
-    Ok(())
+    mprv::copy_buf_in(dest, source)
+        .map_err(|_| encl_ret!(REGION_OVERLAPS))
 }
 
 /* copies data into enclave, destination must be inside EPM */
-unsafe fn copy_to_enclave(
+fn copy_enclave_report(
     enclave: &Enclave,
-    dest: *mut c_void,
-    source: *const c_void,
-    size: usize,
+    dest: sptr<Report>,
+    source: &Report
 ) -> EResult<()> {
-    let legal = buffer_in_enclave_region(enclave, dest, size);
-    if !legal {
-        return Err(encl_ret!(ILLEGAL_ARGUMENT));
-    }
 
-    dest.copy_from_nonoverlapping(source, size);
-    Ok(())
+    mprv::copy_out(dest, source)
+        .map_err(|_| encl_ret!(REGION_OVERLAPS))
 }
 
 #[no_mangle]
@@ -488,8 +481,8 @@ pub fn init_metadata() {
 
 fn attest_enclave(
     enclave: &Enclave,
-    report_out: &mut Report,
-    data: usize,
+    report_out: sptr<Report>,
+    data: sptr<u8>,
     size: usize,
 ) -> EResult<()> {
     let mut report = Report {
@@ -516,26 +509,15 @@ fn attest_enclave(
     }
 
     /* copy data to be signed */
-    let dst_data_ptr = report.enclave.data.as_mut_ptr() as *mut c_void;
-    let src_data_ptr = data as *mut c_void;
-
     report.enclave.data_len = size as u64;
     report.enclave.hash = enclave.hash;
 
-    unsafe {
-        copy_from_enclave(enclave, dst_data_ptr, src_data_ptr, size)?;
-    }
+    copy_enclave_data(enclave, &mut report.enclave.data[..size], data)?;
 
     report.copy_keys();
     report.enclave.sign();
 
-    /* copy report to the enclave */
-    let dst_report_ptr = report_out as *mut Report as *mut c_void;
-    let src_report_ptr = &mut report as *mut Report as *mut c_void;
-
-    unsafe {
-        copy_to_enclave(enclave, dst_report_ptr, src_report_ptr, size_of::<Report>())?;
-    }
+    copy_enclave_report(enclave, report_out, &report)?;
 
     Ok(())
 }
@@ -807,14 +789,13 @@ pub mod sbi_functions {
 
     #[no_mangle]
     pub extern "C" fn attest_enclave(
-        report_ptr: *mut Report,
-        data: usize,
+        report_ptr: sptr<Report>,
+        data: sptr<u8>,
         size: usize,
         eid: enclave_id,
     ) -> enclave_ret_code {
-        let report_out = unsafe { &mut *report_ptr };
         with_enclave!(eid, NOT_INITIALIZED, |enclave| {
-            super::attest_enclave(enclave, report_out, data, size)
+            super::attest_enclave(enclave, report_ptr, data, size)
         })
     }
 

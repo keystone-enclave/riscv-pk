@@ -237,22 +237,14 @@ uintptr_t get_enclave_region_base(enclave_id eid, int memid)
 
 /* Ensures that dest ptr is in host, not in enclave regions
  */
-static enclave_ret_code copy_word_to_host(uintptr_t* dest_ptr, uintptr_t value)
+static enclave_ret_code copy_word_to_host(uintptr_t dest_ptr, uintptr_t value)
 {
-  int region_overlap = 0;
-  spinlock_lock(&encl_lock);
-  region_overlap = pmp_detect_region_overlap_atomic((uintptr_t)dest_ptr,
-                                                sizeof(uintptr_t));
-
   enclave_ret_code ret = ENCLAVE_REGION_OVERLAPS;
 
-  if(!region_overlap) {
-    int err = copy8_from_sm((uint64_t *)dest_ptr, (uint64_t *)&value);
-    if (!err) {
-      ret = ENCLAVE_SUCCESS;
-    }
+  int err = copy8_from_sm(dest_ptr, (uint64_t *)&value);
+  if (!err) {
+    ret = ENCLAVE_SUCCESS;
   }
-  spinlock_unlock(&encl_lock);
 
   return ret;
 }
@@ -294,33 +286,24 @@ static int buffer_in_enclave_region(struct enclave* enclave,
 }
 
 /* copies data from enclave, source must be inside EPM */
-static enclave_ret_code copy_from_enclave(struct enclave* enclave,
-                                          void* dest, void* source, size_t size) {
+static enclave_ret_code copy_enclave_data(struct enclave* enclave,
+                                          void* dest, uintptr_t source, size_t size) {
 
-  spinlock_lock(&encl_lock);
-  int legal = buffer_in_enclave_region(enclave, source, size);
+  int illegal = copy_to_sm(dest, source, size);
 
-  if(legal)
-    memcpy(dest, source, size);
-  spinlock_unlock(&encl_lock);
-
-  if(!legal)
+  if(illegal)
     return ENCLAVE_ILLEGAL_ARGUMENT;
   else
     return ENCLAVE_SUCCESS;
 }
 
 /* copies data into enclave, destination must be inside EPM */
-static enclave_ret_code copy_to_enclave(struct enclave* enclave,
-                                        void* dest, void* source, size_t size) {
-  spinlock_lock(&encl_lock);
-  int legal = buffer_in_enclave_region(enclave, dest, size);
+static enclave_ret_code copy_enclave_report(struct enclave* enclave,
+                                            uintptr_t dest, struct report* source) {
 
-  if(legal)
-    memcpy(dest, source, size);
-  spinlock_unlock(&encl_lock);
+  int illegal = copy_from_sm(dest, source, sizeof(struct report));
 
-  if(!legal)
+  if(illegal)
     return ENCLAVE_ILLEGAL_ARGUMENT;
   else
     return ENCLAVE_SUCCESS;
@@ -474,7 +457,7 @@ enclave_ret_code create_enclave(struct keystone_sbi_create create_args)
     goto free_platform;
 
   /* EIDs are unsigned int in size, copy via simple copy */
-  return copy_word_to_host((uintptr_t*)eidptr, (uintptr_t)eid);
+  return copy_word_to_host((uintptr_t)eidptr, (uintptr_t)eid);
 
 free_platform:
   platform_destroy_enclave(&enclaves[eid]);
@@ -664,10 +647,8 @@ enclave_ret_code attest_enclave(uintptr_t report_ptr, uintptr_t data, uintptr_t 
     return ENCLAVE_NOT_INITIALIZED;
 
   /* copy data to be signed */
-  ret = copy_from_enclave(&enclaves[eid],
-      report.enclave.data,
-      (void*)data,
-      size);
+  ret = copy_enclave_data(&enclaves[eid], report.enclave.data,
+      data, size);
   report.enclave.data_len = size;
 
   if (ret) {
@@ -686,10 +667,10 @@ enclave_ret_code attest_enclave(uintptr_t report_ptr, uintptr_t data, uintptr_t 
       - ATTEST_DATA_MAXLEN + size);
 
   /* copy report to the enclave */
-  ret = copy_to_enclave(&enclaves[eid],
-      (void*)report_ptr,
-      &report,
-      sizeof(struct report));
+  ret = copy_enclave_report(&enclaves[eid],
+      report_ptr,
+      &report);
+      
   if (ret) {
     return ret;
   }

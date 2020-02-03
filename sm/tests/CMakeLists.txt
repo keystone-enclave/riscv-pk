@@ -70,5 +70,7 @@ set_target_properties(test_enclave
           -Wl,--wrap=copy1_to_sm \
           -Wl,--wrap=copy8_to_sm \
           -Wl,--wrap=copy64_to_sm \
-          -Wl,--wrap=copy8_from_sm"
+          -Wl,--wrap=copy1_from_sm \
+          -Wl,--wrap=copy8_from_sm \
+          -Wl,--wrap=copy64_from_sm"
          )

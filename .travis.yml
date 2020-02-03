@@ -16,7 +16,7 @@ git:
   depth: 1
 
 env:
-  - RISCV=$TRAVIS_BUILD_DIR/riscv PATH=$PATH:$RISCV/bin PATH=$PATH:TRAVIS_BUILD_DIR/llvm-9
+  - RISCV=$TRAVIS_BUILD_DIR/riscv PATH=$PATH:$RISCV/bin:TRAVIS_BUILD_DIR/llvm-9
 
 addons:
   apt:

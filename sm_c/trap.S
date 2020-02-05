@@ -78,9 +78,7 @@ trap_vector_enclave:
   LWU t1, %pcrel_lo(1b)(t1)         # t1 <- trap_table[mcause]
   STORE s1, 9*REGBYTES(sp)
  
-  li a0, 0  # a0 <- REQUEST = TIMER_INTERRUPT
   STORE x0, 10*REGBYTES(sp) 
-
   mv a0, sp                        # a0 <- regs  
   STORE a2,12*REGBYTES(sp)
   csrr a2, mepc                    # a2 <- mepc
@@ -90,7 +88,6 @@ trap_vector_enclave:
   STORE a5,15*REGBYTES(sp)
   STORE a6,16*REGBYTES(sp)
   STORE a7,17*REGBYTES(sp)
-
   STORE s2,18*REGBYTES(sp)
   STORE s3,19*REGBYTES(sp)
   STORE s4,20*REGBYTES(sp)
@@ -107,16 +104,10 @@ trap_vector_enclave:
   STORE t6,31*REGBYTES(sp)
   STORE t0, 2*REGBYTES(sp)         # sp
 
-
-  li a7, 106 #set n <- SBI_SM_STOP_ENCLAVE
-  STORE a7, (17)*REGBYTES(sp)
-
   jalr t1  
   
   j restore_mscratch
   
-
-
 .Lhandle_trap_in_machine_mode:
   # Preserve the registers.  Compute the address of the trap handler.
   STORE ra, 1*REGBYTES(sp)

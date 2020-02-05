@@ -127,6 +127,11 @@ static void send_ipi_many(uintptr_t* pmask, int event)
 
 void mcall_trap_enclave(uintptr_t* regs, uintptr_t mcause, uintptr_t mepc)
 {
+
+  regs[10] = mcall_sm_stop_enclave(regs, regs[10]);
+  return;  
+  
+/*
   uintptr_t n = regs[17], arg0 = regs[10], arg1 = regs[11], arg2 = regs[12], arg3 = regs[13], retval, ipi_type;
 
   switch (n)
@@ -197,6 +202,7 @@ send_ipi:
       break;
   }
   regs[10] = retval;
+ */ 
 }
 
 

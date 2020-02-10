@@ -29,6 +29,14 @@ extern byte dev_public_key[PUBLIC_KEY_SIZE];
  *
  ****************************/
 
+static uintptr_t mcall_set_timer(uint64_t when)
+{
+  *HLS()->timecmp = when;
+  clear_csr(mip, MIP_STIP);
+  set_csr(mie, MIP_MTIP);
+  return 0;
+}
+
 /* Internal function containing the core of the context switching
  * code to the enclave.
  *
@@ -44,7 +52,7 @@ static inline enclave_ret_code context_switch_to_enclave(uintptr_t* regs,
   swap_prev_state(&enclaves[eid].threads[0], regs);
   swap_prev_mepc(&enclaves[eid].threads[0], read_csr(mepc));
 
-  if(load_parameters){
+  if(load_parameters) {
     // passing parameters for a first run
     // $mepc: (VA) kernel entry
     write_csr(mepc, (uintptr_t) enclaves[eid].params.runtime_entry);
@@ -69,17 +77,19 @@ static inline enclave_ret_code context_switch_to_enclave(uintptr_t* regs,
     write_csr(satp, enclaves[eid].encl_satp);
   }
 
+  printm("h2e switching vector\r\n");
   switch_vector_enclave();
 
-  hls_t* hls = HLS();
-  *hls->timecmp = getRTC() + ENCL_TIME_SLICE;
+  mcall_set_timer(getRTC() + ENCL_TIME_SLICE);
+  //hls_t* hls = HLS();
+  //*hls->timecmp = getRTC() + ENCL_TIME_SLICE;
 
-  clear_csr(mip, MIP_MTIP);
-  clear_csr(mip, MIP_STIP);
-  clear_csr(mip, MIP_SSIP);
-  clear_csr(mip, MIP_SEIP);
+  //clear_csr(mip, MIP_MTIP);
+  //clear_csr(mip, MIP_STIP);
+  //clear_csr(mip, MIP_SSIP);
+  //clear_csr(mip, MIP_SEIP);
 
-  set_csr(mie, MIP_MTIP);
+  // set_csr(mie, MIP_MTIP);
 
   uintptr_t interrupts = MIP_SSIP | MIP_SEIP;
   write_csr(mideleg, interrupts);
@@ -116,14 +126,15 @@ static inline void context_switch_to_host(uintptr_t* encl_regs,
   swap_prev_state(&enclaves[eid].threads[0], encl_regs);
   swap_prev_mepc(&enclaves[eid].threads[0], read_csr(mepc));
 
+  printm("e2h switch vector\r\n");
   switch_vector_host();
 
   uintptr_t interrupts = MIP_SSIP | MIP_STIP | MIP_SEIP;
   write_csr(mideleg, interrupts);
 
   // enable timer interrupt
-  clear_csr(mip, MIP_STIP);
-  clear_csr(mip, MIP_MTIP);
+  // clear_csr(mip, MIP_STIP);
+  //set_csr(mip, MIP_MTIP);
 
   // Reconfigure platform specific defenses
   platform_switch_from_enclave(&(enclaves[eid]));
@@ -410,7 +421,7 @@ enclave_ret_code create_enclave(struct keystone_sbi_create create_args)
   struct runtime_va_params_t params = create_args.params;
   struct runtime_pa_params pa_params;
   pa_params.dram_base = base;
-  pa_params.dram_size = size;
+   pa_params.dram_size = size;
   pa_params.runtime_base = create_args.runtime_paddr;
   pa_params.user_base = create_args.user_paddr;
   pa_params.free_base = create_args.free_paddr;
@@ -472,6 +483,7 @@ enclave_ret_code create_enclave(struct keystone_sbi_create create_args)
   /* EIDs are unsigned int in size, copy via simple copy */
   copy_word_to_host((uintptr_t*)eidptr, (uintptr_t)eid);
 
+  printm("create hart:%d, eid: %d\r\n", read_csr(mhartid), eid);
   return ENCLAVE_SUCCESS;
 
 free_platform:
@@ -605,6 +617,8 @@ enclave_ret_code stop_enclave(uintptr_t* encl_regs, uint64_t request, enclave_id
   stoppable = enclaves[eid].state == RUNNING;
   spinlock_unlock(&encl_lock);
 
+  printm(" - stop_enclave, request = %d\r\n",request);
+
   if(!stoppable)
     return ENCLAVE_NOT_RUNNING;
 
@@ -656,6 +670,7 @@ enclave_ret_code attest_enclave(uintptr_t report_ptr, uintptr_t data, uintptr_t 
     return ENCLAVE_NOT_INITIALIZED;
 
   /* copy data to be signed */
+  printm("copy from enclave data = %p, size = %d\r\n", data, size);
   ret = copy_from_enclave(&enclaves[eid],
       report.enclave.data,
       (void*)data,
@@ -671,12 +686,15 @@ enclave_ret_code attest_enclave(uintptr_t report_ptr, uintptr_t data, uintptr_t 
   memcpy(report.sm.public_key, sm_public_key, PUBLIC_KEY_SIZE);
   memcpy(report.sm.signature, sm_signature, SIGNATURE_SIZE);
   memcpy(report.enclave.hash, enclaves[eid].hash, MDSIZE);
+
+  printm("sign\r\n");
   sm_sign(report.enclave.signature,
       &report.enclave,
       sizeof(struct enclave_report)
       - SIGNATURE_SIZE
       - ATTEST_DATA_MAXLEN + size);
 
+  printm("copy to enclave\r\n");
   /* copy report to the enclave */
   ret = copy_to_enclave(&enclaves[eid],
       (void*)report_ptr,

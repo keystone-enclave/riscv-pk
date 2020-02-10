@@ -17,7 +17,7 @@ void switch_vector_host(){
 }
 
 uint64_t getRTC(){
-	return *mtime; 
+	return *mtime;
 }
 
 void swap_prev_mpp(struct thread_state* thread, uintptr_t* regs){
@@ -25,13 +25,15 @@ void swap_prev_mpp(struct thread_state* thread, uintptr_t* regs){
 
   int curr_mstatus = read_csr(mstatus);
   int old_mpp = thread->prev_mpp;
+  printm("current mstatus: %x\r\n", curr_mstatus);
   if(old_mpp < 0){
    //Old MPP bit isn't initialized!
-   old_mpp = curr_mstatus & 0x800;    
+   old_mpp = curr_mstatus & 0x800;
   }
   thread->prev_mpp = curr_mstatus & 0x800;
   int new_mstatus = (curr_mstatus & ~0x800) | old_mpp;
-  write_csr(mstatus, new_mstatus); 
+  write_csr(mstatus, new_mstatus);
+  printm("new mstatus: %x\r\n", read_csr(mstatus));
 }
 
 /* Swaps the entire s-mode visible state, general registers and then csrs */
@@ -100,7 +102,7 @@ void clean_state(struct thread_state* state){
     prev[i] = 0;
   }
 
-  state->prev_mpp = -1; // 0x800;   
+  state->prev_mpp = -1; // 0x800;
   clean_smode_csrs(state);
 }
 

@@ -206,6 +206,14 @@ int pmp_detect_region_overlap_atomic(uintptr_t addr, uintptr_t size)
 
 static void send_pmp_ipi(uintptr_t recipient, uint8_t perm)
 {
+  uint64_t suspect = (uint64_t) OTHER_HLS(recipient)->ipi;
+  if(suspect > 0x0200000c || suspect < 0x02000000)
+  {
+    printm("&OTHER_HLS(%d)->ipi: %p\r\n", recipient, &OTHER_HLS(recipient)->ipi);
+    printm("[hart: %d] event: pmp, OTHER_HLS(%d)->ipi: %p, recipient: %d\r\n", read_csr(mhartid),recipient,OTHER_HLS(recipient)->ipi);
+  }
+
+  printm("[hart:%d] OTHER_HLS: %p, recipient: %d\r\n",read_csr(mhartid), OTHER_HLS(recipient), recipient);
   if (((disabled_hart_mask >> recipient) & 1)) return;
   /* never send IPI to my self; it will result in a deadlock */
   if (recipient == read_csr(mhartid)) return;

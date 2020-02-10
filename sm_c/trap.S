@@ -2,39 +2,37 @@
 #include "bits.h"
 #include "config.h"
 
-
-#define BAD_TRAP_VECTOR 0
-#define TRAP_FROM_MACHINE_MODE_VECTOR 13
-#define HANDLE_IPI_PMP_VECTOR 16
-
   .data
   .align 6
-
 enclave_trap_table:
-  .word bad_trap
+#define BAD_TRAP_VECTOR 0
+  .word pmp_trap
   .word pmp_trap
   .word illegal_insn_trap
-  .word bad_trap
+  .word pmp_trap
   .word misaligned_load_trap
   .word pmp_trap
   .word misaligned_store_trap
   .word pmp_trap
-  .word bad_trap
-  .word mcall_trap_enclave // 9 --> ECALL from S-mode
-  .word bad_trap
-  .word bad_trap
-  .word bad_trap
+  .word pmp_trap
+  .word mcall_trap // 9 --> ECALL from S-mode
+  .word pmp_trap
+  .word pmp_trap
+  .word pmp_trap
+#define TRAP_FROM_MACHINE_MODE_VECTOR 13
+  .word __trap_from_machine_mode
+  .word pmp_trap
+  .word pmp_trap
+#ifdef SM_ENABLED
+# define HANDLE_IPI_PMP_VECTOR 16
+  .word handle_pmp_ipi
+#endif
+
   .option norvc
   .section .text.init,"ax",@progbits
   .globl enclave_trap_table
   .globl trap_vector_enclave
 
-.Lmret:
-  # Go back whence we came.
-  LOAD a0, 10*REGBYTES(sp)
-  LOAD a1, 11*REGBYTES(sp)
-  csrrw sp, mscratch, sp # sp <- mscratch 
-  mret
 
 trap_vector_enclave:
   csrrw sp, mscratch, sp
@@ -46,21 +44,21 @@ trap_vector_enclave:
 
   bgez a1, .Lhandle_trap_in_machine_mode
 
-  # This is an interrupt.  Discard the mcause MSB and decode the rest.
+  # This is an interrupt.  Discard he mcause MSB and decode the rest.
   sll a1, a1, 1
 
   # Is it a machine timer interrupt?
   li a0, IRQ_M_TIMER * 2
-  bne a0, a1, .Lmret
+  bne a0, a1, .Lhandle_ipi_in_machine_mode
 
   # Yes.  Simply clear MSIE and raise SSIP.
-  li a0, MIP_MTIP
-  csrc mie, a0
-  
-  li a0, MIP_MTIP
-  csrc mip, a0
+  # li a0, MIP_MTIP
+  # csrc mie, a0
 
-  j .Lhandle_timer_int_machine_mode 
+  # li a0, MIP_MTIP
+  # csrc mip, a0
+
+  j .Lhandle_timer_int_machine_mode
 
 .Lhandle_timer_int_machine_mode:
   li a1, 9 # set mcause <- 9 (mcall_trap)
@@ -77,11 +75,11 @@ trap_vector_enclave:
   STORE s0, 8*REGBYTES(sp)
   LWU t1, %pcrel_lo(1b)(t1)         # t1 <- trap_table[mcause]
   STORE s1, 9*REGBYTES(sp)
- 
-  li a0, 0  # a0 <- REQUEST = TIMER_INTERRUPT
-  STORE x0, 10*REGBYTES(sp) 
 
-  mv a0, sp                        # a0 <- regs  
+  li a0, 0  # a0 <- REQUEST = TIMER_INTERRUPT
+  STORE x0, 10*REGBYTES(sp)
+
+  mv a0, sp                        # a0 <- regs
   STORE a2,12*REGBYTES(sp)
   csrr a2, mepc                    # a2 <- mepc
   STORE a3,13*REGBYTES(sp)
@@ -107,15 +105,63 @@ trap_vector_enclave:
   STORE t6,31*REGBYTES(sp)
   STORE t0, 2*REGBYTES(sp)         # sp
 
-
   li a7, 106 #set n <- SBI_SM_STOP_ENCLAVE
   STORE a7, (17)*REGBYTES(sp)
 
-  jalr t1  
-  
-  j restore_mscratch
-  
+  jalr t1
 
+  j restore_mscratch
+
+############ Below are exact copy of mentry.S
+.Lmret:
+  # Go back whence we came.
+  LOAD a0, 10*REGBYTES(sp)
+  LOAD a1, 11*REGBYTES(sp)
+  csrrw sp, mscratch, sp # sp <- mscratch
+  mret
+
+.Lhandle_ipi_in_machine_mode:
+  # Is it an IPI?
+  li a0, IRQ_M_SOFT * 2
+  bne a0, a1, .Lbad_trap
+
+  # Yes.  First, clear the MIPI bit.
+  LOAD a0, MENTRY_IPI_OFFSET(sp)
+  sw x0, (a0)
+  fence
+
+  # Now, decode the cause(s).
+#ifdef __riscv_atomic
+  addi a0, sp, MENTRY_IPI_PENDING_OFFSET
+  amoswap.w a0, x0, (a0)
+#else
+  lw a0, MENTRY_IPI_PENDING_OFFSET(a0)
+  sw x0, MENTRY_IPI_PENDING_OFFSET(a0)
+#endif
+
+  and a1, a0, IPI_SOFT
+  beqz a1, 1f
+  csrs mip, MIP_SSIP
+1:
+  andi a1, a0, IPI_FENCE_I
+  beqz a1, 1f
+  fence.i
+1:
+  andi a1, a0, IPI_SFENCE_VMA
+  beqz a1, 1f
+  sfence.vma
+1:
+  andi a1, a0, IPI_HALT
+  beqz a1, 1f
+  wfi
+  j 1b
+#ifdef SM_ENABLED
+1:
+  andi a1, a0, IPI_PMP
+  bnez a1, .Lipi_pmp
+#endif
+1:
+  j .Lmret
 
 .Lhandle_trap_in_machine_mode:
   # Preserve the registers.  Compute the address of the trap handler.
@@ -173,7 +219,6 @@ restore_mscratch:
   csrw mscratch, sp
 
 restore_regs:
-
   # Restore all of the registers.
   LOAD ra, 1*REGBYTES(sp)
   LOAD gp, 3*REGBYTES(sp)
@@ -225,15 +270,6 @@ restore_regs:
 .Lbad_trap:
   li a1, BAD_TRAP_VECTOR
   j .Lhandle_trap_in_machine_mode
-
-__redirect_trap:
-  # reset sp to top of M-mode stack
-  li t0, MACHINE_STACK_SIZE
-  add sp, sp, t0
-  neg t0, t0
-  and sp, sp, t0
-  addi sp, sp, -MENTRY_FRAME_SIZE
-  j restore_mscratch
 
 __trap_from_machine_mode:
   jal trap_from_machine_mode

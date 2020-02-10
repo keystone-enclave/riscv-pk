@@ -58,6 +58,12 @@ void printm(const char* s, ...)
 
 static void send_ipi(uintptr_t recipient, int event)
 {
+  uint64_t suspect = (uint64_t) OTHER_HLS(recipient)->ipi;
+  if(suspect > 0x0200000c || suspect < 0x02000000)
+  {
+    printm("&OTHER_HLS(%d)->ipi: %p\r\n", recipient, &OTHER_HLS(recipient)->ipi);
+    printm("[hart: %d] event: %d, OTHER_HLS(%d)->ipi: %p, recipient: %d\r\n", read_csr(mhartid),event,recipient,OTHER_HLS(recipient)->ipi);
+  }
   if (((disabled_hart_mask >> recipient) & 1)) return;
   atomic_or(&OTHER_HLS(recipient)->mipi_pending, event);
   mb();
@@ -129,6 +135,7 @@ void mcall_trap_enclave(uintptr_t* regs, uintptr_t mcause, uintptr_t mepc)
 {
   uintptr_t n = regs[17], arg0 = regs[10], arg1 = regs[11], arg2 = regs[12], arg3 = regs[13], retval, ipi_type;
 
+  printm("mcall_trap_enclave: a7(%d), a0(%x), a1(%x), a2(%x), a3(%x)\r\n", n, arg0, arg1, arg2, arg3);
   switch (n)
   {
     case SBI_CONSOLE_PUTCHAR:
@@ -207,6 +214,7 @@ void mcall_trap(uintptr_t* regs, uintptr_t mcause, uintptr_t mepc)
 
   uintptr_t n = regs[17], arg0 = regs[10], arg1 = regs[11], arg2 = regs[12], arg3 = regs[13], retval, ipi_type;
 
+
   switch (n)
   {
     case SBI_CONSOLE_PUTCHAR:
@@ -282,6 +290,7 @@ send_ipi:
 
 void redirect_trap(uintptr_t epc, uintptr_t mstatus, uintptr_t badaddr)
 {
+  printm(" ** redirect_trap() mstatus:%x, mcause:%x\r\n",read_csr(mstatus), read_csr(mcause));
   write_csr(sbadaddr, badaddr);
   write_csr(sepc, epc);
   write_csr(scause, read_csr(mcause));
@@ -315,6 +324,7 @@ static void machine_page_fault(uintptr_t* regs, uintptr_t dummy, uintptr_t mepc)
 
 void trap_from_machine_mode(uintptr_t* regs, uintptr_t dummy, uintptr_t mepc)
 {
+  printm(" ** trap_from_machine_mode() sp:%x, mepc:%x, mcause:%x\r\n", regs, mepc, read_csr(mcause));
   uintptr_t mcause = read_csr(mcause);
 
   switch (mcause)

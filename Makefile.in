@@ -85,7 +85,8 @@ VPATH := $(addprefix $(src_dir)/, $(sprojs_enabled))
 CC            := @CC@
 READELF       := @READELF@
 OBJCOPY       := @OBJCOPY@
-CFLAGS        := @CFLAGS@ $(CFLAGS) -DBBL_PAYLOAD=\"bbl_payload\" -DBBL_LOGO_FILE=\"bbl_logo_file\" -DTARGET_PLATFORM_HEADER=\"platform/@TARGET_PLATFORM@/@TARGET_PLATFORM@.h\"
+PLATFORM_FLAG := -DTARGET_PLATFORM_HEADER=\"platform/@TARGET_PLATFORM@/@TARGET_PLATFORM@.h\"
+CFLAGS        := @CFLAGS@ $(CFLAGS) -DBBL_PAYLOAD=\"bbl_payload\" -DBBL_LOGO_FILE=\"bbl_logo_file\" $(PLATFORM_FLAG)
 BBL_PAYLOAD   := @BBL_PAYLOAD@
 COMPILE       := $(CC) -MMD -MP $(CFLAGS) \
                  $(sprojs_include)
@@ -147,6 +148,8 @@ define reverse_list_h
     $(2))
 endef
 
+
+
 #-------------------------------------------------------------------------
 # Template for per subproject rules
 #-------------------------------------------------------------------------
@@ -189,12 +192,41 @@ $$($(2)_c_objs) : %.o : %.c
 $$($(2)_asm_objs) : %.o : %.S
 	$(COMPILE) -c $$<
 
+
+$(2)_crate_libs := $$(addprefix lib, $$(addsuffix .a, $$($(2)_crates)))
+
+.PHONY: $$($(2)_crates)
+
+ifeq (@RUST_OPT@,release)
+	RUST_OPT_FLAG := --release
+endif
+
+$$($(2)_crate_libs) : lib%.a : %
+	mkdir -p $$<
+	$(eval _PWD := $(shell pwd))
+	$(eval RUST_TARGET := $(if $(RUST_TARGET),$(RUST_TARGET),$(src_dir)/riscv64gc-unknown-none-elfhf.json))
+	$(eval RUST_TARGET_NAME := $(shell basename $(RUST_TARGET) .json))
+	cd $(src_dir)/$(2) ;\
+	  export CFLAGS=$(PLATFORM_FLAG) ;\
+	  cargo +nightly xrustc --verbose --target $(RUST_TARGET) $(RUST_OPT_FLAG) --target-dir $(_PWD)/$$< -- -Clto
+	cp $$</$(RUST_TARGET_NAME)/@RUST_OPT@/lib$$(subst -,_,$$<).a $$@
+
 $(2)_junk += $$($(2)_c_objs) $$($(2)_c_deps) $$($(2)_asm_objs)
 
 # Build a library for this subproject
 
-lib$(1).a : $$($(2)_c_objs) $$($(2)_asm_objs)
+lib$(1)_Clib.a : $$($(2)_c_objs) $$($(2)_asm_objs)
 	$(AR) rcv $$@ $$(notdir $$^)
+	$(RANLIB) $$@
+
+lib$(1)_Rlib.a : $$($(2)_crate_libs)
+	@rm -f $$@
+	$(AR) rcvT $$@ $$(notdir $$^)
+	$(RANLIB) $$@
+
+lib$(1).a : lib$(1)_Clib.a lib$(1)_Rlib.a
+	@rm -f $$@
+	$(AR) rcvT $$@ $$(notdir $$^)
 	$(RANLIB) $$@
 
 $(2)_junk += lib$(1).a

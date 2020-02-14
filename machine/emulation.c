@@ -103,19 +103,11 @@ void illegal_insn_trap(uintptr_t* regs, uintptr_t mcause, uintptr_t mepc)
        "  .word truly_illegal_insn\n"
 #endif
        "  .word truly_illegal_insn\n"
-#ifdef PK_ENABLE_FP_EMULATION
-       "  .word emulate_fmadd\n"
-       "  .word emulate_fmadd\n"
-       "  .word emulate_fmadd\n"
-       "  .word emulate_fmadd\n"
-       "  .word emulate_fp\n"
-#else
        "  .word truly_illegal_insn\n"
        "  .word truly_illegal_insn\n"
        "  .word truly_illegal_insn\n"
        "  .word truly_illegal_insn\n"
        "  .word truly_illegal_insn\n"
-#endif
        "  .word truly_illegal_insn\n"
        "  .word truly_illegal_insn\n"
        "  .word truly_illegal_insn\n"

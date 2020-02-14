@@ -1,17 +1,22 @@
-language: minimal
+language: rust
+rust:
+  - nightly
+
 dist: xenial
 cache:
   apt: true
+  cargo: true
   timeout: 1000 #In seconds
   directories:
     - $TRAVIS_BUILD_DIR/riscv
+    - $TRAVIS_BUILD_DIR/llvm-9
 
 git:
   submodules: false
   depth: 1
 
 env:
-  - RISCV=$TRAVIS_BUILD_DIR/riscv PATH=$PATH:$RISCV/bin
+  - RISCV=$TRAVIS_BUILD_DIR/riscv PATH=$PATH:$RISCV/bin PATH=$PATH:TRAVIS_BUILD_DIR/llvm-9
 
 addons:
   apt:
@@ -28,13 +33,15 @@ branches:
     - keystone
 
 before_install:
+  - rustup target add riscv64gc-unknown-none-elf
+  - rustup component add rust-src
+  - cargo install cargo-xbuild || true
   - ./.fast-setup.sh
 
 jobs:
   include:
-    - stage: build everything & test
+    - stage: build everything (C)
       script:
-        - if [ -f riscv/bin/qemu-riscv64 ]; then ls riscv; else ./.build-qemu.sh; fi
         - mkdir build
         - cd build
         - ../configure
@@ -42,11 +49,32 @@ jobs:
           --host=riscv64-unknown-elf
           --enable-sm
         - make
-        - cd $TRAVIS_BUILD_DIR
-        - cd sm/tests
+
+    - stage: build everything (Rust)
+      script:
+        - ln -snf sm_rs sm
+        - mkdir build
+        - cd build
+        - ../configure
+          --enable-logo
+          --host=riscv64-unknown-elf
+          --enable-sm
+        - make
+
+    - stage: test (Rust)
+      script:
+        - ln -snf sm_rs sm
+        - if [ -f riscv/bin/qemu-riscv64 ]; then ls riscv; else ./.build-qemu.sh; fi
+        - ./test-sm.sh
+
+    - stage: test (C)
+      script:
+        - mkdir build
+        - cd build
+        - ../configure
+        - cd ../sm/tests
         - mkdir build
         - cd build
         - cmake ..; make
         - make test CTEST_OUTPUT_ON_FAILURE=TRUE ARGS="--verbose"
         - cd $TRAVIS_BUILD_DIR
-

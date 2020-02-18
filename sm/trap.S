@@ -1,12 +1,16 @@
-// See LICENSE for license details.
-
 #include "mtrap.h"
 #include "bits.h"
 #include "config.h"
+
+
+#define BAD_TRAP_VECTOR 0
+#define TRAP_FROM_MACHINE_MODE_VECTOR 13
+#define HANDLE_IPI_PMP_VECTOR 16
+
   .data
   .align 6
-trap_table:
-#define BAD_TRAP_VECTOR 0
+
+enclave_trap_table:
   .word bad_trap
   .word pmp_trap
   .word illegal_insn_trap
@@ -16,35 +20,28 @@ trap_table:
   .word misaligned_store_trap
   .word pmp_trap
   .word bad_trap
-  .word mcall_trap // 9 --> ECALL from S-mode
+  .word mcall_trap_enclave // 9 --> ECALL from S-mode
   .word bad_trap
   .word bad_trap
   .word bad_trap
-#define TRAP_FROM_MACHINE_MODE_VECTOR 13
-  .word __trap_from_machine_mode
-  .word bad_trap
-  .word bad_trap
-#ifdef SM_ENABLED
-# define HANDLE_IPI_PMP_VECTOR 16
-  .word handle_pmp_ipi
-#endif
-
   .option norvc
   .section .text.init,"ax",@progbits
-  .globl trap_table
-  .globl reset_vector
-  .globl trap_vector
+  .globl enclave_trap_table
+  .globl trap_vector_enclave
 
-reset_vector:
-  j do_reset
+.Lmret:
+  # Go back whence we came.
+  LOAD a0, 10*REGBYTES(sp)
+  LOAD a1, 11*REGBYTES(sp)
+  csrrw sp, mscratch, sp # sp <- mscratch 
+  mret
 
-trap_vector:
+trap_vector_enclave:
   csrrw sp, mscratch, sp
   beqz sp, .Ltrap_from_machine_mode
 
   STORE a0, 10*REGBYTES(sp)
   STORE a1, 11*REGBYTES(sp)
-
   csrr a1, mcause
 
   bgez a1, .Lhandle_trap_in_machine_mode
@@ -54,63 +51,70 @@ trap_vector:
 
   # Is it a machine timer interrupt?
   li a0, IRQ_M_TIMER * 2
-  bne a0, a1, 1f
+  bne a0, a1, .Lmret
 
   # Yes.  Simply clear MSIE and raise SSIP.
   li a0, MIP_MTIP
   csrc mie, a0
-  li a0, MIP_STIP
-  csrs mip, a0
+  
+  li a0, MIP_MTIP
+  csrc mip, a0
 
-.Lmret:
-  # Go back whence we came.
-  LOAD a0, 10*REGBYTES(sp)
-  LOAD a1, 11*REGBYTES(sp)
-  csrrw sp, mscratch, sp
-  mret
+  j .Lhandle_timer_int_machine_mode 
 
-1:
-  # Is it an IPI?
-  li a0, IRQ_M_SOFT * 2
-  bne a0, a1, .Lbad_trap
+.Lhandle_timer_int_machine_mode:
+  li a1, 9 # set mcause <- 9 (mcall_trap)
 
-  # Yes.  First, clear the MIPI bit.
-  LOAD a0, MENTRY_IPI_OFFSET(sp)
-  sw x0, (a0)
-  fence
+  STORE ra, 1*REGBYTES(sp)
+  STORE gp, 3*REGBYTES(sp)
+  STORE tp, 4*REGBYTES(sp)
+  STORE t0, 5*REGBYTES(sp)
+1:auipc t0, %pcrel_hi(enclave_trap_table)  # t0 <- %hi(trap_table)
+  STORE t1, 6*REGBYTES(sp)
+  sll t1, a1, 2                    # t1 <- mcause << 2
+  STORE t2, 7*REGBYTES(sp)
+  add t1, t0, t1                   # t1 <- %hi(trap_table)[mcause]
+  STORE s0, 8*REGBYTES(sp)
+  LWU t1, %pcrel_lo(1b)(t1)         # t1 <- trap_table[mcause]
+  STORE s1, 9*REGBYTES(sp)
+ 
+  li a0, 0  # a0 <- REQUEST = TIMER_INTERRUPT
+  STORE x0, 10*REGBYTES(sp) 
 
-  # Now, decode the cause(s).
-#ifdef __riscv_atomic
-  addi a0, sp, MENTRY_IPI_PENDING_OFFSET
-  amoswap.w a0, x0, (a0)
-#else
-  lw a0, MENTRY_IPI_PENDING_OFFSET(a0)
-  sw x0, MENTRY_IPI_PENDING_OFFSET(a0)
-#endif
+  mv a0, sp                        # a0 <- regs  
+  STORE a2,12*REGBYTES(sp)
+  csrr a2, mepc                    # a2 <- mepc
+  STORE a3,13*REGBYTES(sp)
+  csrrw t0, mscratch, x0           # t0 <- user sp
+  STORE a4,14*REGBYTES(sp)
+  STORE a5,15*REGBYTES(sp)
+  STORE a6,16*REGBYTES(sp)
+  STORE a7,17*REGBYTES(sp)
 
-  and a1, a0, IPI_SOFT
-  beqz a1, 1f
-  csrs mip, MIP_SSIP
-1:
-  andi a1, a0, IPI_FENCE_I
-  beqz a1, 1f
-  fence.i
-1:
-  andi a1, a0, IPI_SFENCE_VMA
-  beqz a1, 1f
-  sfence.vma
-1:
-  andi a1, a0, IPI_HALT
-  beqz a1, 1f
-  wfi
-  j 1b
-#ifdef SM_ENABLED
-1:
-  andi a1, a0, IPI_PMP
-  bnez a1, .Lipi_pmp
-#endif
-1:
-  j .Lmret
+  STORE s2,18*REGBYTES(sp)
+  STORE s3,19*REGBYTES(sp)
+  STORE s4,20*REGBYTES(sp)
+  STORE s5,21*REGBYTES(sp)
+  STORE s6,22*REGBYTES(sp)
+  STORE s7,23*REGBYTES(sp)
+  STORE s8,24*REGBYTES(sp)
+  STORE s9,25*REGBYTES(sp)
+  STORE s10,26*REGBYTES(sp)
+  STORE s11,27*REGBYTES(sp)
+  STORE t3,28*REGBYTES(sp)
+  STORE t4,29*REGBYTES(sp)
+  STORE t5,30*REGBYTES(sp)
+  STORE t6,31*REGBYTES(sp)
+  STORE t0, 2*REGBYTES(sp)         # sp
+
+
+  li a7, 106 #set n <- SBI_SM_STOP_ENCLAVE
+  STORE a7, (17)*REGBYTES(sp)
+
+  jalr t1  
+  
+  j restore_mscratch
+  
 
 
 .Lhandle_trap_in_machine_mode:
@@ -169,6 +173,7 @@ restore_mscratch:
   csrw mscratch, sp
 
 restore_regs:
+
   # Restore all of the registers.
   LOAD ra, 1*REGBYTES(sp)
   LOAD gp, 3*REGBYTES(sp)
@@ -221,7 +226,6 @@ restore_regs:
   li a1, BAD_TRAP_VECTOR
   j .Lhandle_trap_in_machine_mode
 
-  .globl __redirect_trap
 __redirect_trap:
   # reset sp to top of M-mode stack
   li t0, MACHINE_STACK_SIZE
@@ -235,86 +239,3 @@ __trap_from_machine_mode:
   jal trap_from_machine_mode
   j restore_regs
 
-do_reset:
-  li x1, 0
-  li x2, 0
-  li x3, 0
-  li x4, 0
-  li x5, 0
-  li x6, 0
-  li x7, 0
-  li x8, 0
-  li x9, 0
-// save a0 and a1; arguments from previous boot loader stage:
-//  li x10, 0
-//  li x11, 0
-  li x12, 0
-  li x13, 0
-  li x14, 0
-  li x15, 0
-  li x16, 0
-  li x17, 0
-  li x18, 0
-  li x19, 0
-  li x20, 0
-  li x21, 0
-  li x22, 0
-  li x23, 0
-  li x24, 0
-  li x25, 0
-  li x26, 0
-  li x27, 0
-  li x28, 0
-  li x29, 0
-  li x30, 0
-  li x31, 0
-  csrw mscratch, x0
-
-  # write mtvec and make sure it sticks
-  la t0, trap_vector
-  csrw mtvec, t0
-  csrr t1, mtvec
-1:bne t0, t1, 1b
-
-  la sp, stacks + RISCV_PGSIZE - MENTRY_FRAME_SIZE
-
-  csrr a3, mhartid
-  slli a2, a3, RISCV_PGSHIFT
-  add sp, sp, a2
-
-  # Boot on the first hart
-  beqz a3, init_first_hart
-
-  # set MSIE bit to receive IPI
-  li a2, MIP_MSIP
-  csrw mie, a2
-
-.LmultiHart:
-#if MAX_HARTS > 1
-  # wait for an IPI to signal that it's safe to boot
-  wfi
-
-  # masked harts never start
-  la a4, disabled_hart_mask
-  LOAD a4, 0(a4)
-  srl a4, a4, a3
-  andi a4, a4, 1
-  bnez a4, .LmultiHart
-
-  # only start if mip is set
-  csrr a2, mip
-  andi a2, a2, MIP_MSIP
-  beqz a2, .LmultiHart
-
-  # make sure our hart id is within a valid range
-  fence
-  li a2, MAX_HARTS
-  bltu a3, a2, init_other_hart
-#endif
-  wfi
-  j .LmultiHart
-
-  .bss
-  .align RISCV_PGSHIFT
-stacks:
-  .skip RISCV_PGSIZE * MAX_HARTS

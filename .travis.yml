@@ -31,6 +31,7 @@ addons:
 branches:
   only:
     - keystone
+    - sm_rs
 
 before_install:
   - rustup target add riscv64gc-unknown-none-elf

@@ -148,9 +148,6 @@ pub extern "C" fn sm_init() {
     // Copy the keypair from the root of trust
     copy_keys(init_inner);
 
-    // Init the enclave metadata
-    enclave::init_metadata();
-
     // for debug
     // sm_print_cert();
 }

@@ -56,14 +56,25 @@ enclave_ret_code resume_enclave(uintptr_t* regs, enclave_id eid);
 enclave_ret_code exit_enclave(uintptr_t* regs, unsigned long retval, enclave_id eid);
 enclave_ret_code stop_enclave(uintptr_t* regs, uint64_t request, enclave_id eid);
 enclave_ret_code attest_enclave(uintptr_t report, uintptr_t data, uintptr_t size, enclave_id eid);
+
 // TODO: These functions are supposed to be internal functions.
 void enclave_init_metadata();
-int get_enclave_region_index(const struct enclave *enclave, enum enclave_region_type type);
-int get_eid_region_index(enclave_id eid, enum enclave_region_type type);
+
+// Changes the type of a given enclave region.
+int enclave_region_retype(struct enclave *enclave, enum enclave_region_type old, enum enclave_region_type new);
+
+// Creates a new memory region of the given type with the given PMP ID. Takes ownership of the PMP region belonging to `pmp_id`.
+int enclave_region_make(struct enclave *enclave, enum enclave_region_type ty, int pmp_id);
+
+// Borrows the PMP region id belonging to the given memory region.
+int enclave_region_get_pmpid(struct enclave *enclave, enum enclave_region_type ty, int *pmp_id);
+
+uintptr_t enclave_region_get_base(struct enclave *enclave, enum enclave_region_type ty);
+uintptr_t enclave_region_get_size(struct enclave *enclave, enum enclave_region_type ty);
 
 enclave_ret_code copy_from_host(void* source, void* dest, size_t size);
-uintptr_t get_enclave_region_base(enclave_id eid, int memid);
-uintptr_t get_enclave_region_size(enclave_id eid, int memid);
 struct platform_enclave_data *get_enclave_ped(struct enclave *enclave);
+struct runtime_pa_params *get_enclave_pa_params(struct enclave *enclave);
+void enclave_set_satp(struct enclave *enclave, uintptr_t satp);
 
 #endif

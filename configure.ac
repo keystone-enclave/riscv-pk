@@ -138,7 +138,7 @@ AC_SUBST(RUST_OPT)
 # The '*' suffix indicates an optional subproject. The '**' suffix
 # indicates an optional subproject which is also the name of a group.
 
-MCPPBS_SUBPROJECTS([ pk, bbl, sm*, dummy_payload, machine, util ])
+MCPPBS_SUBPROJECTS([ pk, bbl, sm*, sm_rs?, dummy_payload, machine, util ])
 
 #-------------------------------------------------------------------------
 # MCPPBS subproject groups

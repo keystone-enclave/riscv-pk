@@ -151,18 +151,21 @@ AC_DEFUN([MCPPBS_SUBPROJECTS],
     # Determine if this is a required or an optional subproject
 
     m4_define([MCPPBS_IS_REQ],
-      m4_bmatch(MCPPBS_SPROJ,[\*+],[false],[true]))
+      m4_bmatch(MCPPBS_SPROJ,[[\*\?]],[false],[true]))
 
     # Determine if there is a group with the same name
 
     m4_define([MCPPBS_IS_GROUP],
       m4_bmatch(MCPPBS_SPROJ,[\*\*],[true],[false]))
 
+    m4_define([MCPPBS_HIDDEN_OPTIONAL],
+      m4_bmatch(MCPPBS_SPROJ,[\?],[true],[false]))
+
     # Create variations of the subproject name suitable for use as a CPP
     # enabled define, a shell enabled variable, and a shell function
 
     m4_define([MCPPBS_SPROJ_NORM],
-      m4_normalize(m4_bpatsubsts(MCPPBS_SPROJ,[*],[])))
+      m4_normalize(m4_bpatsubsts(MCPPBS_SPROJ,[[*\?]],[])))
 
     m4_define([MCPPBS_SPROJ_DEFINE],
       m4_toupper(m4_bpatsubst(MCPPBS_SPROJ_NORM[]_ENABLED,[-],[_])))
@@ -220,7 +223,7 @@ AC_DEFUN([MCPPBS_SUBPROJECTS],
         AC_ARG_ENABLE(MCPPBS_SPROJ_NORM,
           AS_HELP_STRING(--enable-MCPPBS_SPROJ_NORM,
             [Subproject MCPPBS_SPROJ_NORM]),
-          [MCPPBS_SPROJ_SHVAR="yes"],[MCPPBS_SPROJ_SHVAR="no"])
+          [MCPPBS_SPROJ_SHVAR="$enableval"],[MCPPBS_SPROJ_SHVAR="unset"])
 
         AS_IF([test "$MCPPBS_SPROJ_SHVAR" = "yes"],
         [
@@ -243,14 +246,15 @@ AC_DEFUN([MCPPBS_SUBPROJECTS],
      # Always execute the subproject configure code if we are enabling
      # all subprojects.
 
-     AS_IF([    test "$enable_optional_subprojects" = "yes" \
-             && test "$MCPPBS_SPROJ_SHVAR" = "no"  ],
+     m4_if(MCPPBS_HIDDEN_OPTIONAL,[false],
      [
-       eval "MCPPBS_SPROJ_FUNC"
+       AS_IF([    test "$enable_optional_subprojects" = "yes" \
+               && test "$MCPPBS_SPROJ_SHVAR" = "unset"  ],
+       [
+         eval "MCPPBS_SPROJ_FUNC"
+       ])
      ])
-
     ])
-
   ])
 
   # Output make variables  

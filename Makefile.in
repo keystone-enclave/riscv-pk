@@ -193,15 +193,19 @@ $$($(2)_asm_objs) : %.o : %.S
 	$(COMPILE) -c $$<
 
 
+$(2)_provides_libs := $$(addprefix lib, $$(addsuffix .a, $$($(2)_provides)))
 $(2)_crate_libs := $$(addprefix lib, $$(addsuffix .a, $$($(2)_crates)))
 
 .PHONY: $$($(2)_crates)
 
-ifeq (@RUST_OPT@,release)
+ifeq (debug,release)
 	RUST_OPT_FLAG := --release
 endif
 
-$$($(2)_crate_libs) : lib%.a : %
+$$($(2)_provides_libs) : lib$(1).a
+	ln -sf lib$(1).a $$@
+
+$$($(2)_crate_libs) : lib%.a : % 
 	mkdir -p $$<
 	$(eval _PWD := $(shell pwd))
 	$(eval RUST_TARGET := $(if $(RUST_TARGET),$(RUST_TARGET),$(src_dir)/riscv64gc-unknown-none-elfhf.json))

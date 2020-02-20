@@ -682,6 +682,7 @@ with_logo
 with_target_platform
 enable_sm_multimem
 enable_sm
+enable_sm_rs
 enable_fp_emulation
 '
       ac_precious_vars='build_alias
@@ -1334,6 +1335,7 @@ Optional Features:
   --enable-logo           Enable boot logo
   --enable-sm-multimem    Specify sm plugins to include
   --enable-sm             Subproject sm
+  --enable-sm_rs          Subproject sm_rs
   --disable-fp-emulation  Disable floating-point emulation
 
 Optional Packages:
@@ -4178,6 +4180,8 @@ fi
 
 
 
+
+
     # Create variations of the subproject name suitable for use as a CPP
     # enabled define, a shell enabled variable, and a shell function
 
@@ -4226,12 +4230,13 @@ fi
 
 
 
-
     # Determine if this is a required or an optional subproject
 
 
 
     # Determine if there is a group with the same name
+
+
 
 
 
@@ -4305,12 +4310,13 @@ fi
 
 
 
-
     # Determine if this is a required or an optional subproject
 
 
 
     # Determine if there is a group with the same name
+
+
 
 
 
@@ -4381,9 +4387,9 @@ fi
 
         # Check whether --enable-sm was given.
 if test "${enable_sm+set}" = set; then :
-  enableval=$enable_sm; enable_sm_sproj="yes"
+  enableval=$enable_sm; enable_sm_sproj="$enableval"
 else
-  enable_sm_sproj="no"
+  enable_sm_sproj="unset"
 fi
 
 
@@ -4403,12 +4409,115 @@ fi
      # Always execute the subproject configure code if we are enabling
      # all subprojects.
 
-     if     test "$enable_optional_subprojects" = "yes" \
-             && test "$enable_sm_sproj" = "no"  ; then :
 
-       eval "_mpbp_sm_configure"
+       if     test "$enable_optional_subprojects" = "yes" \
+               && test "$enable_sm_sproj" = "unset"  ; then :
+
+         eval "_mpbp_sm_configure"
 
 fi
+
+
+
+
+    # Determine if this is a required or an optional subproject
+
+
+
+    # Determine if there is a group with the same name
+
+
+
+
+
+    # Create variations of the subproject name suitable for use as a CPP
+    # enabled define, a shell enabled variable, and a shell function
+
+
+
+
+
+
+
+
+
+
+
+    # Add subproject to our running list
+
+    subprojects="$subprojects sm_rs"
+
+    # Process the subproject appropriately. If enabled add it to the
+    # $enabled_subprojects running shell variable, set a
+    # SUBPROJECT_ENABLED C define, and include the appropriate
+    # 'subproject.ac'.
+
+
+
+      # For optional subprojects we capture the 'subproject.ac' as a
+      # shell function so that in the MCPPBS_GROUP macro we can just
+      # call this shell function instead of reading in 'subproject.ac'
+      # again.
+
+      _mpbp_sm_rs_configure ()
+      {
+        { $as_echo "$as_me:${as_lineno-$LINENO}: configuring optional subproject : sm_rs" >&5
+$as_echo "$as_me: configuring optional subproject : sm_rs" >&6;}
+        ac_config_files="$ac_config_files sm_rs.mk:sm_rs/sm_rs.mk.in"
+
+        enable_sm_rs_sproj="yes"
+        subprojects_enabled="$subprojects_enabled sm_rs"
+
+$as_echo "#define SM_RS_ENABLED /**/" >>confdefs.h
+
+
+# Check whether --with-target_platform was given.
+if test "${with_target_platform+set}" = set; then :
+  withval=$with_target_platform; TARGET_PLATFORM=$with_target_platform
+
+else
+  TARGET_PLATFORM=default
+
+fi
+
+
+# Check whether --enable-sm_multimem was given.
+if test "${enable_sm_multimem+set}" = set; then :
+  enableval=$enable_sm_multimem;
+$as_echo "#define PLUGIN_ENABLE_MULTIMEM /**/" >>confdefs.h
+
+fi
+
+
+      };
+
+      # Optional subprojects add --enable-subproject command line
+      # options, _if_ the subproject name is not also a group name.
+
+
+        # Check whether --enable-sm_rs was given.
+if test "${enable_sm_rs+set}" = set; then :
+  enableval=$enable_sm_rs; enable_sm_rs_sproj="$enableval"
+else
+  enable_sm_rs_sproj="unset"
+fi
+
+
+        if test "$enable_sm_rs_sproj" = "yes"; then :
+
+          eval "_mpbp_sm_rs_configure"
+
+else
+
+          { $as_echo "$as_me:${as_lineno-$LINENO}: processing optional subproject : sm_rs" >&5
+$as_echo "$as_me: processing optional subproject : sm_rs" >&6;}
+
+fi
+
+
+
+     # Always execute the subproject configure code if we are enabling
+     # all subprojects.
 
 
 
@@ -4419,6 +4528,8 @@ fi
 
 
     # Determine if there is a group with the same name
+
+
 
 
 
@@ -4458,12 +4569,13 @@ $as_echo "#define DUMMY_PAYLOAD_ENABLED /**/" >>confdefs.h
 
 
 
-
     # Determine if this is a required or an optional subproject
 
 
 
     # Determine if there is a group with the same name
+
+
 
 
 
@@ -4515,12 +4627,13 @@ fi
 
 
 
-
     # Determine if this is a required or an optional subproject
 
 
 
     # Determine if there is a group with the same name
+
+
 
 
 
@@ -4555,7 +4668,6 @@ $as_echo "$as_me: configuring default subproject : util" >&6;}
       subprojects_enabled="$subprojects_enabled util"
 
 $as_echo "#define UTIL_ENABLED /**/" >>confdefs.h
-
 
 
 
@@ -5280,6 +5392,7 @@ do
     "pk.mk") CONFIG_FILES="$CONFIG_FILES pk.mk:pk/pk.mk.in" ;;
     "bbl.mk") CONFIG_FILES="$CONFIG_FILES bbl.mk:bbl/bbl.mk.in" ;;
     "sm.mk") CONFIG_FILES="$CONFIG_FILES sm.mk:sm/sm.mk.in" ;;
+    "sm_rs.mk") CONFIG_FILES="$CONFIG_FILES sm_rs.mk:sm_rs/sm_rs.mk.in" ;;
     "dummy_payload.mk") CONFIG_FILES="$CONFIG_FILES dummy_payload.mk:dummy_payload/dummy_payload.mk.in" ;;
     "machine.mk") CONFIG_FILES="$CONFIG_FILES machine.mk:machine/machine.mk.in" ;;
     "util.mk") CONFIG_FILES="$CONFIG_FILES util.mk:util/util.mk.in" ;;

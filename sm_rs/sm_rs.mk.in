@@ -1,8 +1,8 @@
-sm_hdrs = \
+sm_rs_hdrs = \
   sm.h \
   sm-sbi.h \
 
-sm_c_srcs = \
+sm_rs_c_srcs = \
   sm-sbi.c \
   thread.c \
   pmp.c \
@@ -15,11 +15,13 @@ sm_c_srcs = \
   platform/@TARGET_PLATFORM@/@TARGET_PLATFORM@.c \
 	plugins/plugins.c \
 
-sm_asm_srcs = \
+sm_rs_asm_srcs = \
   enclave_copy.S \
 
-sm_test_srcs =
+sm_rs_test_srcs =
 
-sm_install_prog_srcs =
+sm_rs_install_prog_srcs =
 
-sm_crates = sm-rs
+sm_rs_crates = sm-rs
+
+sm_rs_provides = sm

@@ -48,8 +48,12 @@ trap_vector_enclave:
   sll a1, a1, 1
 
   # Is it a machine timer interrupt?
-  li a0, IRQ_M_TIMER * 2
-  bne a0, a1, .Lhandle_ipi_in_machine_mode
+  li a0, IRQ_M_EXT * 2
+  beq a0, a1, .Lhandle_ipi_in_machine_mode
+  # li a0, IRQ_M_SOFT * 2
+  # bne a0, a1, .Lhandle_ipi_in_machine_mode
+  # li a0, IRQ_M_EXT * 2
+  # bne a0, a1, .Lhandle_ipi_in_machine_mode
 
   # Yes.  Simply clear MSIE and raise SSIP.
   # li a0, MIP_MTIP
@@ -61,34 +65,20 @@ trap_vector_enclave:
   j .Lhandle_timer_int_machine_mode
 
 .Lhandle_timer_int_machine_mode:
-  li a1, 9 # set mcause <- 9 (mcall_trap)
-
   STORE ra, 1*REGBYTES(sp)
   STORE gp, 3*REGBYTES(sp)
   STORE tp, 4*REGBYTES(sp)
   STORE t0, 5*REGBYTES(sp)
-1:auipc t0, %pcrel_hi(enclave_trap_table)  # t0 <- %hi(trap_table)
   STORE t1, 6*REGBYTES(sp)
-  sll t1, a1, 2                    # t1 <- mcause << 2
   STORE t2, 7*REGBYTES(sp)
-  add t1, t0, t1                   # t1 <- %hi(trap_table)[mcause]
   STORE s0, 8*REGBYTES(sp)
-  LWU t1, %pcrel_lo(1b)(t1)         # t1 <- trap_table[mcause]
   STORE s1, 9*REGBYTES(sp)
-
-  li a0, 0  # a0 <- REQUEST = TIMER_INTERRUPT
-  STORE x0, 10*REGBYTES(sp)
-
-  mv a0, sp                        # a0 <- regs
   STORE a2,12*REGBYTES(sp)
-  csrr a2, mepc                    # a2 <- mepc
   STORE a3,13*REGBYTES(sp)
-  csrrw t0, mscratch, x0           # t0 <- user sp
   STORE a4,14*REGBYTES(sp)
   STORE a5,15*REGBYTES(sp)
   STORE a6,16*REGBYTES(sp)
   STORE a7,17*REGBYTES(sp)
-
   STORE s2,18*REGBYTES(sp)
   STORE s3,19*REGBYTES(sp)
   STORE s4,20*REGBYTES(sp)
@@ -103,12 +93,15 @@ trap_vector_enclave:
   STORE t4,29*REGBYTES(sp)
   STORE t5,30*REGBYTES(sp)
   STORE t6,31*REGBYTES(sp)
+  csrrw t0, mscratch, x0           # t0 <- user sp
   STORE t0, 2*REGBYTES(sp)         # sp
 
-  li a7, 106 #set n <- SBI_SM_STOP_ENCLAVE
-  STORE a7, (17)*REGBYTES(sp)
-
-  jalr t1
+  # call mcall_sm_stop_enclave
+  mv a0, sp
+  li a1, 0
+  call mcall_sm_stop_enclave
+  li a0, 2
+  STORE a0, 10*REGBYTES(sp)
 
   j restore_mscratch
 
@@ -122,8 +115,8 @@ trap_vector_enclave:
 
 .Lhandle_ipi_in_machine_mode:
   # Is it an IPI?
-  li a0, IRQ_M_SOFT * 2
-  bne a0, a1, .Lbad_trap
+  # li a0, IRQ_M_SOFT * 2
+  # bne a0, a1, .Lbad_trap
 
   # Yes.  First, clear the MIPI bit.
   LOAD a0, MENTRY_IPI_OFFSET(sp)

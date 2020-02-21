@@ -43,7 +43,7 @@ uintptr_t mcall_sm_destroy_enclave(unsigned long eid)
   }
 
   register uintptr_t sp asm("sp");
-  printm("destroy hart:%d, eid: %d, sp:%x\r\n", read_csr(mhartid), eid, sp);
+  printm(" - destroy hart:%d, eid: %d, sp:%x\r\n", read_csr(mhartid), eid, sp);
   ret = destroy_enclave((unsigned int)eid);
   return ret;
 }
@@ -57,7 +57,8 @@ uintptr_t mcall_sm_run_enclave(uintptr_t* regs, unsigned long eid)
   }
 
   register uintptr_t sp asm("sp");
-  printm("run hart:%d, eid: %d, sp: %x\r\n", read_csr(mhartid), eid, regs);
+  printm(" - run hart:%d, eid: %d, sp: %x\r\n", read_csr(mhartid), eid, regs);
+
   ret = run_enclave(regs, (unsigned int) eid);
 
   return ret;
@@ -73,7 +74,7 @@ uintptr_t mcall_sm_resume_enclave(uintptr_t* host_regs, unsigned long eid)
   }
 
   register uintptr_t sp asm("sp");
-  printm("resume hart:%d, eid: %d, sp: %x\r\n", read_csr(mhartid), eid, host_regs);
+  printm(" - resume hart:%d, eid: %d, sp: %x\r\n", read_csr(mhartid), eid, host_regs);
   ret = resume_enclave(host_regs, (unsigned int) eid);
   return ret;
 }
@@ -87,7 +88,7 @@ uintptr_t mcall_sm_exit_enclave(uintptr_t* encl_regs, unsigned long retval)
   }
 
   register uintptr_t sp asm("sp");
-  printm("exit hart:%d, eid: %d, sp: %x\r\n", read_csr(mhartid), cpu_get_enclave_id(), encl_regs);
+  printm(" - exit hart:%d, eid: %d, sp: %x\r\n", read_csr(mhartid), cpu_get_enclave_id(), encl_regs);
   ret = exit_enclave(encl_regs, (unsigned long) retval, cpu_get_enclave_id());
   return ret;
 }
@@ -101,7 +102,7 @@ uintptr_t mcall_sm_stop_enclave(uintptr_t* encl_regs, unsigned long request)
   }
 
   register uintptr_t sp asm("sp");
-  printm("stop hart:%d, eid:%d, sp:%x, request:%d\r\n", read_csr(mhartid), cpu_get_enclave_id(), encl_regs, request);
+  printm(" - stop hart:%d, eid:%d, sp:%x, request:%d\r\n", read_csr(mhartid), cpu_get_enclave_id(), encl_regs, request);
   ret = stop_enclave(encl_regs, (uint64_t)request, cpu_get_enclave_id());
   return ret;
 }
@@ -115,9 +116,9 @@ uintptr_t mcall_sm_attest_enclave(uintptr_t report, uintptr_t data, uintptr_t si
   }
 
   register uintptr_t sp asm("sp");
-  printm("attest hart:%d, eid: %d, sp: %x\r\n", read_csr(mhartid), cpu_get_enclave_id(), sp);
+  printm(" - attest hart:%d, eid: %d, sp: %x\r\n", read_csr(mhartid), cpu_get_enclave_id(), sp);
   ret = attest_enclave(report, data, size, cpu_get_enclave_id());
-  printm("attest done\r\n");
+  printm("   attest done\r\n");
   return ret;
 }
 

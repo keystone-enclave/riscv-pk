@@ -11,7 +11,7 @@
 #include "platform.h"
 
 #define ENCL_MAX  16
-#define ENCL_TIME_SLICE 100000
+#define ENCL_TIME_SLICE 1000000
 
 struct enclave enclaves[ENCL_MAX];
 #define ENCLAVE_EXISTS(eid) (eid >= 0 && eid < ENCL_MAX && enclaves[eid].state >= 0)
@@ -29,12 +29,14 @@ extern byte dev_public_key[PUBLIC_KEY_SIZE];
  *
  ****************************/
 
-static uintptr_t mcall_set_timer(uint64_t when)
+static void dump_csr()
 {
-  *HLS()->timecmp = when;
-  clear_csr(mip, MIP_STIP);
-  set_csr(mie, MIP_MTIP);
-  return 0;
+  printm(" * reg status: \r\n");
+  printm("   mstatus (%lx) mie (%lx) mip (%lx) mtvec(%lx) mscratch (%lx) mepc (%lx) mcause (%lx)\r\n",
+             read_csr(mstatus), read_csr(mie), read_csr(mip), read_csr(mtvec), read_csr(mscratch), read_csr(mepc), read_csr(mcause));
+  printm("   sstatus (%lx) sie (%lx) sip (%lx) stvec(%lx) sscratch (%lx) sepc (%lx) scause (%lx)\r\n",
+             read_csr(sstatus), read_csr(sie), read_csr(sip), read_csr(stvec), read_csr(sscratch), read_csr(sepc), read_csr(scause));
+  printm("   mideleg (%lx)\r\n", read_csr(mideleg));
 }
 
 /* Internal function containing the core of the context switching
@@ -47,6 +49,12 @@ static uintptr_t mcall_set_timer(uint64_t when)
 static inline enclave_ret_code context_switch_to_enclave(uintptr_t* regs,
                                                 enclave_id eid,
                                                 int load_parameters){
+
+  printm("==== Host --> Enclave ====\r\n");
+  dump_csr();
+
+  uintptr_t interrupts = 0;// MIP_SSIP | MIP_SEIP;
+  write_csr(mideleg, interrupts);
 
   /* save host context */
   swap_prev_state(&enclaves[eid].threads[0], regs);
@@ -77,24 +85,19 @@ static inline enclave_ret_code context_switch_to_enclave(uintptr_t* regs,
     write_csr(satp, enclaves[eid].encl_satp);
   }
 
-  printm("h2e switching vector\r\n");
   switch_vector_enclave();
 
-  mcall_set_timer(getRTC() + ENCL_TIME_SLICE);
-  //hls_t* hls = HLS();
-  //*hls->timecmp = getRTC() + ENCL_TIME_SLICE;
+  //mcall_set_timer(getRTC() + ENCL_TIME_SLICE);
+  hls_t* hls = HLS();
+  *hls->timecmp = getRTC() + ENCL_TIME_SLICE;
+  set_csr(mie, MIP_MTIP);
 
-  //clear_csr(mip, MIP_MTIP);
+  clear_csr(mip, MIP_MTIP);
   //clear_csr(mip, MIP_STIP);
   //clear_csr(mip, MIP_SSIP);
   //clear_csr(mip, MIP_SEIP);
 
-  // set_csr(mie, MIP_MTIP);
-
-  uintptr_t interrupts = MIP_SSIP | MIP_SEIP;
-  write_csr(mideleg, interrupts);
-
-  // set PMP
+   // set PMP
   osm_pmp_set(PMP_NO_PERM);
   int memid;
   for(memid=0; memid < ENCLAVE_REGIONS_MAX; memid++) {
@@ -107,11 +110,15 @@ static inline enclave_ret_code context_switch_to_enclave(uintptr_t* regs,
   platform_switch_to_enclave(&(enclaves[eid]));
   cpu_enter_enclave_context(eid);
   swap_prev_mpp(&enclaves[eid].threads[0], regs);
+  dump_csr();
   return ENCLAVE_SUCCESS;
 }
 
 static inline void context_switch_to_host(uintptr_t* encl_regs,
     enclave_id eid){
+
+  printm("==== Enclave --> Host ====\r\n");
+  dump_csr();
 
   // set PMP
   int memid;
@@ -126,14 +133,34 @@ static inline void context_switch_to_host(uintptr_t* encl_regs,
   swap_prev_state(&enclaves[eid].threads[0], encl_regs);
   swap_prev_mepc(&enclaves[eid].threads[0], read_csr(mepc));
 
-  printm("e2h switch vector\r\n");
   switch_vector_host();
 
   uintptr_t interrupts = MIP_SSIP | MIP_STIP | MIP_SEIP;
   write_csr(mideleg, interrupts);
 
+  uintptr_t pending = read_csr(mip);
+
+  if (pending & MIP_MTIP) {
+    printm(" * MTIP pending\r\n");
+    clear_csr(mip, MIP_MTIP);
+    set_csr(mip, MIP_STIP);
+  }
+  if (pending & MIP_MSIP) {
+    printm(" * MSIP pending\r\n");
+    clear_csr(mip, MIP_MSIP);
+    set_csr(mip, MIP_SSIP);
+  }
+  if (pending & MIP_MEIP) {
+    printm(" * MEIP pending\r\n");
+    clear_csr(mip, MIP_MEIP);
+    set_csr(mip, MIP_SEIP);
+  }
+
   // enable timer interrupt
-  // clear_csr(mip, MIP_STIP);
+  //set_csr(mstatus, MSTATUS_SPIE);
+  //set_csr(mie, MIP_STIP);
+  //clear_csr(mip, MIP_STIP);
+  //set_csr(mip, MIP_SSIP);
   //set_csr(mip, MIP_MTIP);
 
   // Reconfigure platform specific defenses
@@ -141,6 +168,7 @@ static inline void context_switch_to_host(uintptr_t* encl_regs,
 
   cpu_exit_enclave_context();
   swap_prev_mpp(&enclaves[eid].threads[0], encl_regs);
+  dump_csr();
   return;
 }
 
@@ -483,7 +511,7 @@ enclave_ret_code create_enclave(struct keystone_sbi_create create_args)
   /* EIDs are unsigned int in size, copy via simple copy */
   copy_word_to_host((uintptr_t*)eidptr, (uintptr_t)eid);
 
-  printm("create hart:%d, eid: %d\r\n", read_csr(mhartid), eid);
+  printm(" - create hart:%d, eid: %d\r\n", read_csr(mhartid), eid);
   return ENCLAVE_SUCCESS;
 
 free_platform:
@@ -670,7 +698,7 @@ enclave_ret_code attest_enclave(uintptr_t report_ptr, uintptr_t data, uintptr_t 
     return ENCLAVE_NOT_INITIALIZED;
 
   /* copy data to be signed */
-  printm("copy from enclave data = %p, size = %d\r\n", data, size);
+  //printm("copy from enclave data = %p, size = %d\r\n", data, size);
   ret = copy_from_enclave(&enclaves[eid],
       report.enclave.data,
       (void*)data,
@@ -687,14 +715,14 @@ enclave_ret_code attest_enclave(uintptr_t report_ptr, uintptr_t data, uintptr_t 
   memcpy(report.sm.signature, sm_signature, SIGNATURE_SIZE);
   memcpy(report.enclave.hash, enclaves[eid].hash, MDSIZE);
 
-  printm("sign\r\n");
+  //printm("sign\r\n");
   sm_sign(report.enclave.signature,
       &report.enclave,
       sizeof(struct enclave_report)
       - SIGNATURE_SIZE
       - ATTEST_DATA_MAXLEN + size);
 
-  printm("copy to enclave\r\n");
+  //printm("copy to enclave\r\n");
   /* copy report to the enclave */
   ret = copy_to_enclave(&enclaves[eid],
       (void*)report_ptr,

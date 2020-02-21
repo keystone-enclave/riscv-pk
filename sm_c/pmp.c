@@ -14,6 +14,8 @@
 static spinlock_t pmp_ipi_global_lock = SPINLOCK_INIT;
 static spinlock_t pmp_lock = SPINLOCK_INIT;
 
+void pmp_ipi_update();
+
 /* PMP region getter/setters */
 static struct pmp_region regions[PMP_MAX_N_REGION];
 static uint32_t reg_bitmap = 0;
@@ -145,6 +147,10 @@ static enum ipi_type {IPI_PMP_INVALID=-1,
 
 void handle_pmp_ipi(uintptr_t* regs, uintptr_t dummy, uintptr_t mepc)
 {
+  //printm("[hart:%d] handling pmp ipi ... \r\n", read_csr(mhartid));
+  pmp_ipi_update();
+  //printm("[hart:%d] done\r\n", read_csr(mhartid));
+  /*
   if(ipi_type == IPI_PMP_SET) {
     uint8_t perm = ipi_mailbox[read_csr(mhartid)].perm;
     pmp_set(ipi_region_idx, perm);
@@ -154,7 +160,45 @@ void handle_pmp_ipi(uintptr_t* regs, uintptr_t dummy, uintptr_t mepc)
 
   ipi_mailbox[read_csr(mhartid)].pending = 0;
   return;
+  */
 }
+
+/*
+ *  * Checks if there is an update in the core's ipi mailbox.
+ *   * If there is (the pending bit is not false), then we update the state of PMP entries.
+ *    * Otherwise, we do nothing.
+ *     */
+void pmp_ipi_update() {
+  if (ipi_mailbox[read_csr(mhartid)].pending) {
+    if(ipi_type == IPI_PMP_SET) {
+      uint8_t perm = ipi_mailbox[read_csr(mhartid)].perm;
+      pmp_set(ipi_region_idx, perm);
+    } else {
+      pmp_unset(ipi_region_idx);
+    }
+
+    ipi_mailbox[read_csr(mhartid)].pending = 0;
+  }
+}
+
+/*
+ *  * Attempt to acquire the pmp ipi lock. If it fails, it means another core is broadcasting,
+ *   * this means we may need to update our pmp state and then try to get the lock again.
+ *    */
+void pmp_ipi_acquire_lock() {
+  while(spinlock_trylock(&pmp_ipi_global_lock)) {
+
+    pmp_ipi_update();
+  }
+}
+
+/*
+ *  * Releases the pmp_ipi_global_lock.
+ *   */
+void pmp_ipi_release_lock() {
+  spinlock_unlock(&pmp_ipi_global_lock);
+}
+
 
 /* We do an integery overflow safety check here for the inputs (addr +
  * size).  We do NOT do a safety check on epm_base + epm_size, since
@@ -209,11 +253,11 @@ static void send_pmp_ipi(uintptr_t recipient, uint8_t perm)
   uint64_t suspect = (uint64_t) OTHER_HLS(recipient)->ipi;
   if(suspect > 0x0200000c || suspect < 0x02000000)
   {
-    printm("&OTHER_HLS(%d)->ipi: %p\r\n", recipient, &OTHER_HLS(recipient)->ipi);
-    printm("[hart: %d] event: pmp, OTHER_HLS(%d)->ipi: %p, recipient: %d\r\n", read_csr(mhartid),recipient,OTHER_HLS(recipient)->ipi);
+    //printm("&OTHER_HLS(%d)->ipi: %p\r\n", recipient, &OTHER_HLS(recipient)->ipi);
+    //printm("[hart: %d] event: pmp, OTHER_HLS(%d)->ipi: %p, recipient: %d\r\n", read_csr(mhartid),recipient,OTHER_HLS(recipient)->ipi);
   }
 
-  printm("[hart:%d] OTHER_HLS: %p, recipient: %d\r\n",read_csr(mhartid), OTHER_HLS(recipient), recipient);
+  //printm("[hart:%d] OTHER_HLS: %p, recipient: %d\r\n",read_csr(mhartid), OTHER_HLS(recipient), recipient);
   if (((disabled_hart_mask >> recipient) & 1)) return;
   /* never send IPI to my self; it will result in a deadlock */
   if (recipient == read_csr(mhartid)) return;
@@ -260,9 +304,11 @@ int pmp_unset_global(int region_idx)
   /* We avoid any complex PMP-related IPI management
    * by ensuring only one hart can enter this region at a time */
 #ifdef __riscv_atomic
-  spinlock_lock(&pmp_ipi_global_lock);
+   pmp_ipi_acquire_lock();
+  //spinlock_lock(&pmp_ipi_global_lock);
   send_and_sync_pmp_ipi(region_idx, IPI_PMP_UNSET, PMP_NO_PERM);
-  spinlock_unlock(&pmp_ipi_global_lock);
+  pmp_ipi_release_lock();
+  //spinlock_unlock(&pmp_ipi_global_lock);
 #endif
   /* unset PMP of itself */
   pmp_unset(region_idx);
@@ -279,9 +325,11 @@ int pmp_set_global(int region_idx, uint8_t perm)
   /* We avoid any complex PMP-related IPI management
    * by ensuring only one hart can enter this region at a time */
 #ifdef __riscv_atomic
-  spinlock_lock(&pmp_ipi_global_lock);
+   pmp_ipi_acquire_lock();
+  //spinlock_lock(&pmp_ipi_global_lock);
   send_and_sync_pmp_ipi(region_idx, IPI_PMP_SET, perm);
-  spinlock_unlock(&pmp_ipi_global_lock);
+  pmp_ipi_release_lock();
+  //spinlock_unlock(&pmp_ipi_global_lock);
 #endif
   /* set PMP of itself */
   pmp_set(region_idx, perm);

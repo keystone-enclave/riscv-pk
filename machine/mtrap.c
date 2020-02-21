@@ -47,22 +47,25 @@ void vprintm(const char* s, va_list vl)
   putstring(buf);
 }
 
+spinlock_t printm_lock = SPINLOCK_INIT;
+
 void printm(const char* s, ...)
 {
   va_list vl;
-
+  spinlock_lock(&printm_lock);
   va_start(vl, s);
   vprintm(s, vl);
   va_end(vl);
+  spinlock_unlock(&printm_lock);
 }
 
 static void send_ipi(uintptr_t recipient, int event)
 {
   uint64_t suspect = (uint64_t) OTHER_HLS(recipient)->ipi;
-  if(suspect > 0x0200000c || suspect < 0x02000000)
+  if(suspect > 0x020000ff || suspect < 0x02000000)
   {
-    printm("&OTHER_HLS(%d)->ipi: %p\r\n", recipient, &OTHER_HLS(recipient)->ipi);
-    printm("[hart: %d] event: %d, OTHER_HLS(%d)->ipi: %p, recipient: %d\r\n", read_csr(mhartid),event,recipient,OTHER_HLS(recipient)->ipi);
+    //printm("&OTHER_HLS(%d)->ipi: %p\r\n", recipient, &OTHER_HLS(recipient)->ipi);
+    //printm("[hart: %d] event: %d, OTHER_HLS(%d)->ipi: %p, recipient: %d\r\n", read_csr(mhartid),event,recipient,OTHER_HLS(recipient)->ipi);
   }
   if (((disabled_hart_mask >> recipient) & 1)) return;
   atomic_or(&OTHER_HLS(recipient)->mipi_pending, event);

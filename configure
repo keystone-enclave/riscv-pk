@@ -4489,6 +4489,10 @@ $as_echo "#define PLUGIN_ENABLE_MULTIMEM /**/" >>confdefs.h
 fi
 
 
+
+$as_echo "#define SM_ENABLED /**/" >>confdefs.h
+
+
       };
 
       # Optional subprojects add --enable-subproject command line

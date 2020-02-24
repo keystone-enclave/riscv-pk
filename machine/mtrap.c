@@ -17,6 +17,12 @@
 #ifdef SM_ENABLED
 #include "sm.h"
 #endif
+
+hls_t *get_hls()
+{
+  return HLS();
+}
+
 void __attribute__((noreturn)) bad_trap(uintptr_t* regs, uintptr_t dummy, uintptr_t mepc)
 {
   die("machine mode: unhandlable trap %d @ %p", read_csr(mcause), mepc);

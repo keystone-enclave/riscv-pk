@@ -181,6 +181,9 @@ pub unsafe fn context_switch_to_enclave(
     regs: &mut [usize; 32],
     load_parameters: c_int,
 ) -> enclave_ret_code {
+
+    const ENCL_TIME_SLICE: u64 = 100000;
+
     let regs = &mut (*regs)[..];
 
     /* save host context */
@@ -212,14 +215,22 @@ pub unsafe fn context_switch_to_enclave(
         csr::satp::write(enclave.encl_satp);
     }
 
-    // disable timer set by the OS
-    csr::mie::clear_mtimer();
+    switch_vector_enclave();
+
+    let hls_ptr = get_hls();
+    *(*hls_ptr).timecmp = getRTC() + ENCL_TIME_SLICE;
 
     // Clear pending interrupts
     csr::mip::clear_mtimer();
     csr::mip::clear_stimer();
     csr::mip::clear_ssoft();
     csr::mip::clear_sext();
+
+    csr::mie::set_mtimer();
+    
+    csr::mideleg::set_sext();
+    csr::mideleg::set_ssoft();
+    csr::mideleg::clear_stimer();
 
     // set PMP
     osm_pmp_set(PMP_NO_PERM as u8);
@@ -232,6 +243,7 @@ pub unsafe fn context_switch_to_enclave(
     // Setup any platform specific defenses
     platform_switch_to_enclave(enclave.to_ffi_mut());
     cpu::cpu_enter_enclave_context(enclave.eid.eid);
+    swap_prev_mpp(&mut enclave.threads[0], regs.as_mut_ptr());
     encl_ret!(SUCCESS)
 }
 
@@ -247,12 +259,20 @@ unsafe fn context_switch_to_host(enclave: &mut Enclave, encl_regs: &mut [usize; 
     swap_prev_state(&mut enclave.threads[0], encl_regs.as_mut_ptr());
     swap_prev_mepc(&mut enclave.threads[0], csr::mepc::read());
 
+    switch_vector_host(); 
+
+    csr::mideleg::set_sext();
+    csr::mideleg::set_ssoft();
+    csr::mideleg::set_stimer();
+
     // enable timer interrupt
-    csr::mie::set_mtimer();
+    csr::mip::clear_stimer();
+    csr::mip::clear_mtimer();
 
     // Reconfigure platform specific defenses
     platform_switch_from_enclave(enclave.to_ffi_mut());
     cpu::exit_enclave_context();
+    swap_prev_mpp(&mut enclave.threads[0], encl_regs.as_mut_ptr());
 }
 
 unsafe fn clean_enclave_memory(utbase: usize, utsize: usize) {

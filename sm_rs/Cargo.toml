@@ -21,7 +21,7 @@ libc = { git = "https://github.com/rust-lang/libc" }
 cc = { git = "https://github.com/alexcrichton/cc-rs" }
 
 [dependencies.riscv]
-git = "https://github.com/rust-embedded/riscv"
+git = "https://github.com/keystone-enclave/riscv"
 features = ["inline-asm"]
 
 [build-dependencies]

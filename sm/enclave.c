@@ -112,6 +112,22 @@ static inline void context_switch_to_host(uintptr_t* encl_regs,
 
   switch_vector_host();
 
+  uintptr_t pending = read_csr(mip);
+
+  if (pending & MIP_MTIP) {
+    clear_csr(mip, MIP_MTIP);
+    set_csr(mip, MIP_STIP);
+  }
+  if (pending & MIP_MSIP) {
+    clear_csr(mip, MIP_MSIP);
+    set_csr(mip, MIP_SSIP);
+  }
+  if (pending & MIP_MEIP) {
+    clear_csr(mip, MIP_MEIP);
+    set_csr(mip, MIP_SEIP);
+  }
+
+
   // Reconfigure platform specific defenses
   platform_switch_from_enclave(&(enclaves[eid]));
 

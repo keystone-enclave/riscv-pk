@@ -41,8 +41,11 @@ static inline enclave_ret_code context_switch_to_enclave(uintptr_t* regs,
                                                 int load_parameters){
 
   /* save host context */
-  swap_prev_state(&enclaves[eid].threads[0], regs);
+  swap_prev_state(&enclaves[eid].threads[0], regs, 1);
   swap_prev_mepc(&enclaves[eid].threads[0], read_csr(mepc));
+
+  uintptr_t interrupts = 0;
+  write_csr(mideleg, interrupts);
 
   if(load_parameters){
     // passing parameters for a first run
@@ -71,19 +74,6 @@ static inline enclave_ret_code context_switch_to_enclave(uintptr_t* regs,
 
   switch_vector_enclave();
 
-  hls_t* hls = HLS();
-  *hls->timecmp = getRTC() + ENCL_TIME_SLICE;
-
-  clear_csr(mip, MIP_MTIP);
-  clear_csr(mip, MIP_STIP);
-  clear_csr(mip, MIP_SSIP);
-  clear_csr(mip, MIP_SEIP);
-
-  set_csr(mie, MIP_MTIP);
-
-  uintptr_t interrupts = MIP_SSIP | MIP_SEIP;
-  write_csr(mideleg, interrupts);
-
   // set PMP
   osm_pmp_set(PMP_NO_PERM);
   int memid;
@@ -101,7 +91,8 @@ static inline enclave_ret_code context_switch_to_enclave(uintptr_t* regs,
 }
 
 static inline void context_switch_to_host(uintptr_t* encl_regs,
-    enclave_id eid){
+    enclave_id eid,
+    int return_on_resume){
 
   // set PMP
   int memid;
@@ -112,18 +103,14 @@ static inline void context_switch_to_host(uintptr_t* encl_regs,
   }
   osm_pmp_set(PMP_ALL_PERM);
 
-  /* restore host context */
-  swap_prev_state(&enclaves[eid].threads[0], encl_regs);
-  swap_prev_mepc(&enclaves[eid].threads[0], read_csr(mepc));
-
-  switch_vector_host();
-
   uintptr_t interrupts = MIP_SSIP | MIP_STIP | MIP_SEIP;
   write_csr(mideleg, interrupts);
 
-  // enable timer interrupt
-  clear_csr(mip, MIP_STIP);
-  clear_csr(mip, MIP_MTIP);
+  /* restore host context */
+  swap_prev_state(&enclaves[eid].threads[0], encl_regs, return_on_resume);
+  swap_prev_mepc(&enclaves[eid].threads[0], read_csr(mepc));
+
+  switch_vector_host();
 
   // Reconfigure platform specific defenses
   platform_switch_from_enclave(&(enclaves[eid]));
@@ -592,7 +579,7 @@ enclave_ret_code exit_enclave(uintptr_t* encl_regs, unsigned long retval, enclav
   if(!exitable)
     return ENCLAVE_NOT_RUNNING;
 
-  context_switch_to_host(encl_regs, eid);
+  context_switch_to_host(encl_regs, eid, 0);
 
   return ENCLAVE_SUCCESS;
 }
@@ -613,7 +600,7 @@ enclave_ret_code stop_enclave(uintptr_t* encl_regs, uint64_t request, enclave_id
   if(!stoppable)
     return ENCLAVE_NOT_RUNNING;
 
-  context_switch_to_host(encl_regs, eid);
+  context_switch_to_host(encl_regs, eid, request == STOP_EDGE_CALL_HOST);
 
   switch(request) {
   case(STOP_TIMER_INTERRUPT):

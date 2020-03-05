@@ -198,8 +198,8 @@ $(2)_crate_libs := $$(addprefix lib, $$(addsuffix .a, $$($(2)_crates)))
 
 .PHONY: $$($(2)_crates)
 
-ifeq (debug,release)
-	RUST_OPT_FLAG := --release
+ifeq (@RUST_OPT@,release)
+  RUST_OPT_FLAG := --release
 endif
 
 $$($(2)_provides_libs) : lib$(1).a

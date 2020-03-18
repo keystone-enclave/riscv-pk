@@ -15,10 +15,10 @@ pub struct PmpRegion {
 }
 
 impl PmpRegion {
-    pub fn reserve(base: usize, size: usize, prio: Priority) -> Result<Self, c_int> {
+    pub fn reserve(base: usize, size: usize, prio: Priority, allow_overlap: bool) -> Result<Self, c_int> {
         let region = unsafe {
             let mut region = 0;
-            let err = pmp_region_init_atomic(base, size as u64, prio as u32, &mut region, 0);
+            let err = pmp_region_init_atomic(base, size as u64, prio as u32, &mut region, allow_overlap as c_int);
             if err != 0 {
                 return Err(err);
             }

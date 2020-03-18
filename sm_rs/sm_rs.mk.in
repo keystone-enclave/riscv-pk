@@ -17,6 +17,7 @@ sm_rs_c_srcs = \
 
 sm_rs_asm_srcs = \
   enclave_copy.S \
+  trap.S \
 
 sm_rs_test_srcs =
 

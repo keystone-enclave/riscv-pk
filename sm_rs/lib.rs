@@ -1,4 +1,5 @@
 #![no_std]
+#![feature(concat_idents)]
 #[deny(warnings)]
 
 #[cfg(test)]

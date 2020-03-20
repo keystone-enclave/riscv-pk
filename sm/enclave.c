@@ -72,10 +72,9 @@ static inline enclave_ret_code context_switch_to_enclave(uintptr_t* regs,
     write_csr(satp, enclaves[eid].encl_satp);
   }
 
-  switch_vector_enclave();
-
+  switch_vector_enclave(); 
   // set PMP
-  osm_pmp_set(PMP_NO_PERM);
+  osm_pmp_set(PMP_NO_PERM); // TODO: I am now here
   int memid;
   for(memid=0; memid < ENCLAVE_REGIONS_MAX; memid++) {
     if(enclaves[eid].regions[memid].type != REGION_INVALID) {
@@ -562,14 +561,14 @@ enclave_ret_code run_enclave(uintptr_t* host_regs, enclave_id eid)
 {
   int runable;
 
-  spinlock_lock(&encl_lock);
+  // spinlock_lock(&encl_lock);
   runable = (ENCLAVE_EXISTS(eid)
             && enclaves[eid].state == FRESH);
   if(runable) {
     enclaves[eid].state = RUNNING;
     enclaves[eid].n_thread++;
   }
-  spinlock_unlock(&encl_lock);
+  // spinlock_unlock(&encl_lock);
 
   if(!runable) {
     return ENCLAVE_NOT_FRESH;

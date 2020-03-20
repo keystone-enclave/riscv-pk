@@ -6,8 +6,8 @@
 #include "mtrap.h"
 
 
-void switch_vector_enclave(){
-  extern void trap_vector_enclave();
+inline void switch_vector_enclave(){
+  extern void trap_vector_enclave(); // TODO: not sure what is happening here
   write_csr(mtvec, &trap_vector_enclave);
 }
 
@@ -35,18 +35,116 @@ void swap_prev_mpp(struct thread_state* thread, uintptr_t* regs){
 }
 
 /* Swaps the entire s-mode visible state, general registers and then csrs */
-void swap_prev_state(struct thread_state* thread, uintptr_t* regs, int return_on_resume)
+inline void swap_prev_state(struct thread_state* thread, uintptr_t* regs, int return_on_resume)
 {
   int i;
 
   uintptr_t* prev = (uintptr_t*) &thread->prev_state;
-  for(i=0; i<32; i++)
-  {
-    /* swap state */
-    uintptr_t tmp = prev[i];
-    prev[i] = regs[i];
-    regs[i] = tmp;
-  }
+  // for(i=0; i<32; i++)
+  // {
+  //   /* swap state */
+  //   uintptr_t tmp = prev[i];
+  //   prev[i] = regs[i];
+  //   regs[i] = tmp;
+  // }
+
+  /* swap state */
+  uintptr_t tmp = prev[0];
+  prev[0] = regs[0];
+  regs[0] = tmp;
+  uintptr_t tmp = prev[1];
+  prev[1] = regs[1];
+  regs[1] = tmp;
+  uintptr_t tmp = prev[2];
+  prev[2] = regs[2];
+  regs[2] = tmp;
+  uintptr_t tmp = prev[3];
+  prev[3] = regs[3];
+  regs[3] = tmp;
+  uintptr_t tmp = prev[4];
+  prev[4] = regs[4];
+  regs[4] = tmp;
+  uintptr_t tmp = prev[5];
+  prev[5] = regs[5];
+  regs[5] = tmp;
+  uintptr_t tmp = prev[6];
+  prev[6] = regs[6];
+  regs[6] = tmp;
+  uintptr_t tmp = prev[7];
+  prev[7] = regs[7];
+  regs[7] = tmp;
+  uintptr_t tmp = prev[8];
+  prev[8] = regs[8];
+  regs[8] = tmp;
+  uintptr_t tmp = prev[9];
+  prev[9] = regs[9];
+  regs[9] = tmp;
+  uintptr_t tmp = prev[10];
+  prev[10] = regs[10];
+  regs[10] = tmp;
+  uintptr_t tmp = prev[11];
+  prev[11] = regs[11];
+  regs[11] = tmp;
+  uintptr_t tmp = prev[12];
+  prev[12] = regs[12];
+  regs[12] = tmp;
+  uintptr_t tmp = prev[13];
+  prev[13] = regs[13];
+  regs[13] = tmp;
+  uintptr_t tmp = prev[14];
+  prev[14] = regs[14];
+  regs[14] = tmp;
+  uintptr_t tmp = prev[15];
+  prev[15] = regs[15];
+  regs[15] = tmp;
+  uintptr_t tmp = prev[16];
+  prev[16] = regs[16];
+  regs[16] = tmp;
+  uintptr_t tmp = prev[17];
+  prev[17] = regs[17];
+  regs[17] = tmp;
+  uintptr_t tmp = prev[18];
+  prev[18] = regs[18];
+  regs[18] = tmp;
+  uintptr_t tmp = prev[19];
+  prev[19] = regs[19];
+  regs[19] = tmp;
+  uintptr_t tmp = prev[20];
+  prev[20] = regs[20];
+  regs[20] = tmp;
+  uintptr_t tmp = prev[21];
+  prev[21] = regs[21];
+  regs[21] = tmp;
+  uintptr_t tmp = prev[22];
+  prev[22] = regs[22];
+  regs[22] = tmp;
+  uintptr_t tmp = prev[23];
+  prev[23] = regs[23];
+  regs[23] = tmp;
+  uintptr_t tmp = prev[24];
+  prev[24] = regs[24];
+  regs[24] = tmp;
+  uintptr_t tmp = prev[25];
+  prev[25] = regs[25];
+  regs[25] = tmp;
+  uintptr_t tmp = prev[26];
+  prev[26] = regs[26];
+  regs[26] = tmp;
+  uintptr_t tmp = prev[27];
+  prev[27] = regs[27];
+  regs[27] = tmp;
+  uintptr_t tmp = prev[28];
+  prev[28] = regs[28];
+  regs[28] = tmp;
+  uintptr_t tmp = prev[29];
+  prev[29] = regs[29];
+  regs[29] = tmp;
+  uintptr_t tmp = prev[30];
+  prev[30] = regs[30];
+  regs[30] = tmp;
+  uintptr_t tmp = prev[31];
+  prev[31] = regs[31];
+  regs[31] = tmp;
 
   prev[0] = !return_on_resume;
 
@@ -86,7 +184,7 @@ thread){
 #undef LOCAL_SWAP_CSR
 }
 
-void swap_prev_mepc(struct thread_state* thread, uintptr_t current_mepc)
+inline void swap_prev_mepc(struct thread_state* thread, uintptr_t current_mepc)
 {
   uintptr_t tmp = thread->prev_mepc;
   thread->prev_mepc = current_mepc;

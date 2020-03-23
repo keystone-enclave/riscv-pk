@@ -6,7 +6,7 @@
 #include "mtrap.h"
 
 
-inline void switch_vector_enclave(){
+ void switch_vector_enclave(){
   extern void trap_vector_enclave(); // TODO: not sure what is happening here
   write_csr(mtvec, &trap_vector_enclave);
 }
@@ -184,7 +184,7 @@ thread){
 #undef LOCAL_SWAP_CSR
 }
 
-inline void swap_prev_mepc(struct thread_state* thread, uintptr_t current_mepc)
+void swap_prev_mepc(struct thread_state* thread, uintptr_t current_mepc)
 {
   uintptr_t tmp = thread->prev_mepc;
   thread->prev_mepc = current_mepc;

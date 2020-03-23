@@ -36,7 +36,7 @@ extern byte dev_public_key[PUBLIC_KEY_SIZE];
  *
  * Expects that eid has already been valided, and it is OK to run this enclave
 */
-static inline enclave_ret_code context_switch_to_enclave(uintptr_t* regs,
+static enclave_ret_code context_switch_to_enclave(uintptr_t* regs,
                                                 enclave_id eid,
                                                 int load_parameters){
 
@@ -75,11 +75,36 @@ static inline enclave_ret_code context_switch_to_enclave(uintptr_t* regs,
   switch_vector_enclave(); 
   // set PMP
   osm_pmp_set(PMP_NO_PERM); // TODO: I am now here
-  int memid;
-  for(memid=0; memid < ENCLAVE_REGIONS_MAX; memid++) {
-    if(enclaves[eid].regions[memid].type != REGION_INVALID) {
-      pmp_set(enclaves[eid].regions[memid].pmp_rid, PMP_ALL_PERM);
-    }
+  // int memid;
+  // for(memid=0; memid < ENCLAVE_REGIONS_MAX; memid++) { // ENCLAVE_REGIONS_MAX = 8
+  //   if(enclaves[eid].regions[memid].type != REGION_INVALID) {
+  //     pmp_set(enclaves[eid].regions[memid].pmp_rid, PMP_ALL_PERM);
+  //   }
+  // }
+
+  if(enclaves[eid].regions[0].type != REGION_INVALID) {
+    pmp_set(enclaves[eid].regions[0].pmp_rid, PMP_ALL_PERM);
+  }
+  if(enclaves[eid].regions[1].type != REGION_INVALID) {
+    pmp_set(enclaves[eid].regions[1].pmp_rid, PMP_ALL_PERM);
+  }
+  if(enclaves[eid].regions[2].type != REGION_INVALID) {
+    pmp_set(enclaves[eid].regions[2].pmp_rid, PMP_ALL_PERM);
+  }
+  if(enclaves[eid].regions[3].type != REGION_INVALID) {
+    pmp_set(enclaves[eid].regions[3].pmp_rid, PMP_ALL_PERM);
+  }
+  if(enclaves[eid].regions[4].type != REGION_INVALID) {
+    pmp_set(enclaves[eid].regions[4].pmp_rid, PMP_ALL_PERM);
+  }
+  if(enclaves[eid].regions[5].type != REGION_INVALID) {
+    pmp_set(enclaves[eid].regions[5].pmp_rid, PMP_ALL_PERM);
+  }
+  if(enclaves[eid].regions[6].type != REGION_INVALID) {
+    pmp_set(enclaves[eid].regions[6].pmp_rid, PMP_ALL_PERM);
+  }
+  if(enclaves[eid].regions[7].type != REGION_INVALID) {
+    pmp_set(enclaves[eid].regions[7].pmp_rid, PMP_ALL_PERM);
   }
 
   // Setup any platform specific defenses
@@ -89,7 +114,7 @@ static inline enclave_ret_code context_switch_to_enclave(uintptr_t* regs,
   return ENCLAVE_SUCCESS;
 }
 
-static inline void context_switch_to_host(uintptr_t* encl_regs,
+static void context_switch_to_host(uintptr_t* encl_regs,
     enclave_id eid,
     int return_on_resume){
 

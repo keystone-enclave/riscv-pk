@@ -492,19 +492,51 @@ static enclave_ret_code encl_alloc_eid(enclave_id* _eid)
 
 static enclave_ret_code encl_free_eid(enclave_id eid)
 {
-  spinlock_lock(&encl_lock);
+  // spinlock_lock(&encl_lock);
   enclaves[eid].state = INVALID;
-  spinlock_unlock(&encl_lock);
+  // spinlock_unlock(&encl_lock);
   return ENCLAVE_SUCCESS;
 }
 
 int get_enclave_region_index(enclave_id eid, enum enclave_region_type type){
-  size_t i;
-  for(i = 0;i < ENCLAVE_REGIONS_MAX; i++){
-    if(enclaves[eid].regions[i].type == type){
+  size_t i = 0;
+  // for(i = 0;i < ENCLAVE_REGIONS_MAX; i++){
+  //   if(enclaves[eid].regions[i].type == type){
+  //     return i;
+  //   }
+  // }
+  if(enclaves[eid].regions[i].type == type){
       return i;
-    }
   }
+  i++; // i = 1
+  if(enclaves[eid].regions[i].type == type){
+      return i;
+  }
+  i++; // i = 2
+  if(enclaves[eid].regions[i].type == type){
+      return i;
+  }
+  i++; // i = 3
+  if(enclaves[eid].regions[i].type == type){
+      return i;
+  }
+  i++; // i = 4
+  if(enclaves[eid].regions[i].type == type){
+      return i;
+  }
+  i++; // i = 5
+  if(enclaves[eid].regions[i].type == type){
+      return i;
+  }
+  i++; // i = 6
+  if(enclaves[eid].regions[i].type == type){
+      return i;
+  }
+  i++; // i = 7
+  if(enclaves[eid].regions[i].type == type){
+      return i;
+  }
+  i++; // i = 8
   // No such region for this enclave
   return -1;
 }
@@ -530,12 +562,12 @@ uintptr_t get_enclave_region_base(enclave_id eid, int memid)
 static enclave_ret_code copy_word_to_host(uintptr_t* dest_ptr, uintptr_t value)
 {
   int region_overlap = 0;
-  spinlock_lock(&encl_lock);
+  // spinlock_lock(&encl_lock);
   region_overlap = pmp_detect_region_overlap_atomic((uintptr_t)dest_ptr,
                                                 sizeof(uintptr_t));
   if(!region_overlap)
     *dest_ptr = value;
-  spinlock_unlock(&encl_lock);
+  // spinlock_unlock(&encl_lock);
 
   if(region_overlap)
     return ENCLAVE_REGION_OVERLAPS;
@@ -571,8 +603,20 @@ static int buffer_in_enclave_region(struct enclave* enclave,
 
   int i;
   /* Check if the source is in a valid region */
-  for(i = 0; i < ENCLAVE_REGIONS_MAX; i++){
-    if(enclave->regions[i].type == REGION_INVALID ||
+  // for(i = 0; i < ENCLAVE_REGIONS_MAX; i++){
+  //   if(enclave->regions[i].type == REGION_INVALID ||
+  //      enclave->regions[i].type == REGION_UTM)
+  //     continue;
+  //   uintptr_t region_start = pmp_region_get_addr(enclave->regions[i].pmp_rid);
+  //   size_t region_size = pmp_region_get_size(enclave->regions[i].pmp_rid);
+  //   if(start >= (void*)region_start
+  //      && start + size <= (void*)(region_start + region_size)){
+  //     return 1;
+  //   }
+  // }
+
+  i = 0; 
+  if(enclave->regions[i].type == REGION_INVALID ||
        enclave->regions[i].type == REGION_UTM)
       continue;
     uintptr_t region_start = pmp_region_get_addr(enclave->regions[i].pmp_rid);
@@ -580,7 +624,76 @@ static int buffer_in_enclave_region(struct enclave* enclave,
     if(start >= (void*)region_start
        && start + size <= (void*)(region_start + region_size)){
       return 1;
-    }
+  }
+  i++; // i = 1; 
+  if(enclave->regions[i].type == REGION_INVALID ||
+       enclave->regions[i].type == REGION_UTM)
+      continue;
+    uintptr_t region_start = pmp_region_get_addr(enclave->regions[i].pmp_rid);
+    size_t region_size = pmp_region_get_size(enclave->regions[i].pmp_rid);
+    if(start >= (void*)region_start
+       && start + size <= (void*)(region_start + region_size)){
+      return 1;
+  }
+  i++; // i = 2; 
+  if(enclave->regions[i].type == REGION_INVALID ||
+       enclave->regions[i].type == REGION_UTM)
+      continue;
+    uintptr_t region_start = pmp_region_get_addr(enclave->regions[i].pmp_rid);
+    size_t region_size = pmp_region_get_size(enclave->regions[i].pmp_rid);
+    if(start >= (void*)region_start
+       && start + size <= (void*)(region_start + region_size)){
+      return 1;
+  }
+  i++; // i = 3; 
+  if(enclave->regions[i].type == REGION_INVALID ||
+       enclave->regions[i].type == REGION_UTM)
+      continue;
+    uintptr_t region_start = pmp_region_get_addr(enclave->regions[i].pmp_rid);
+    size_t region_size = pmp_region_get_size(enclave->regions[i].pmp_rid);
+    if(start >= (void*)region_start
+       && start + size <= (void*)(region_start + region_size)){
+      return 1;
+  }
+  i++; // i = 4; 
+  if(enclave->regions[i].type == REGION_INVALID ||
+       enclave->regions[i].type == REGION_UTM)
+      continue;
+    uintptr_t region_start = pmp_region_get_addr(enclave->regions[i].pmp_rid);
+    size_t region_size = pmp_region_get_size(enclave->regions[i].pmp_rid);
+    if(start >= (void*)region_start
+       && start + size <= (void*)(region_start + region_size)){
+      return 1;
+  }
+  i++; // i = 5; 
+  if(enclave->regions[i].type == REGION_INVALID ||
+       enclave->regions[i].type == REGION_UTM)
+      continue;
+    uintptr_t region_start = pmp_region_get_addr(enclave->regions[i].pmp_rid);
+    size_t region_size = pmp_region_get_size(enclave->regions[i].pmp_rid);
+    if(start >= (void*)region_start
+       && start + size <= (void*)(region_start + region_size)){
+      return 1;
+  }
+  i++; // i = 6; 
+  if(enclave->regions[i].type == REGION_INVALID ||
+       enclave->regions[i].type == REGION_UTM)
+      continue;
+    uintptr_t region_start = pmp_region_get_addr(enclave->regions[i].pmp_rid);
+    size_t region_size = pmp_region_get_size(enclave->regions[i].pmp_rid);
+    if(start >= (void*)region_start
+       && start + size <= (void*)(region_start + region_size)){
+      return 1;
+  }
+  i++; // i = 7; 
+  if(enclave->regions[i].type == REGION_INVALID ||
+       enclave->regions[i].type == REGION_UTM)
+      continue;
+    uintptr_t region_start = pmp_region_get_addr(enclave->regions[i].pmp_rid);
+    size_t region_size = pmp_region_get_size(enclave->regions[i].pmp_rid);
+    if(start >= (void*)region_start
+       && start + size <= (void*)(region_start + region_size)){
+      return 1;
   }
   return 0;
 }

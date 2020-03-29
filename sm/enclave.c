@@ -119,12 +119,38 @@ static void context_switch_to_host(uintptr_t* encl_regs,
     int return_on_resume){
 
   // set PMP
-  int memid;
-  for(memid=0; memid < ENCLAVE_REGIONS_MAX; memid++) {
-    if(enclaves[eid].regions[memid].type != REGION_INVALID) {
-      pmp_set(enclaves[eid].regions[memid].pmp_rid, PMP_NO_PERM);
-    }
+  // int memid;
+  // for(memid=0; memid < ENCLAVE_REGIONS_MAX; memid++) {
+  //   if(enclaves[eid].regions[memid].type != REGION_INVALID) {
+  //     pmp_set(enclaves[eid].regions[memid].pmp_rid, PMP_NO_PERM);
+  //   }
+  // }
+
+  if(enclaves[eid].regions[0].type != REGION_INVALID) {
+    pmp_set(enclaves[eid].regions[0].pmp_rid, PMP_NO_PERM);
   }
+  if(enclaves[eid].regions[1].type != REGION_INVALID) {
+    pmp_set(enclaves[eid].regions[1].pmp_rid, PMP_NO_PERM);
+  }
+  if(enclaves[eid].regions[2].type != REGION_INVALID) {
+    pmp_set(enclaves[eid].regions[2].pmp_rid, PMP_NO_PERM);
+  }
+  if(enclaves[eid].regions[3].type != REGION_INVALID) {
+    pmp_set(enclaves[eid].regions[3].pmp_rid, PMP_NO_PERM);
+  }
+  if(enclaves[eid].regions[4].type != REGION_INVALID) {
+    pmp_set(enclaves[eid].regions[4].pmp_rid, PMP_NO_PERM);
+  }
+  if(enclaves[eid].regions[5].type != REGION_INVALID) {
+    pmp_set(enclaves[eid].regions[5].pmp_rid, PMP_NO_PERM);
+  }
+  if(enclaves[eid].regions[6].type != REGION_INVALID) {
+    pmp_set(enclaves[eid].regions[6].pmp_rid, PMP_NO_PERM);
+  }
+  if(enclaves[eid].regions[7].type != REGION_INVALID) {
+    pmp_set(enclaves[eid].regions[7].pmp_rid, PMP_NO_PERM);
+  }
+
   osm_pmp_set(PMP_ALL_PERM);
 
   uintptr_t interrupts = MIP_SSIP | MIP_STIP | MIP_SEIP;
@@ -172,17 +198,191 @@ void enclave_init_metadata(){
   int i=0;
 
   /* Assumes eids are incrementing values, which they are for now */
-  for(eid=0; eid < ENCL_MAX; eid++){
-    enclaves[eid].state = INVALID;
+  // for(eid=0; eid < ENCL_MAX; eid++){
+  //   enclaves[eid].state = INVALID;
 
-    // Clear out regions
-    for(i=0; i < ENCLAVE_REGIONS_MAX; i++){
-      enclaves[eid].regions[i].type = REGION_INVALID;
-    }
-    /* Fire all platform specific init for each enclave */
-    platform_init_enclave(&(enclaves[eid]));
-  }
+  //   // Clear out regions
+  //   for(i=0; i < ENCLAVE_REGIONS_MAX; i++){
+  //     enclaves[eid].regions[i].type = REGION_INVALID;
+  //   }
+  //   /* Fire all platform specific init for each enclave */
+  //   platform_init_enclave(&(enclaves[eid]));
+  // }
 
+  // Outer loop eid = 0 
+  enclaves[eid].regions[0].type = REGION_INVALID;
+  enclaves[eid].regions[1].type = REGION_INVALID;
+  enclaves[eid].regions[2].type = REGION_INVALID;
+  enclaves[eid].regions[3].type = REGION_INVALID;
+  enclaves[eid].regions[4].type = REGION_INVALID;
+  enclaves[eid].regions[5].type = REGION_INVALID;
+  enclaves[eid].regions[6].type = REGION_INVALID;
+  enclaves[eid].regions[7].type = REGION_INVALID;
+  
+  // Outer loop eid = 1
+  eid++; 
+  enclaves[eid].regions[0].type = REGION_INVALID;
+  enclaves[eid].regions[1].type = REGION_INVALID;
+  enclaves[eid].regions[2].type = REGION_INVALID;
+  enclaves[eid].regions[3].type = REGION_INVALID;
+  enclaves[eid].regions[4].type = REGION_INVALID;
+  enclaves[eid].regions[5].type = REGION_INVALID;
+  enclaves[eid].regions[6].type = REGION_INVALID;
+  enclaves[eid].regions[7].type = REGION_INVALID;
+
+  // Outer loop eid = 2
+  eid++; 
+  enclaves[eid].regions[0].type = REGION_INVALID;
+  enclaves[eid].regions[1].type = REGION_INVALID;
+  enclaves[eid].regions[2].type = REGION_INVALID;
+  enclaves[eid].regions[3].type = REGION_INVALID;
+  enclaves[eid].regions[4].type = REGION_INVALID;
+  enclaves[eid].regions[5].type = REGION_INVALID;
+  enclaves[eid].regions[6].type = REGION_INVALID;
+  enclaves[eid].regions[7].type = REGION_INVALID;
+
+  // Outer loop eid = 3
+  eid++; 
+  enclaves[eid].regions[0].type = REGION_INVALID;
+  enclaves[eid].regions[1].type = REGION_INVALID;
+  enclaves[eid].regions[2].type = REGION_INVALID;
+  enclaves[eid].regions[3].type = REGION_INVALID;
+  enclaves[eid].regions[4].type = REGION_INVALID;
+  enclaves[eid].regions[5].type = REGION_INVALID;
+  enclaves[eid].regions[6].type = REGION_INVALID;
+  enclaves[eid].regions[7].type = REGION_INVALID;
+  
+  // Outer loop eid = 4
+  eid++; 
+  enclaves[eid].regions[0].type = REGION_INVALID;
+  enclaves[eid].regions[1].type = REGION_INVALID;
+  enclaves[eid].regions[2].type = REGION_INVALID;
+  enclaves[eid].regions[3].type = REGION_INVALID;
+  enclaves[eid].regions[4].type = REGION_INVALID;
+  enclaves[eid].regions[5].type = REGION_INVALID;
+  enclaves[eid].regions[6].type = REGION_INVALID;
+  enclaves[eid].regions[7].type = REGION_INVALID;
+
+  // Outer loop eid = 5
+  eid++; 
+  enclaves[eid].regions[0].type = REGION_INVALID;
+  enclaves[eid].regions[1].type = REGION_INVALID;
+  enclaves[eid].regions[2].type = REGION_INVALID;
+  enclaves[eid].regions[3].type = REGION_INVALID;
+  enclaves[eid].regions[4].type = REGION_INVALID;
+  enclaves[eid].regions[5].type = REGION_INVALID;
+  enclaves[eid].regions[6].type = REGION_INVALID;
+  enclaves[eid].regions[7].type = REGION_INVALID;
+
+  // Outer loop eid = 6
+  eid++; 
+  enclaves[eid].regions[0].type = REGION_INVALID;
+  enclaves[eid].regions[1].type = REGION_INVALID;
+  enclaves[eid].regions[2].type = REGION_INVALID;
+  enclaves[eid].regions[3].type = REGION_INVALID;
+  enclaves[eid].regions[4].type = REGION_INVALID;
+  enclaves[eid].regions[5].type = REGION_INVALID;
+  enclaves[eid].regions[6].type = REGION_INVALID;
+  enclaves[eid].regions[7].type = REGION_INVALID;
+
+  // Outer loop eid = 7
+  eid++; 
+  enclaves[eid].regions[0].type = REGION_INVALID;
+  enclaves[eid].regions[1].type = REGION_INVALID;
+  enclaves[eid].regions[2].type = REGION_INVALID;
+  enclaves[eid].regions[3].type = REGION_INVALID;
+  enclaves[eid].regions[4].type = REGION_INVALID;
+  enclaves[eid].regions[5].type = REGION_INVALID;
+  enclaves[eid].regions[6].type = REGION_INVALID;
+  enclaves[eid].regions[7].type = REGION_INVALID;
+
+  // Outer loop eid = 8
+  eid++; 
+  enclaves[eid].regions[0].type = REGION_INVALID;
+  enclaves[eid].regions[1].type = REGION_INVALID;
+  enclaves[eid].regions[2].type = REGION_INVALID;
+  enclaves[eid].regions[3].type = REGION_INVALID;
+  enclaves[eid].regions[4].type = REGION_INVALID;
+  enclaves[eid].regions[5].type = REGION_INVALID;
+  enclaves[eid].regions[6].type = REGION_INVALID;
+  enclaves[eid].regions[7].type = REGION_INVALID;
+
+  // Outer loop eid = 9
+  eid++; 
+  enclaves[eid].regions[0].type = REGION_INVALID;
+  enclaves[eid].regions[1].type = REGION_INVALID;
+  enclaves[eid].regions[2].type = REGION_INVALID;
+  enclaves[eid].regions[3].type = REGION_INVALID;
+  enclaves[eid].regions[4].type = REGION_INVALID;
+  enclaves[eid].regions[5].type = REGION_INVALID;
+  enclaves[eid].regions[6].type = REGION_INVALID;
+  enclaves[eid].regions[7].type = REGION_INVALID;
+
+  // Outer loop eid = 10
+  eid++; 
+  enclaves[eid].regions[0].type = REGION_INVALID;
+  enclaves[eid].regions[1].type = REGION_INVALID;
+  enclaves[eid].regions[2].type = REGION_INVALID;
+  enclaves[eid].regions[3].type = REGION_INVALID;
+  enclaves[eid].regions[4].type = REGION_INVALID;
+  enclaves[eid].regions[5].type = REGION_INVALID;
+  enclaves[eid].regions[6].type = REGION_INVALID;
+  enclaves[eid].regions[7].type = REGION_INVALID;
+
+  // Outer loop eid = 11
+  eid++; 
+  enclaves[eid].regions[0].type = REGION_INVALID;
+  enclaves[eid].regions[1].type = REGION_INVALID;
+  enclaves[eid].regions[2].type = REGION_INVALID;
+  enclaves[eid].regions[3].type = REGION_INVALID;
+  enclaves[eid].regions[4].type = REGION_INVALID;
+  enclaves[eid].regions[5].type = REGION_INVALID;
+  enclaves[eid].regions[6].type = REGION_INVALID;
+  enclaves[eid].regions[7].type = REGION_INVALID;
+
+  // Outer loop eid = 12
+  eid++; 
+  enclaves[eid].regions[0].type = REGION_INVALID;
+  enclaves[eid].regions[1].type = REGION_INVALID;
+  enclaves[eid].regions[2].type = REGION_INVALID;
+  enclaves[eid].regions[3].type = REGION_INVALID;
+  enclaves[eid].regions[4].type = REGION_INVALID;
+  enclaves[eid].regions[5].type = REGION_INVALID;
+  enclaves[eid].regions[6].type = REGION_INVALID;
+  enclaves[eid].regions[7].type = REGION_INVALID;
+
+  // Outer loop eid = 13
+  eid++; 
+  enclaves[eid].regions[0].type = REGION_INVALID;
+  enclaves[eid].regions[1].type = REGION_INVALID;
+  enclaves[eid].regions[2].type = REGION_INVALID;
+  enclaves[eid].regions[3].type = REGION_INVALID;
+  enclaves[eid].regions[4].type = REGION_INVALID;
+  enclaves[eid].regions[5].type = REGION_INVALID;
+  enclaves[eid].regions[6].type = REGION_INVALID;
+  enclaves[eid].regions[7].type = REGION_INVALID;
+
+  // Outer loop eid = 14
+  eid++; 
+  enclaves[eid].regions[0].type = REGION_INVALID;
+  enclaves[eid].regions[1].type = REGION_INVALID;
+  enclaves[eid].regions[2].type = REGION_INVALID;
+  enclaves[eid].regions[3].type = REGION_INVALID;
+  enclaves[eid].regions[4].type = REGION_INVALID;
+  enclaves[eid].regions[5].type = REGION_INVALID;
+  enclaves[eid].regions[6].type = REGION_INVALID;
+  enclaves[eid].regions[7].type = REGION_INVALID;
+
+  // Outer loop eid = 15
+  eid++; 
+  enclaves[eid].regions[0].type = REGION_INVALID;
+  enclaves[eid].regions[1].type = REGION_INVALID;
+  enclaves[eid].regions[2].type = REGION_INVALID;
+  enclaves[eid].regions[3].type = REGION_INVALID;
+  enclaves[eid].regions[4].type = REGION_INVALID;
+  enclaves[eid].regions[5].type = REGION_INVALID;
+  enclaves[eid].regions[6].type = REGION_INVALID;
+  enclaves[eid].regions[7].type = REGION_INVALID;
 }
 
 static enclave_ret_code clean_enclave_memory(uintptr_t utbase, uintptr_t utsize)
@@ -201,18 +401,85 @@ static enclave_ret_code encl_alloc_eid(enclave_id* _eid)
 {
   enclave_id eid;
 
-  spinlock_lock(&encl_lock);
+  // spinlock_lock(&encl_lock);
 
-  for(eid=0; eid<ENCL_MAX; eid++)
-  {
-    if(enclaves[eid].state == INVALID){
+  // for(eid=0; eid<ENCL_MAX; eid++)
+  // {
+  //   if(enclaves[eid].state == INVALID){
+  //     break;
+  //   }
+  // }
+
+  eid = 0; // eid = 0 
+  if(enclaves[eid].state == INVALID){ 
       break;
-    }
   }
+  eid++; // eid = 1
+  if(enclaves[eid].state == INVALID){ 
+      break;
+  }
+  eid++; // eid = 2
+  if(enclaves[eid].state == INVALID){ 
+      break;
+  }
+  eid++; // eid = 3
+  if(enclaves[eid].state == INVALID){ 
+      break;
+  }
+  eid++; // eid = 4
+  if(enclaves[eid].state == INVALID){ 
+      break;
+  }
+  eid++; // eid = 5
+  if(enclaves[eid].state == INVALID){ 
+      break;
+  }
+  eid++; // eid = 6
+  if(enclaves[eid].state == INVALID){ 
+      break;
+  }
+  eid++; // eid = 6
+  if(enclaves[eid].state == INVALID){ 
+      break;
+  }
+  eid++; // eid = 8
+  if(enclaves[eid].state == INVALID){ 
+      break;
+  }
+  eid++; // eid = 9
+  if(enclaves[eid].state == INVALID){ 
+      break;
+  }
+  eid++; // eid = 10
+  if(enclaves[eid].state == INVALID){ 
+      break;
+  }
+  eid++; // eid = 11
+  if(enclaves[eid].state == INVALID){ 
+      break;
+  }
+  eid++; // eid = 12
+  if(enclaves[eid].state == INVALID){ 
+      break;
+  }
+  eid++; // eid = 13
+  if(enclaves[eid].state == INVALID){ 
+      break;
+  }
+  eid++; // eid = 14
+  if(enclaves[eid].state == INVALID){ 
+      break;
+  }
+  eid++; // eid = 15
+  if(enclaves[eid].state == INVALID){ 
+      break;
+  }
+  eid++; // eid = 16
+
   if(eid != ENCL_MAX)
     enclaves[eid].state = ALLOCATED;
 
-  spinlock_unlock(&encl_lock);
+  // spinlock_unlock(&encl_lock);
 
   if(eid != ENCL_MAX){
     *_eid = eid;
@@ -285,12 +552,12 @@ static enclave_ret_code copy_word_to_host(uintptr_t* dest_ptr, uintptr_t value)
 enclave_ret_code copy_from_host(void* source, void* dest, size_t size){
 
   int region_overlap = 0;
-  spinlock_lock(&encl_lock);
+  // spinlock_lock(&encl_lock);
   region_overlap = pmp_detect_region_overlap_atomic((uintptr_t) source, size);
   // TODO: Validate that dest is inside the SM.
   if(!region_overlap)
     memcpy(dest, source, size);
-  spinlock_unlock(&encl_lock);
+  // spinlock_unlock(&encl_lock);
 
   if(region_overlap)
     return ENCLAVE_REGION_OVERLAPS;

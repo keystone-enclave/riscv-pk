@@ -7,7 +7,7 @@
 
 
  void switch_vector_enclave(){
-  extern void trap_vector_enclave(); // TODO: not sure what is happening here
+  extern void trap_vector_enclave(); 
   write_csr(mtvec, &trap_vector_enclave);
 }
 

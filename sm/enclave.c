@@ -977,14 +977,14 @@ enclave_ret_code exit_enclave(uintptr_t* encl_regs, unsigned long retval, enclav
 {
   int exitable;
 
-  spinlock_lock(&encl_lock);
+  // spinlock_lock(&encl_lock);
   exitable = enclaves[eid].state == RUNNING;
   if (exitable) {
     enclaves[eid].n_thread--;
     if(enclaves[eid].n_thread == 0)
       enclaves[eid].state = STOPPED;
   }
-  spinlock_unlock(&encl_lock);
+  // spinlock_unlock(&encl_lock);
 
   if(!exitable)
     return ENCLAVE_NOT_RUNNING;
@@ -998,14 +998,14 @@ enclave_ret_code stop_enclave(uintptr_t* encl_regs, uint64_t request, enclave_id
 {
   int stoppable;
 
-  spinlock_lock(&encl_lock);
+  // spinlock_lock(&encl_lock);
   stoppable = enclaves[eid].state == RUNNING;
   if (stoppable) {
     enclaves[eid].n_thread--;
     if(enclaves[eid].n_thread == 0)
       enclaves[eid].state = STOPPED;
   }
-  spinlock_unlock(&encl_lock);
+  // spinlock_unlock(&encl_lock);
 
   if(!stoppable)
     return ENCLAVE_NOT_RUNNING;

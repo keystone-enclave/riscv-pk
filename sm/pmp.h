@@ -8,6 +8,7 @@
 #include "sm.h"
 #include "mtrap.h"
 #include <errno.h>
+#include "atomic.h"
 
 #define PMP_N_REG         8 //number of PMP registers
 #define PMP_MAX_N_REGION  16 //maximum number of PMP regions
@@ -101,5 +102,9 @@ int pmp_detect_region_overlap_atomic(uintptr_t base, uintptr_t size);
 
 uintptr_t pmp_region_get_addr(region_id i);
 uint64_t pmp_region_get_size(region_id i);
+
+static spinlock_t pmp_ipi_global_lock;
+void pmp_ipi_acquire_lock();
+void pmp_ipi_release_lock();
 
 #endif

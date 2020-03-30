@@ -223,13 +223,21 @@ static void send_and_sync_pmp_ipi(int region_idx, enum ipi_type type, uint8_t pe
     }
   }
 
+  // wait until all events have been handled.
+  // prevent deadlock by consuming incoming IPIs.
+  uint32_t incoming_ipi = 0;
   /* wait until every other hart sets PMP */
   for(uintptr_t i=0, m=mask; m; i++, m>>=1) {
     if(m & 1) {
       while( atomic_read(&ipi_mailbox[i].pending) ) {
-        continue;
+        incoming_ipi |= atomic_swap(HLS()->ipi, 0);
       }
     }
+  }
+  // if we got an IPI, restore it; it will be taken after returning
+  if (incoming_ipi) {
+    *HLS()->ipi = incoming_ipi;
+    mb();
   }
 }
 

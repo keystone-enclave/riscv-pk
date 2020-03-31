@@ -306,8 +306,6 @@ unsafe fn copy_word_to_host(
 }
 
 /* Internal function enforcing a copy source is from the untrusted world.
- * Does NOT do verification of dest, assumes caller knows what that is.
- * Dest should be inside the SM memory.
  */
 fn copy_create_args(
     source: sptr<keystone_sbi_create>,

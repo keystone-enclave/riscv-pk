@@ -449,16 +449,23 @@ enclave_ret_code create_enclave(struct keystone_sbi_create create_args)
   spinlock_lock(&encl_lock); // FIXME This should error for second enter.
   ret = validate_and_hash_enclave(&enclaves[eid]);
   /* The enclave is fresh if it has been validated and hashed but not run yet. */
-  if(ret == ENCLAVE_SUCCESS)
-    enclaves[eid].state = FRESH;
-  spinlock_unlock(&encl_lock);
-
   if(ret != ENCLAVE_SUCCESS)
-    goto free_platform;
+    goto unlock;
 
+  enclaves[eid].state = FRESH;
   /* EIDs are unsigned int in size, copy via simple copy */
-  return copy_word_to_host((uintptr_t)eidptr, (uintptr_t)eid);
 
+  ret = copy_word_to_host((uintptr_t)eidptr, (uintptr_t)eid);
+  if (ret) {
+    ret = ENCLAVE_ILLEGAL_ARGUMENT;
+    goto unlock;
+  }
+
+  spinlock_unlock(&encl_lock);
+  return ENCLAVE_SUCCESS;
+
+unlock:
+  spinlock_unlock(&encl_lock);
 free_platform:
   platform_destroy_enclave(&enclaves[eid]);
 free_shared_region:
@@ -641,10 +648,11 @@ enclave_ret_code attest_enclave(uintptr_t report_ptr, uintptr_t data, uintptr_t 
   spinlock_lock(&encl_lock);
   attestable = (ENCLAVE_EXISTS(eid)
                 && (enclaves[eid].state >= FRESH));
-  spinlock_unlock(&encl_lock);
 
-  if(!attestable)
-    return ENCLAVE_NOT_INITIALIZED;
+  if(!attestable) {
+    ret = ENCLAVE_NOT_INITIALIZED;
+    goto err_unlock;
+  }
 
   /* copy data to be signed */
   ret = copy_enclave_data(&enclaves[eid], report.enclave.data,
@@ -652,8 +660,11 @@ enclave_ret_code attest_enclave(uintptr_t report_ptr, uintptr_t data, uintptr_t 
   report.enclave.data_len = size;
 
   if (ret) {
-    return ret;
+    ret = ENCLAVE_NOT_ACCESSIBLE;
+    goto err_unlock;
   }
+
+  spinlock_unlock(&encl_lock); // Don't need to wait while signing, which might take some time
 
   memcpy(report.dev_public_key, dev_public_key, PUBLIC_KEY_SIZE);
   memcpy(report.sm.hash, sm_hash, MDSIZE);
@@ -666,14 +677,21 @@ enclave_ret_code attest_enclave(uintptr_t report_ptr, uintptr_t data, uintptr_t 
       - SIGNATURE_SIZE
       - ATTEST_DATA_MAXLEN + size);
 
+  spinlock_lock(&encl_lock);
+
   /* copy report to the enclave */
   ret = copy_enclave_report(&enclaves[eid],
       report_ptr,
       &report);
       
   if (ret) {
-    return ret;
+    ret = ENCLAVE_ILLEGAL_ARGUMENT;
+    goto err_unlock;
   }
 
-  return ENCLAVE_SUCCESS;
+  ret = ENCLAVE_SUCCESS;
+
+err_unlock:
+  spinlock_unlock(&encl_lock);
+  return ret;
 }

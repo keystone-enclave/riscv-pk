@@ -219,6 +219,8 @@ void enclave_init_metadata(){
   enclaves[eid].regions[5].type = REGION_INVALID;
   enclaves[eid].regions[6].type = REGION_INVALID;
   enclaves[eid].regions[7].type = REGION_INVALID;
+
+  platform_init_enclave(&(enclaves[eid]));
   
   // Outer loop eid = 1
   eid++; 
@@ -231,6 +233,8 @@ void enclave_init_metadata(){
   enclaves[eid].regions[6].type = REGION_INVALID;
   enclaves[eid].regions[7].type = REGION_INVALID;
 
+  platform_init_enclave(&(enclaves[eid]));
+
   // Outer loop eid = 2
   eid++; 
   enclaves[eid].regions[0].type = REGION_INVALID;
@@ -242,6 +246,8 @@ void enclave_init_metadata(){
   enclaves[eid].regions[6].type = REGION_INVALID;
   enclaves[eid].regions[7].type = REGION_INVALID;
 
+  platform_init_enclave(&(enclaves[eid]));
+
   // Outer loop eid = 3
   eid++; 
   enclaves[eid].regions[0].type = REGION_INVALID;
@@ -252,6 +258,8 @@ void enclave_init_metadata(){
   enclaves[eid].regions[5].type = REGION_INVALID;
   enclaves[eid].regions[6].type = REGION_INVALID;
   enclaves[eid].regions[7].type = REGION_INVALID;
+
+  platform_init_enclave(&(enclaves[eid]));
   
   // Outer loop eid = 4
   eid++; 
@@ -264,6 +272,8 @@ void enclave_init_metadata(){
   enclaves[eid].regions[6].type = REGION_INVALID;
   enclaves[eid].regions[7].type = REGION_INVALID;
 
+  platform_init_enclave(&(enclaves[eid]));
+
   // Outer loop eid = 5
   eid++; 
   enclaves[eid].regions[0].type = REGION_INVALID;
@@ -274,6 +284,8 @@ void enclave_init_metadata(){
   enclaves[eid].regions[5].type = REGION_INVALID;
   enclaves[eid].regions[6].type = REGION_INVALID;
   enclaves[eid].regions[7].type = REGION_INVALID;
+
+  platform_init_enclave(&(enclaves[eid]));
 
   // Outer loop eid = 6
   eid++; 
@@ -286,6 +298,8 @@ void enclave_init_metadata(){
   enclaves[eid].regions[6].type = REGION_INVALID;
   enclaves[eid].regions[7].type = REGION_INVALID;
 
+  platform_init_enclave(&(enclaves[eid]));
+
   // Outer loop eid = 7
   eid++; 
   enclaves[eid].regions[0].type = REGION_INVALID;
@@ -296,6 +310,8 @@ void enclave_init_metadata(){
   enclaves[eid].regions[5].type = REGION_INVALID;
   enclaves[eid].regions[6].type = REGION_INVALID;
   enclaves[eid].regions[7].type = REGION_INVALID;
+
+  platform_init_enclave(&(enclaves[eid]));
 
   // Outer loop eid = 8
   eid++; 
@@ -308,6 +324,8 @@ void enclave_init_metadata(){
   enclaves[eid].regions[6].type = REGION_INVALID;
   enclaves[eid].regions[7].type = REGION_INVALID;
 
+  platform_init_enclave(&(enclaves[eid]));
+
   // Outer loop eid = 9
   eid++; 
   enclaves[eid].regions[0].type = REGION_INVALID;
@@ -318,6 +336,8 @@ void enclave_init_metadata(){
   enclaves[eid].regions[5].type = REGION_INVALID;
   enclaves[eid].regions[6].type = REGION_INVALID;
   enclaves[eid].regions[7].type = REGION_INVALID;
+
+  platform_init_enclave(&(enclaves[eid]));
 
   // Outer loop eid = 10
   eid++; 
@@ -330,6 +350,8 @@ void enclave_init_metadata(){
   enclaves[eid].regions[6].type = REGION_INVALID;
   enclaves[eid].regions[7].type = REGION_INVALID;
 
+  platform_init_enclave(&(enclaves[eid]));
+
   // Outer loop eid = 11
   eid++; 
   enclaves[eid].regions[0].type = REGION_INVALID;
@@ -340,6 +362,8 @@ void enclave_init_metadata(){
   enclaves[eid].regions[5].type = REGION_INVALID;
   enclaves[eid].regions[6].type = REGION_INVALID;
   enclaves[eid].regions[7].type = REGION_INVALID;
+
+  platform_init_enclave(&(enclaves[eid]));
 
   // Outer loop eid = 12
   eid++; 
@@ -352,6 +376,8 @@ void enclave_init_metadata(){
   enclaves[eid].regions[6].type = REGION_INVALID;
   enclaves[eid].regions[7].type = REGION_INVALID;
 
+  platform_init_enclave(&(enclaves[eid]));
+
   // Outer loop eid = 13
   eid++; 
   enclaves[eid].regions[0].type = REGION_INVALID;
@@ -362,6 +388,8 @@ void enclave_init_metadata(){
   enclaves[eid].regions[5].type = REGION_INVALID;
   enclaves[eid].regions[6].type = REGION_INVALID;
   enclaves[eid].regions[7].type = REGION_INVALID;
+
+  platform_init_enclave(&(enclaves[eid]));
 
   // Outer loop eid = 14
   eid++; 
@@ -374,6 +402,8 @@ void enclave_init_metadata(){
   enclaves[eid].regions[6].type = REGION_INVALID;
   enclaves[eid].regions[7].type = REGION_INVALID;
 
+  platform_init_enclave(&(enclaves[eid]));
+
   // Outer loop eid = 15
   eid++; 
   enclaves[eid].regions[0].type = REGION_INVALID;
@@ -384,6 +414,8 @@ void enclave_init_metadata(){
   enclaves[eid].regions[5].type = REGION_INVALID;
   enclaves[eid].regions[6].type = REGION_INVALID;
   enclaves[eid].regions[7].type = REGION_INVALID;
+
+  platform_init_enclave(&(enclaves[eid]));
 }
 
 static enclave_ret_code clean_enclave_memory(uintptr_t utbase, uintptr_t utsize)

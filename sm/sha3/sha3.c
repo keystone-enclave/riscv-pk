@@ -5,6 +5,8 @@
 // Revised 03-Sep-15 for portability + OpenSSL - style API
 
 #include "sha3.h"
+#include "atomic.h"
+#include "mtrap.h"
 
 // update the state with given number of rounds
 
@@ -120,16 +122,27 @@ int sha3_update(sha3_ctx_t *c, const void *data, size_t len)
     size_t i;
     int j;
 
+    // wait until all events have been handled.
+    // prevent deadlock by consuming incoming IPIs.
+    uint32_t incoming_ipi = 0;
+
     j = c->pt;
     for (i = 0; i < len; i++) {
         c->st.b[j++] ^= ((const uint8_t *) data)[i];
         if (j >= c->rsiz) {
             sha3_keccakf(c->st.q);
             j = 0;
+            incoming_ipi |= atomic_swap(HLS()->ipi, 0);
         }
     }
     c->pt = j;
 
+    // if we got an IPI, restore it; it will be taken after returning
+    if (incoming_ipi) {
+        *HLS()->ipi = incoming_ipi;
+        mb();
+    }
+    
     return 1;
 }
 

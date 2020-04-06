@@ -106,5 +106,6 @@ uint64_t pmp_region_get_size(region_id i);
 static spinlock_t pmp_ipi_global_lock;
 void pmp_ipi_acquire_lock();
 void pmp_ipi_release_lock();
+void pmp_ipi_update();
 
 #endif

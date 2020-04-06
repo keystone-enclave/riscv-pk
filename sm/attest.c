@@ -133,7 +133,7 @@ int validate_and_hash_epm(hash_ctx* hash_ctx, int level,
 
 
 
-      //printm("PAGE hashed: 0x%lx (pa: 0x%lx)\n", vpn << RISCV_PGSHIFT, phys_addr);
+      // printm("PAGE hashed: 0x%lx (pa: 0x%lx)\n", vpn << RISCV_PGSHIFT, phys_addr);
     }
     else
     {

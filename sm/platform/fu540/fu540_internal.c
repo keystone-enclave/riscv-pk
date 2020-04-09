@@ -146,7 +146,7 @@ enclave_ret_code platform_create_enclave(struct enclave* enclave){
     }
     memcpy((enclave_ret_code*)scratch_epm_start,
            (enclave_ret_code*)old_epm_start,
-           size);
+           size); // TODO: l o o p s ? 
     printm("Performing copy from %llx to %llx\r\n", old_epm_start, scratch_epm_start);
     /* Change pa params to the new region */
     enclave->pa_params.dram_base = scratch_epm_start;
@@ -188,7 +188,7 @@ void platform_destroy_enclave(struct enclave* enclave){
          addr < scratch_stop;
          addr += sizeof(uintptr_t)){
       *(uintptr_t*)addr = 0;
-    }
+    } // TODO: how to unroll this
 
     /* Fix the enclave region info to no longer know about
        scratchpad */

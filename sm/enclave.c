@@ -852,7 +852,7 @@ enclave_ret_code create_enclave(struct keystone_sbi_create create_args)
 
   // create a PMP region bound to the enclave
   ret = ENCLAVE_PMP_FAILURE;
-  if(pmp_region_init_atomic(base, size, PMP_PRI_ANY, &region, 0))
+  if(pmp_region_init_atomic(base, size, PMP_PRI_ANY, &region, 0)) // TODO: can't unroll
     goto free_encl_idx;
 
   // create PMP region for shared memory
@@ -885,17 +885,17 @@ enclave_ret_code create_enclave(struct keystone_sbi_create create_args)
 
   /* Platform create happens as the last thing before hashing/etc since
      it may modify the enclave struct */
-  ret = platform_create_enclave(&enclaves[eid]);
+  ret = platform_create_enclave(&enclaves[eid]); // TODO
   if(ret != ENCLAVE_SUCCESS)
     goto free_shared_region;
 
   /* Validate memory, prepare hash and signature for attestation */
-  spinlock_lock(&encl_lock); // FIXME This should error for second enter.
+  // spinlock _lock(&encl_lock); // FIXME This should error for second enter.
   ret = validate_and_hash_enclave(&enclaves[eid]);
   /* The enclave is fresh if it has been validated and hashed but not run yet. */
   if(ret == ENCLAVE_SUCCESS)
     enclaves[eid].state = FRESH;
-  spinlock_unlock(&encl_lock);
+  // spinlock _unlock(&encl_lock);
 
   if(ret != ENCLAVE_SUCCESS)
     goto free_platform;
@@ -926,14 +926,14 @@ enclave_ret_code destroy_enclave(enclave_id eid)
 {
   int destroyable;
 
-  spinlock_lock(&encl_lock);
+  // spinlock_lock(&encl_lock);
   destroyable = (ENCLAVE_EXISTS(eid)
                  && enclaves[eid].state <= STOPPED);
   /* update the enclave state first so that
    * no SM can run the enclave any longer */
   if(destroyable)
     enclaves[eid].state = DESTROYING;
-  spinlock_unlock(&encl_lock);
+  // spinlock_unlock(&encl_lock);
 
   if(!destroyable)
     return ENCLAVE_NOT_DESTROYABLE;
@@ -973,9 +973,17 @@ enclave_ret_code destroy_enclave(enclave_id eid)
   enclaves[eid].n_thread = 0;
   enclaves[eid].params = (struct runtime_va_params_t) {0};
   enclaves[eid].pa_params = (struct runtime_pa_params) {0};
-  for(i=0; i < ENCLAVE_REGIONS_MAX; i++){
-    enclaves[eid].regions[i].type = REGION_INVALID;
-  }
+  // for(i=0; i < ENCLAVE_REGIONS_MAX; i++){
+  //   enclaves[eid].regions[i].type = REGION_INVALID;
+  // }
+  enclaves[eid].regions[0].type = REGION_INVALID;
+  enclaves[eid].regions[1].type = REGION_INVALID;
+  enclaves[eid].regions[2].type = REGION_INVALID;
+  enclaves[eid].regions[3].type = REGION_INVALID;
+  enclaves[eid].regions[4].type = REGION_INVALID;
+  enclaves[eid].regions[5].type = REGION_INVALID;
+  enclaves[eid].regions[6].type = REGION_INVALID;
+  enclaves[eid].regions[7].type = REGION_INVALID;
 
   // 3. release eid
   encl_free_eid(eid);
@@ -1058,18 +1066,18 @@ enclave_ret_code resume_enclave(uintptr_t* host_regs, enclave_id eid)
 {
   int resumable;
 
-  spinlock_lock(&encl_lock);
+  // spinlock_lock(&encl_lock);
   resumable = (ENCLAVE_EXISTS(eid)
                && (enclaves[eid].state == RUNNING || enclaves[eid].state == STOPPED)
                && enclaves[eid].n_thread < MAX_ENCL_THREADS);
   if(!resumable) {
-    spinlock_unlock(&encl_lock);
+    // spinlock_unlock(&encl_lock);
     return ENCLAVE_NOT_RESUMABLE;
   } else {
     enclaves[eid].n_thread++;
     enclaves[eid].state = RUNNING;
   }
-  spinlock_unlock(&encl_lock);
+  // spinlock_unlock(&encl_lock);
 
   // Enclave is OK to resume, context switch to it
   return context_switch_to_enclave(host_regs, eid, 0);
@@ -1084,10 +1092,10 @@ enclave_ret_code attest_enclave(uintptr_t report_ptr, uintptr_t data, uintptr_t 
   if (size > ATTEST_DATA_MAXLEN)
     return ENCLAVE_ILLEGAL_ARGUMENT;
 
-  spinlock_lock(&encl_lock);
+  // spinlock _lock(&encl_lock);
   attestable = (ENCLAVE_EXISTS(eid)
                 && (enclaves[eid].state >= FRESH));
-  spinlock_unlock(&encl_lock);
+  // spinlock _unlock(&encl_lock);
 
   if(!attestable)
     return ENCLAVE_NOT_INITIALIZED;

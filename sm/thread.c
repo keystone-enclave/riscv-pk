@@ -197,10 +197,17 @@ void swap_prev_mepc(struct thread_state* thread, uintptr_t current_mepc)
 void clean_state(struct thread_state* state){
   int i;
   uintptr_t* prev = (uintptr_t*) &state->prev_state;
-  for(i=1; i<32; i++)
-  {
-    prev[i] = 0;
-  }
+  // for(i=1; i<32; i++)
+  // {
+  //   prev[i] = 0;
+  // }
+  prev[1] = 0; prev[2] = 0; prev[3] = 0; prev[4] = 0; prev[5] = 0;
+  prev[6] = 0; prev[7] = 0; prev[8] = 0; prev[9] = 0; prev[10] = 0;
+  prev[11] = 0; prev[12] = 0; prev[13] = 0; prev[14] = 0; prev[15] = 0;
+  prev[16] = 0; prev[17] = 0; prev[18] = 0; prev[19] = 0; prev[20] = 0;
+  prev[21] = 0; prev[22] = 0; prev[23] = 0; prev[24] = 0; prev[25] = 0;
+  prev[26] = 0; prev[27] = 0; prev[28] = 0; prev[29] = 0; prev[30] = 0;
+  prev[31] = 0;
 
   state->prev_mpp = -1; // 0x800;
   clean_smode_csrs(state);

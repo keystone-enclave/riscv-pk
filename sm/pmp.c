@@ -119,6 +119,7 @@ static int search_rightmost_unset(uint32_t bitmap, int max, uint32_t mask)
     mask = mask << 1;
     i++;
   }
+    
 
   return -1;
 }
@@ -170,22 +171,135 @@ static int detect_region_overlap(uintptr_t addr, uintptr_t size)
     return 1;
   }
 
-  for(i=0; i<PMP_MAX_N_REGION; i++)
-  {
-    if(!is_pmp_region_valid(i))
-      continue;
+  // for(i=0; i<PMP_MAX_N_REGION; i++)
+  // {
+  //   if(!is_pmp_region_valid(i))
+  //     continue;
 
-    if(region_allows_overlap(i)) {
-      continue;
-    }
+  //   if(region_allows_overlap(i)) {
+  //     continue;
+  //   }
 
+  //   epm_base = (void*) region_get_addr(i);
+  //   epm_size = region_get_size(i);
+
+  //   // Only looking at valid regions, no need to check epm_base+size
+  //   region_overlap |= ((uintptr_t) epm_base < input_end) &&
+  //                     ((uintptr_t) epm_base + epm_size > addr); // TODO: why does this loop through everything instead of just returning?
+  // }
+
+  i = 0; 
+  if(is_pmp_region_valid(i) && region_allows_overlap(i)) {
     epm_base = (void*) region_get_addr(i);
     epm_size = region_get_size(i);
-
-    // Only looking at valid regions, no need to check epm_base+size
+    region_overlap |= ((uintptr_t) epm_base < input_end) &&
+                      ((uintptr_t) epm_base + epm_size > addr);
+  } 
+  i++; // i = 1
+  if(is_pmp_region_valid(i) && region_allows_overlap(i)) {
+    epm_base = (void*) region_get_addr(i);
+    epm_size = region_get_size(i);
     region_overlap |= ((uintptr_t) epm_base < input_end) &&
                       ((uintptr_t) epm_base + epm_size > addr);
   }
+  i++; // i = 2
+  if(is_pmp_region_valid(i) && region_allows_overlap(i)) {
+    epm_base = (void*) region_get_addr(i);
+    epm_size = region_get_size(i);
+    region_overlap |= ((uintptr_t) epm_base < input_end) &&
+                      ((uintptr_t) epm_base + epm_size > addr);
+  }
+  i++; // i = 3
+  if(is_pmp_region_valid(i) && region_allows_overlap(i)) {
+    epm_base = (void*) region_get_addr(i);
+    epm_size = region_get_size(i);
+    region_overlap |= ((uintptr_t) epm_base < input_end) &&
+                      ((uintptr_t) epm_base + epm_size > addr);
+  }
+  i++; // i = 4
+  if(is_pmp_region_valid(i) && region_allows_overlap(i)) {
+    epm_base = (void*) region_get_addr(i);
+    epm_size = region_get_size(i);
+    region_overlap |= ((uintptr_t) epm_base < input_end) &&
+                      ((uintptr_t) epm_base + epm_size > addr);
+  }
+  i++; // i = 5
+  if(is_pmp_region_valid(i) && region_allows_overlap(i)) {
+    epm_base = (void*) region_get_addr(i);
+    epm_size = region_get_size(i);
+    region_overlap |= ((uintptr_t) epm_base < input_end) &&
+                      ((uintptr_t) epm_base + epm_size > addr);
+  }
+  i++; // i = 6
+  if(is_pmp_region_valid(i) && region_allows_overlap(i)) {
+    epm_base = (void*) region_get_addr(i);
+    epm_size = region_get_size(i);
+    region_overlap |= ((uintptr_t) epm_base < input_end) &&
+                      ((uintptr_t) epm_base + epm_size > addr);
+  }
+  i++; // i = 7
+  if(is_pmp_region_valid(i) && region_allows_overlap(i)) {
+    epm_base = (void*) region_get_addr(i);
+    epm_size = region_get_size(i);
+    region_overlap |= ((uintptr_t) epm_base < input_end) &&
+                      ((uintptr_t) epm_base + epm_size > addr);
+  }
+  i++; // i = 8
+  if(is_pmp_region_valid(i) && region_allows_overlap(i)) {
+    epm_base = (void*) region_get_addr(i);
+    epm_size = region_get_size(i);
+    region_overlap |= ((uintptr_t) epm_base < input_end) &&
+                      ((uintptr_t) epm_base + epm_size > addr);
+  }
+  i++; // i = 9
+  if(is_pmp_region_valid(i) && region_allows_overlap(i)) {
+    epm_base = (void*) region_get_addr(i);
+    epm_size = region_get_size(i);
+    region_overlap |= ((uintptr_t) epm_base < input_end) &&
+                      ((uintptr_t) epm_base + epm_size > addr);
+  }
+  i++; // i = 10
+  if(is_pmp_region_valid(i) && region_allows_overlap(i)) {
+    epm_base = (void*) region_get_addr(i);
+    epm_size = region_get_size(i);
+    region_overlap |= ((uintptr_t) epm_base < input_end) &&
+                      ((uintptr_t) epm_base + epm_size > addr);
+  }
+  i++; // i = 11
+  if(is_pmp_region_valid(i) && region_allows_overlap(i)) {
+    epm_base = (void*) region_get_addr(i);
+    epm_size = region_get_size(i);
+    region_overlap |= ((uintptr_t) epm_base < input_end) &&
+                      ((uintptr_t) epm_base + epm_size > addr);
+  }
+  i++; // i = 12
+  if(is_pmp_region_valid(i) && region_allows_overlap(i)) {
+    epm_base = (void*) region_get_addr(i);
+    epm_size = region_get_size(i);
+    region_overlap |= ((uintptr_t) epm_base < input_end) &&
+                      ((uintptr_t) epm_base + epm_size > addr);
+  }
+  i++; // i = 13
+  if(is_pmp_region_valid(i) && region_allows_overlap(i)) {
+    epm_base = (void*) region_get_addr(i);
+    epm_size = region_get_size(i);
+    region_overlap |= ((uintptr_t) epm_base < input_end) &&
+                      ((uintptr_t) epm_base + epm_size > addr);
+  }
+  i++; // i = 14
+  if(is_pmp_region_valid(i) && region_allows_overlap(i)) {
+    epm_base = (void*) region_get_addr(i);
+    epm_size = region_get_size(i);
+    region_overlap |= ((uintptr_t) epm_base < input_end) &&
+                      ((uintptr_t) epm_base + epm_size > addr);
+  }
+  i++; // i = 15
+  if(is_pmp_region_valid(i) && region_allows_overlap(i)) {
+    epm_base = (void*) region_get_addr(i);
+    epm_size = region_get_size(i);
+    region_overlap |= ((uintptr_t) epm_base < input_end) &&
+                      ((uintptr_t) epm_base + epm_size > addr);
+  }  
 
   return region_overlap;
 }
@@ -193,9 +307,9 @@ static int detect_region_overlap(uintptr_t addr, uintptr_t size)
 int pmp_detect_region_overlap_atomic(uintptr_t addr, uintptr_t size)
 {
   int region_overlap = 0;
-  spinlock_lock(&pmp_lock);
+  // spinlock_lock(&pmp_lock);
   region_overlap = detect_region_overlap(addr, size);
-  spinlock_unlock(&pmp_lock);
+  // spinlock_unlock(&pmp_lock);
   return region_overlap;
 }
 
@@ -282,9 +396,9 @@ int pmp_unset_global(int region_idx)
   /* We avoid any complex PMP-related IPI management
    * by ensuring only one hart can enter this region at a time */
 #ifdef __riscv_atomic
-  pmp_ipi_acquire_lock();
+  // pmp_ipi_acquire_lock();
   send_and_sync_pmp_ipi(region_idx, IPI_PMP_UNSET, PMP_NO_PERM);
-  pmp_ipi_release_lock();
+  // pmp_ipi_release_lock();
 #endif
   /* unset PMP of itself */
   pmp_unset(region_idx);
@@ -301,9 +415,9 @@ int pmp_set_global(int region_idx, uint8_t perm)
   /* We avoid any complex PMP-related IPI management
    * by ensuring only one hart can enter this region at a time */
 #ifdef __riscv_atomic
-  pmp_ipi_acquire_lock();
+  // pmp_ipi_acquire_lock();
   send_and_sync_pmp_ipi(region_idx, IPI_PMP_SET, perm);
-  pmp_ipi_release_lock();
+  // pmp_ipi_release_lock();
 #endif
   /* set PMP of itself */
   pmp_set(region_idx, perm);
@@ -389,9 +503,9 @@ int pmp_unset(int region_idx)
 int pmp_region_init_atomic(uintptr_t start, uint64_t size, enum pmp_priority priority, region_id* rid, int allow_overlap)
 {
   int ret;
-  spinlock_lock(&pmp_lock);
-  ret = pmp_region_init(start, size, priority, rid, allow_overlap);
-  spinlock_unlock(&pmp_lock);
+  // spinlock_lock(&pmp_lock);
+  ret = pmp_region_init(start, size, priority, rid, allow_overlap); // TODO: can't unroll
+  // spinlock_unlock(&pmp_lock);
   return ret;
 }
 
@@ -508,11 +622,11 @@ static int napot_region_init(uintptr_t start, uint64_t size, enum pmp_priority p
 int pmp_region_free_atomic(int region_idx)
 {
 
-  spinlock_lock(&pmp_lock);
+  // spinlock_lock(&pmp_lock);
 
   if(!is_pmp_region_valid(region_idx))
   {
-    spinlock_unlock(&pmp_lock);
+    // spinlock_unlock(&pmp_lock);
     PMP_ERROR(PMP_REGION_INVALID, "Invalid PMP region index");
   }
 
@@ -524,7 +638,7 @@ int pmp_region_free_atomic(int region_idx)
 
   region_clear_all(region_idx);
 
-  spinlock_unlock(&pmp_lock);
+  // spinlock_unlock(&pmp_lock);
 
   return PMP_SUCCESS;
 }
@@ -550,7 +664,7 @@ int pmp_region_init(uintptr_t start, uint64_t size, enum pmp_priority priority, 
   /* if the address covers the entire RAM or it's NAPOT */
   if ((size == -1UL && start == 0) ||
       (!(size & (size - 1)) && !(start & (size - 1)))) {
-    return napot_region_init(start, size, priority, rid, allow_overlap);
+    return napot_region_init(start, size, priority, rid, allow_overlap); // TODO: can't unroll
   }
   else
   {
@@ -559,7 +673,7 @@ int pmp_region_init(uintptr_t start, uint64_t size, enum pmp_priority priority, 
       PMP_ERROR(PMP_REGION_IMPOSSIBLE_TOR, "The top-priority TOR PMP entry must start from address 0");
     }
 
-    return tor_region_init(start, size, priority, rid, allow_overlap);
+    return tor_region_init(start, size, priority, rid, allow_overlap); // TODO: can't unroll
   }
 }
 

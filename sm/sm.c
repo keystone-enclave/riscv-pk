@@ -98,7 +98,7 @@ void sm_init(void)
 {
 	// initialize SMM
 
-  spinlock_lock(&sm_init_lock);
+  // spinlock_lock(&sm_init_lock);
 
   if(!sm_init_done) {
     sm_region_id = smm_init();
@@ -129,7 +129,7 @@ void sm_init(void)
   // Init the enclave metadata
   enclave_init_metadata();
 
-  spinlock_unlock(&sm_init_lock);
+  // spinlock_unlock(&sm_init_lock);
 
   return;
   // for debug

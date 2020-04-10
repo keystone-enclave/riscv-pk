@@ -113,13 +113,173 @@ static int search_rightmost_unset(uint32_t bitmap, int max, uint32_t mask)
   assert(max < 32);
   assert(!((mask + 1) & mask));
 
-  while(mask < (1UL << max)) {
+  // while(mask < (1UL << max)) {
+  //   if((~bitmap & mask) == mask)
+  //     return i;
+  //   mask = mask << 1;
+  //   i++;
+  // }
+
+  // i = 0 
+  if (mask < (1UL << max)) {
     if((~bitmap & mask) == mask)
       return i;
-    mask = mask << 1;
-    i++;
   }
-    
+  mask = mask << 1; i++; // i = 1
+  if (mask < (1UL << max)) {
+    if((~bitmap & mask) == mask)
+      return i;
+  }
+  mask = mask << 1; i++; // i = 2
+  if (mask < (1UL << max)) {
+    if((~bitmap & mask) == mask)
+      return i;
+  }
+  mask = mask << 1; i++; // i = 3
+  if (mask < (1UL << max)) {
+    if((~bitmap & mask) == mask)
+      return i;
+  }
+  mask = mask << 1; i++; // i = 4
+  if (mask < (1UL << max)) {
+    if((~bitmap & mask) == mask)
+      return i;
+  }
+  mask = mask << 1; i++; // i = 5
+  if (mask < (1UL << max)) {
+    if((~bitmap & mask) == mask)
+      return i;
+  }
+  mask = mask << 1; i++; // i = 6
+  if (mask < (1UL << max)) {
+    if((~bitmap & mask) == mask)
+      return i;
+  }
+  mask = mask << 1; i++; // i = 7
+  if (mask < (1UL << max)) {
+    if((~bitmap & mask) == mask)
+      return i;
+  }
+  mask = mask << 1; i++; // i = 8
+  if (mask < (1UL << max)) {
+    if((~bitmap & mask) == mask)
+      return i;
+  }
+  mask = mask << 1; i++; // i = 9
+  if (mask < (1UL << max)) {
+    if((~bitmap & mask) == mask)
+      return i;
+  }
+  mask = mask << 1; i++; // i = 10
+  if (mask < (1UL << max)) {
+    if((~bitmap & mask) == mask)
+      return i;
+  }
+  mask = mask << 1; i++; // i = 11
+  if (mask < (1UL << max)) {
+    if((~bitmap & mask) == mask)
+      return i;
+  }
+  mask = mask << 1; i++; // i = 12
+  if (mask < (1UL << max)) {
+    if((~bitmap & mask) == mask)
+      return i;
+  }
+  mask = mask << 1; i++; // i = 13
+  if (mask < (1UL << max)) {
+    if((~bitmap & mask) == mask)
+      return i;
+  }
+  mask = mask << 1; i++; // i = 14
+  if (mask < (1UL << max)) {
+    if((~bitmap & mask) == mask)
+      return i;
+  }
+  mask = mask << 1; i++; // i = 15
+  if (mask < (1UL << max)) {
+    if((~bitmap & mask) == mask)
+      return i;
+  }
+  mask = mask << 1; i++; // i = 16
+  if (mask < (1UL << max)) {
+    if((~bitmap & mask) == mask)
+      return i;
+  }
+  mask = mask << 1; i++; // i = 17
+  if (mask < (1UL << max)) {
+    if((~bitmap & mask) == mask)
+      return i;
+  }
+  mask = mask << 1; i++; // i = 18
+  if (mask < (1UL << max)) {
+    if((~bitmap & mask) == mask)
+      return i;
+  }
+  mask = mask << 1; i++; // i = 19
+  if (mask < (1UL << max)) {
+    if((~bitmap & mask) == mask)
+      return i;
+  }
+  mask = mask << 1; i++; // i = 20
+  if (mask < (1UL << max)) {
+    if((~bitmap & mask) == mask)
+      return i;
+  }
+  mask = mask << 1; i++; // i = 21
+  if (mask < (1UL << max)) {
+    if((~bitmap & mask) == mask)
+      return i;
+  }
+  mask = mask << 1; i++; // i = 22
+  if (mask < (1UL << max)) {
+    if((~bitmap & mask) == mask)
+      return i;
+  }
+  mask = mask << 1; i++; // i = 23
+  if (mask < (1UL << max)) {
+    if((~bitmap & mask) == mask)
+      return i;
+  }
+  mask = mask << 1; i++; // i = 24
+  if (mask < (1UL << max)) {
+    if((~bitmap & mask) == mask)
+      return i;
+  }
+  mask = mask << 1; i++; // i = 25
+  if (mask < (1UL << max)) {
+    if((~bitmap & mask) == mask)
+      return i;
+  }
+  mask = mask << 1; i++; // i = 26
+  if (mask < (1UL << max)) {
+    if((~bitmap & mask) == mask)
+      return i;
+  }
+  mask = mask << 1; i++; // i = 27
+  if (mask < (1UL << max)) {
+    if((~bitmap & mask) == mask)
+      return i;
+  }
+  mask = mask << 1; i++; // i = 28
+  if (mask < (1UL << max)) {
+    if((~bitmap & mask) == mask)
+      return i;
+  }
+  mask = mask << 1; i++; // i = 29
+  if (mask < (1UL << max)) {
+    if((~bitmap & mask) == mask)
+      return i;
+  }
+  mask = mask << 1; i++; // i = 30
+  if (mask < (1UL << max)) {
+    if((~bitmap & mask) == mask)
+      return i;
+  }
+  mask = mask << 1; i++; // i = 31
+  if (mask < (1UL << max)) {
+    if((~bitmap & mask) == mask)
+      return i;
+  }
 
   return -1;
 }

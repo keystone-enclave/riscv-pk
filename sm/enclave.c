@@ -884,7 +884,7 @@ enclave_ret_code create_enclave(struct keystone_sbi_create create_args)
 
   // create a PMP region bound to the enclave
   ret = ENCLAVE_PMP_FAILURE;
-  if(pmp_region_init_atomic(base, size, PMP_PRI_ANY, &region, 0)) // TODO: can't unroll
+  if(pmp_region_init_atomic(base, size, PMP_PRI_ANY, &region, 0)) 
     goto free_encl_idx;
 
   // create PMP region for shared memory

@@ -74,7 +74,7 @@ static enclave_ret_code context_switch_to_enclave(uintptr_t* regs,
 
   switch_vector_enclave(); 
   // set PMP
-  osm_pmp_set(PMP_NO_PERM); // TODO: I am now here
+  osm_pmp_set(PMP_NO_PERM); 
   // int memid;
   // for(memid=0; memid < ENCLAVE_REGIONS_MAX; memid++) { // ENCLAVE_REGIONS_MAX = 8
   //   if(enclaves[eid].regions[memid].type != REGION_INVALID) {
@@ -981,20 +981,103 @@ enclave_ret_code destroy_enclave(enclave_id eid)
   void* base;
   size_t size;
   region_id rid;
-  for(i = 0; i < ENCLAVE_REGIONS_MAX; i++){
-    if(enclaves[eid].regions[i].type == REGION_INVALID ||
-       enclaves[eid].regions[i].type == REGION_UTM)
-      continue;
-    //1.a Clear all pages
-    rid = enclaves[eid].regions[i].pmp_rid;
-    base = (void*) pmp_region_get_addr(rid);
-    size = (size_t) pmp_region_get_size(rid);
-    memset((void*) base, 0, size);
+  // for(i = 0; i < ENCLAVE_REGIONS_MAX; i++){ 
+  //   if(enclaves[eid].regions[i].type == REGION_INVALID ||
+  //      enclaves[eid].regions[i].type == REGION_UTM)
+  //     continue;
+  //   //1.a Clear all pages
+  //   rid = enclaves[eid].regions[i].pmp_rid;
+  //   base = (void*) pmp_region_get_addr(rid);
+  //   size = (size_t) pmp_region_get_size(rid);
+  //   memset((void*) base, 0, size);
 
-    //1.b free pmp region
-    pmp_unset_global(rid);
-    pmp_region_free_atomic(rid);
-  }
+  //   //1.b free pmp region
+  //   pmp_unset_global(rid);
+  //   pmp_region_free_atomic(rid);
+  // }
+
+  i = 0; 
+  if(!(enclaves[eid].regions[i].type == REGION_INVALID ||
+       enclaves[eid].regions[i].type == REGION_UTM)){
+        rid = enclaves[eid].regions[i].pmp_rid;
+        base = (void*) pmp_region_get_addr(rid);
+        size = (size_t) pmp_region_get_size(rid);
+        memset((void*) base, 0, size); 
+        pmp_unset_global(rid);
+        pmp_region_free_atomic(rid);
+      }
+  i++; // i = 1 
+  if(!(enclaves[eid].regions[i].type == REGION_INVALID ||
+       enclaves[eid].regions[i].type == REGION_UTM)){
+        rid = enclaves[eid].regions[i].pmp_rid;
+        base = (void*) pmp_region_get_addr(rid);
+        size = (size_t) pmp_region_get_size(rid);
+        memset((void*) base, 0, size); 
+        pmp_unset_global(rid);
+        pmp_region_free_atomic(rid);
+      }
+  i++; // i = 2
+  if(!(enclaves[eid].regions[i].type == REGION_INVALID ||
+       enclaves[eid].regions[i].type == REGION_UTM)){
+        rid = enclaves[eid].regions[i].pmp_rid;
+        base = (void*) pmp_region_get_addr(rid);
+        size = (size_t) pmp_region_get_size(rid);
+        memset((void*) base, 0, size); 
+        pmp_unset_global(rid);
+        pmp_region_free_atomic(rid);
+      }
+  i++; // i = 3
+  if(!(enclaves[eid].regions[i].type == REGION_INVALID ||
+       enclaves[eid].regions[i].type == REGION_UTM)){
+        rid = enclaves[eid].regions[i].pmp_rid;
+        base = (void*) pmp_region_get_addr(rid);
+        size = (size_t) pmp_region_get_size(rid);
+        memset((void*) base, 0, size); 
+        pmp_unset_global(rid);
+        pmp_region_free_atomic(rid);
+      }
+  i++; // i = 4
+  if(!(enclaves[eid].regions[i].type == REGION_INVALID ||
+       enclaves[eid].regions[i].type == REGION_UTM)){
+        rid = enclaves[eid].regions[i].pmp_rid;
+        base = (void*) pmp_region_get_addr(rid);
+        size = (size_t) pmp_region_get_size(rid);
+        memset((void*) base, 0, size); 
+        pmp_unset_global(rid);
+        pmp_region_free_atomic(rid);
+      }
+  i++; // i = 5
+  if(!(enclaves[eid].regions[i].type == REGION_INVALID ||
+       enclaves[eid].regions[i].type == REGION_UTM)){
+        rid = enclaves[eid].regions[i].pmp_rid;
+        base = (void*) pmp_region_get_addr(rid);
+        size = (size_t) pmp_region_get_size(rid);
+        memset((void*) base, 0, size); 
+        pmp_unset_global(rid);
+        pmp_region_free_atomic(rid);
+      }
+  i++; // i = 6 
+  if(!(enclaves[eid].regions[i].type == REGION_INVALID ||
+       enclaves[eid].regions[i].type == REGION_UTM)){
+        rid = enclaves[eid].regions[i].pmp_rid;
+        base = (void*) pmp_region_get_addr(rid);
+        size = (size_t) pmp_region_get_size(rid);
+        memset((void*) base, 0, size); 
+        pmp_unset_global(rid);
+        pmp_region_free_atomic(rid);
+      }
+  i++; // i = 7 
+  if(!(enclaves[eid].regions[i].type == REGION_INVALID ||
+       enclaves[eid].regions[i].type == REGION_UTM)){
+        rid = enclaves[eid].regions[i].pmp_rid;
+        base = (void*) pmp_region_get_addr(rid);
+        size = (size_t) pmp_region_get_size(rid);
+        memset((void*) base, 0, size); 
+        pmp_unset_global(rid);
+        pmp_region_free_atomic(rid);
+      }
+        
+          
 
   // 2. free pmp region for UTM
   rid = get_enclave_region_index(eid, REGION_UTM);

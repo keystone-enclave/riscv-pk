@@ -104,34 +104,8 @@ int sha3_init(sha3_ctx_t *c, int mdlen)
 {
     int i;
 
-    // for (i = 0; i < 25; i++)
-    //     c->st.q[i] = 0;
-    i = 0; 
-    c->st.q[i] = 0; i++; // i = 1
-    c->st.q[i] = 0; i++; // i = 2
-    c->st.q[i] = 0; i++; // i = 3
-    c->st.q[i] = 0; i++; // i = 4
-    c->st.q[i] = 0; i++; // i = 5
-    c->st.q[i] = 0; i++; // i = 6
-    c->st.q[i] = 0; i++; // i = 7
-    c->st.q[i] = 0; i++; // i = 8
-    c->st.q[i] = 0; i++; // i = 9
-    c->st.q[i] = 0; i++; // i = 10
-    c->st.q[i] = 0; i++; // i = 11
-    c->st.q[i] = 0; i++; // i = 12
-    c->st.q[i] = 0; i++; // i = 13
-    c->st.q[i] = 0; i++; // i = 14
-    c->st.q[i] = 0; i++; // i = 15
-    c->st.q[i] = 0; i++; // i = 16
-    c->st.q[i] = 0; i++; // i = 17
-    c->st.q[i] = 0; i++; // i = 18
-    c->st.q[i] = 0; i++; // i = 19
-    c->st.q[i] = 0; i++; // i = 20
-    c->st.q[i] = 0; i++; // i = 21
-    c->st.q[i] = 0; i++; // i = 22
-    c->st.q[i] = 0; i++; // i = 23
-    c->st.q[i] = 0; i++; // i = 24
-
+    for (i = 0; i < 25; i++)
+        c->st.q[i] = 0;
     c->mdlen = mdlen;
     c->rsiz = 200 - 2 * mdlen;
     c->pt = 0;

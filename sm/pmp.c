@@ -189,112 +189,112 @@ static int detect_region_overlap(uintptr_t addr, uintptr_t size)
   // }
 
   i = 0; 
-  if(is_pmp_region_valid(i) && region_allows_overlap(i)) {
+  if(is_pmp_region_valid(i) && !region_allows_overlap(i)) {
     epm_base = (void*) region_get_addr(i);
     epm_size = region_get_size(i);
     region_overlap |= ((uintptr_t) epm_base < input_end) &&
                       ((uintptr_t) epm_base + epm_size > addr);
   } 
   i++; // i = 1
-  if(is_pmp_region_valid(i) && region_allows_overlap(i)) {
+  if(is_pmp_region_valid(i) && !region_allows_overlap(i)) {
     epm_base = (void*) region_get_addr(i);
     epm_size = region_get_size(i);
     region_overlap |= ((uintptr_t) epm_base < input_end) &&
                       ((uintptr_t) epm_base + epm_size > addr);
   }
   i++; // i = 2
-  if(is_pmp_region_valid(i) && region_allows_overlap(i)) {
+  if(is_pmp_region_valid(i) && !region_allows_overlap(i)) {
     epm_base = (void*) region_get_addr(i);
     epm_size = region_get_size(i);
     region_overlap |= ((uintptr_t) epm_base < input_end) &&
                       ((uintptr_t) epm_base + epm_size > addr);
   }
   i++; // i = 3
-  if(is_pmp_region_valid(i) && region_allows_overlap(i)) {
+  if(is_pmp_region_valid(i) && !region_allows_overlap(i)) {
     epm_base = (void*) region_get_addr(i);
     epm_size = region_get_size(i);
     region_overlap |= ((uintptr_t) epm_base < input_end) &&
                       ((uintptr_t) epm_base + epm_size > addr);
   }
   i++; // i = 4
-  if(is_pmp_region_valid(i) && region_allows_overlap(i)) {
+  if(is_pmp_region_valid(i) && !region_allows_overlap(i)) {
     epm_base = (void*) region_get_addr(i);
     epm_size = region_get_size(i);
     region_overlap |= ((uintptr_t) epm_base < input_end) &&
                       ((uintptr_t) epm_base + epm_size > addr);
   }
   i++; // i = 5
-  if(is_pmp_region_valid(i) && region_allows_overlap(i)) {
+  if(is_pmp_region_valid(i) && !region_allows_overlap(i)) {
     epm_base = (void*) region_get_addr(i);
     epm_size = region_get_size(i);
     region_overlap |= ((uintptr_t) epm_base < input_end) &&
                       ((uintptr_t) epm_base + epm_size > addr);
   }
   i++; // i = 6
-  if(is_pmp_region_valid(i) && region_allows_overlap(i)) {
+  if(is_pmp_region_valid(i) && !region_allows_overlap(i)) {
     epm_base = (void*) region_get_addr(i);
     epm_size = region_get_size(i);
     region_overlap |= ((uintptr_t) epm_base < input_end) &&
                       ((uintptr_t) epm_base + epm_size > addr);
   }
   i++; // i = 7
-  if(is_pmp_region_valid(i) && region_allows_overlap(i)) {
+  if(is_pmp_region_valid(i) && !region_allows_overlap(i)) {
     epm_base = (void*) region_get_addr(i);
     epm_size = region_get_size(i);
     region_overlap |= ((uintptr_t) epm_base < input_end) &&
                       ((uintptr_t) epm_base + epm_size > addr);
   }
   i++; // i = 8
-  if(is_pmp_region_valid(i) && region_allows_overlap(i)) {
+  if(is_pmp_region_valid(i) && !region_allows_overlap(i)) {
     epm_base = (void*) region_get_addr(i);
     epm_size = region_get_size(i);
     region_overlap |= ((uintptr_t) epm_base < input_end) &&
                       ((uintptr_t) epm_base + epm_size > addr);
   }
   i++; // i = 9
-  if(is_pmp_region_valid(i) && region_allows_overlap(i)) {
+  if(is_pmp_region_valid(i) && !region_allows_overlap(i)) {
     epm_base = (void*) region_get_addr(i);
     epm_size = region_get_size(i);
     region_overlap |= ((uintptr_t) epm_base < input_end) &&
                       ((uintptr_t) epm_base + epm_size > addr);
   }
   i++; // i = 10
-  if(is_pmp_region_valid(i) && region_allows_overlap(i)) {
+  if(is_pmp_region_valid(i) && !region_allows_overlap(i)) {
     epm_base = (void*) region_get_addr(i);
     epm_size = region_get_size(i);
     region_overlap |= ((uintptr_t) epm_base < input_end) &&
                       ((uintptr_t) epm_base + epm_size > addr);
   }
   i++; // i = 11
-  if(is_pmp_region_valid(i) && region_allows_overlap(i)) {
+  if(is_pmp_region_valid(i) && !region_allows_overlap(i)) {
     epm_base = (void*) region_get_addr(i);
     epm_size = region_get_size(i);
     region_overlap |= ((uintptr_t) epm_base < input_end) &&
                       ((uintptr_t) epm_base + epm_size > addr);
   }
   i++; // i = 12
-  if(is_pmp_region_valid(i) && region_allows_overlap(i)) {
+  if(is_pmp_region_valid(i) && !region_allows_overlap(i)) {
     epm_base = (void*) region_get_addr(i);
     epm_size = region_get_size(i);
     region_overlap |= ((uintptr_t) epm_base < input_end) &&
                       ((uintptr_t) epm_base + epm_size > addr);
   }
   i++; // i = 13
-  if(is_pmp_region_valid(i) && region_allows_overlap(i)) {
+  if(is_pmp_region_valid(i) && !region_allows_overlap(i)) {
     epm_base = (void*) region_get_addr(i);
     epm_size = region_get_size(i);
     region_overlap |= ((uintptr_t) epm_base < input_end) &&
                       ((uintptr_t) epm_base + epm_size > addr);
   }
   i++; // i = 14
-  if(is_pmp_region_valid(i) && region_allows_overlap(i)) {
+  if(is_pmp_region_valid(i) && !region_allows_overlap(i)) {
     epm_base = (void*) region_get_addr(i);
     epm_size = region_get_size(i);
     region_overlap |= ((uintptr_t) epm_base < input_end) &&
                       ((uintptr_t) epm_base + epm_size > addr);
   }
   i++; // i = 15
-  if(is_pmp_region_valid(i) && region_allows_overlap(i)) {
+  if(is_pmp_region_valid(i) && !region_allows_overlap(i)) {
     epm_base = (void*) region_get_addr(i);
     epm_size = region_get_size(i);
     region_overlap |= ((uintptr_t) epm_base < input_end) &&

@@ -917,7 +917,7 @@ enclave_ret_code create_enclave(struct keystone_sbi_create create_args)
 
   /* Platform create happens as the last thing before hashing/etc since
      it may modify the enclave struct */
-  ret = platform_create_enclave(&enclaves[eid]); // TODO
+  ret = platform_create_enclave(&enclaves[eid]); 
   if(ret != ENCLAVE_SUCCESS)
     goto free_shared_region;
 

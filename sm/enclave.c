@@ -211,6 +211,8 @@ void enclave_init_metadata(){
 
   eid = 0; 
   // Outer loop eid = 0 
+  enclaves[eid].state = INVALID;
+
   enclaves[eid].regions[0].type = REGION_INVALID;
   enclaves[eid].regions[1].type = REGION_INVALID;
   enclaves[eid].regions[2].type = REGION_INVALID;
@@ -224,6 +226,8 @@ void enclave_init_metadata(){
   
   // Outer loop eid = 1
   eid++; 
+  enclaves[eid].state = INVALID;
+  
   enclaves[eid].regions[0].type = REGION_INVALID;
   enclaves[eid].regions[1].type = REGION_INVALID;
   enclaves[eid].regions[2].type = REGION_INVALID;
@@ -237,6 +241,8 @@ void enclave_init_metadata(){
 
   // Outer loop eid = 2
   eid++; 
+  enclaves[eid].state = INVALID;
+
   enclaves[eid].regions[0].type = REGION_INVALID;
   enclaves[eid].regions[1].type = REGION_INVALID;
   enclaves[eid].regions[2].type = REGION_INVALID;
@@ -250,6 +256,8 @@ void enclave_init_metadata(){
 
   // Outer loop eid = 3
   eid++; 
+  enclaves[eid].state = INVALID;
+
   enclaves[eid].regions[0].type = REGION_INVALID;
   enclaves[eid].regions[1].type = REGION_INVALID;
   enclaves[eid].regions[2].type = REGION_INVALID;
@@ -263,6 +271,8 @@ void enclave_init_metadata(){
   
   // Outer loop eid = 4
   eid++; 
+  enclaves[eid].state = INVALID;
+
   enclaves[eid].regions[0].type = REGION_INVALID;
   enclaves[eid].regions[1].type = REGION_INVALID;
   enclaves[eid].regions[2].type = REGION_INVALID;
@@ -276,6 +286,8 @@ void enclave_init_metadata(){
 
   // Outer loop eid = 5
   eid++; 
+  enclaves[eid].state = INVALID;
+
   enclaves[eid].regions[0].type = REGION_INVALID;
   enclaves[eid].regions[1].type = REGION_INVALID;
   enclaves[eid].regions[2].type = REGION_INVALID;
@@ -289,6 +301,8 @@ void enclave_init_metadata(){
 
   // Outer loop eid = 6
   eid++; 
+  enclaves[eid].state = INVALID;
+
   enclaves[eid].regions[0].type = REGION_INVALID;
   enclaves[eid].regions[1].type = REGION_INVALID;
   enclaves[eid].regions[2].type = REGION_INVALID;
@@ -302,6 +316,8 @@ void enclave_init_metadata(){
 
   // Outer loop eid = 7
   eid++; 
+  enclaves[eid].state = INVALID;
+  
   enclaves[eid].regions[0].type = REGION_INVALID;
   enclaves[eid].regions[1].type = REGION_INVALID;
   enclaves[eid].regions[2].type = REGION_INVALID;
@@ -315,6 +331,8 @@ void enclave_init_metadata(){
 
   // Outer loop eid = 8
   eid++; 
+  enclaves[eid].state = INVALID;
+  
   enclaves[eid].regions[0].type = REGION_INVALID;
   enclaves[eid].regions[1].type = REGION_INVALID;
   enclaves[eid].regions[2].type = REGION_INVALID;
@@ -327,7 +345,9 @@ void enclave_init_metadata(){
   platform_init_enclave(&(enclaves[eid]));
 
   // Outer loop eid = 9
-  eid++; 
+  eid++;
+  enclaves[eid].state = INVALID;
+   
   enclaves[eid].regions[0].type = REGION_INVALID;
   enclaves[eid].regions[1].type = REGION_INVALID;
   enclaves[eid].regions[2].type = REGION_INVALID;
@@ -341,6 +361,8 @@ void enclave_init_metadata(){
 
   // Outer loop eid = 10
   eid++; 
+  enclaves[eid].state = INVALID;
+  
   enclaves[eid].regions[0].type = REGION_INVALID;
   enclaves[eid].regions[1].type = REGION_INVALID;
   enclaves[eid].regions[2].type = REGION_INVALID;
@@ -354,6 +376,8 @@ void enclave_init_metadata(){
 
   // Outer loop eid = 11
   eid++; 
+  enclaves[eid].state = INVALID;
+
   enclaves[eid].regions[0].type = REGION_INVALID;
   enclaves[eid].regions[1].type = REGION_INVALID;
   enclaves[eid].regions[2].type = REGION_INVALID;
@@ -366,7 +390,9 @@ void enclave_init_metadata(){
   platform_init_enclave(&(enclaves[eid]));
 
   // Outer loop eid = 12
-  eid++; 
+  eid++;
+  enclaves[eid].state = INVALID;
+   
   enclaves[eid].regions[0].type = REGION_INVALID;
   enclaves[eid].regions[1].type = REGION_INVALID;
   enclaves[eid].regions[2].type = REGION_INVALID;
@@ -379,7 +405,9 @@ void enclave_init_metadata(){
   platform_init_enclave(&(enclaves[eid]));
 
   // Outer loop eid = 13
-  eid++; 
+  eid++;
+  enclaves[eid].state = INVALID;
+
   enclaves[eid].regions[0].type = REGION_INVALID;
   enclaves[eid].regions[1].type = REGION_INVALID;
   enclaves[eid].regions[2].type = REGION_INVALID;
@@ -393,6 +421,8 @@ void enclave_init_metadata(){
 
   // Outer loop eid = 14
   eid++; 
+  enclaves[eid].state = INVALID;
+
   enclaves[eid].regions[0].type = REGION_INVALID;
   enclaves[eid].regions[1].type = REGION_INVALID;
   enclaves[eid].regions[2].type = REGION_INVALID;
@@ -406,6 +436,8 @@ void enclave_init_metadata(){
 
   // Outer loop eid = 15
   eid++; 
+  enclaves[eid].state = INVALID;
+
   enclaves[eid].regions[0].type = REGION_INVALID;
   enclaves[eid].regions[1].type = REGION_INVALID;
   enclaves[eid].regions[2].type = REGION_INVALID;

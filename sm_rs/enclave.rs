@@ -870,13 +870,16 @@ pub mod sbi_functions {
 
     #[no_mangle]
     pub extern "C" fn destroy_enclave(eid: enclave_id) -> enclave_ret_code {
-        ENCLAVES[eid as usize]
-            .lock()
-            .take()
-            .ok_or(encl_ret!(NOT_DESTROYABLE))
-            .and_then(|mut e| super::destroy_enclave(&mut e))
-            .err()
-            .unwrap_or(encl_ret!(SUCCESS))
+        if let Some(enc) = ENCLAVES.get(eid as usize) {
+            enc.lock()
+                .take()
+                .ok_or(encl_ret!(NOT_DESTROYABLE))
+                .and_then(|mut e| super::destroy_enclave(&mut e))
+                .err()
+                .unwrap_or(encl_ret!(SUCCESS))
+        } else {
+            encl_ret!(INVALID_ID)
+        }
     }
 }
 

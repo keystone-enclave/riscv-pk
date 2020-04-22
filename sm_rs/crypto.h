@@ -8,6 +8,7 @@
 #include <stdint.h>
 #include "sha3/sha3.h"
 #include "ed25519/ed25519.h"
+#include "hkdf_sha3_512/hkdf_sha3_512.h"
 
 typedef sha3_ctx_t hash_ctx;
 #define MDSIZE  64

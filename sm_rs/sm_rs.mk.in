@@ -7,6 +7,7 @@ sm_rs_c_srcs = \
   thread.c \
   pmp.c \
   sha3/sha3.c \
+  hmac_sha3/hmac_sha3.c \
   ed25519/keypair.c \
   ed25519/sign.c \
   ed25519/fe.c \

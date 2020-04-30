@@ -47,7 +47,8 @@ int validate_and_hash_epm(hash_ctx* hash_ctx, int level,
 
     /* EPM may map anything, UTM may not map pgtables */
     if(!map_in_epm && (!map_in_utm || level != 1)){
-      goto fatal_bail;
+    printm("");
+    goto fatal_bail;
     }
 
 
@@ -91,6 +92,7 @@ int validate_and_hash_epm(hash_ctx* hash_ctx, int level,
 
       /* Validate U bit */
       if(in_user && !(*walk & PTE_U)){
+        printm("Usermode ERROR\n");
         goto fatal_bail;
       }
 
@@ -98,13 +100,15 @@ int validate_and_hash_epm(hash_ctx* hash_ctx, int level,
       if(va_start >= encl->params.untrusted_ptr &&
          va_start < (encl->params.untrusted_ptr + encl->params.untrusted_size) &&
          !map_in_utm){
-        goto fatal_bail;
+        printm("UTM ERROR\n");
+	goto fatal_bail;
       }
 
       /* Do linear mapping validation */
       if(in_runtime){
         if(phys_addr <= *runtime_max_seen){
-          goto fatal_bail;
+         printm("runtime max seen\n"); 
+         goto fatal_bail;
         }
         else{
           *runtime_max_seen = phys_addr;
@@ -112,6 +116,7 @@ int validate_and_hash_epm(hash_ctx* hash_ctx, int level,
       }
       else if(in_user){
         if(phys_addr <= *user_max_seen){
+	  printm("user max seen\n");
           goto fatal_bail;
         }
         else{
@@ -122,7 +127,7 @@ int validate_and_hash_epm(hash_ctx* hash_ctx, int level,
         // we checked this above, its OK
       }
       else{
-        //printm("BAD GENERIC MAP %x %x %x\n", in_runtime, in_user, map_in_utm);
+        printm("BAD GENERIC MAP %x %x %x\n", in_runtime, in_user, map_in_utm);
         goto fatal_bail;
       }
 

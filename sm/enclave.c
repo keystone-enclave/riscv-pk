@@ -11,7 +11,7 @@
 #include "platform.h"
 
 #define ENCL_MAX  16
-#define ENCL_TIME_SLICE 100000
+#define ENCL_TIME_SLICE 1000000
 
 struct enclave enclaves[ENCL_MAX];
 #define ENCLAVE_EXISTS(eid) (eid >= 0 && eid < ENCL_MAX && enclaves[eid].state >= 0)
@@ -73,7 +73,9 @@ static inline enclave_ret_code context_switch_to_enclave(uintptr_t* regs,
   }
 
   switch_vector_enclave();
-
+  
+   *(HLS()->timecmp) = *mtime + ENCL_TIME_SLICE; 
+  
   // set PMP
   osm_pmp_set(PMP_NO_PERM);
   int memid;
@@ -115,7 +117,8 @@ static inline void context_switch_to_host(uintptr_t* encl_regs,
   uintptr_t pending = read_csr(mip);
 
   if (pending & MIP_MTIP) {
-    clear_csr(mip, MIP_MTIP);
+//    clear_csr(mip, MIP_MTIP);
+  *(HLS()->timecmp) = *mtime + ENCL_TIME_SLICE;
     set_csr(mip, MIP_STIP);
   }
   if (pending & MIP_MSIP) {
@@ -405,6 +408,8 @@ enclave_ret_code create_enclave(struct keystone_sbi_create create_args)
   int i;
   int region_overlap = 0;
 
+  printm("Entering Create SBI\n"); 
+
   /* Runtime parameters */
   if(!is_create_args_valid(&create_args))
     return ENCLAVE_ILLEGAL_ARGUMENT;
@@ -440,6 +445,7 @@ enclave_ret_code create_enclave(struct keystone_sbi_create create_args)
   // cleanup some memory regions for sanity See issue #38
   clean_enclave_memory(utbase, utsize);
 
+  printm("After cleanup\n");
 
   // initialize enclave metadata
   enclaves[eid].eid = eid;
@@ -456,6 +462,8 @@ enclave_ret_code create_enclave(struct keystone_sbi_create create_args)
 
   /* Init enclave state (regs etc) */
   clean_state(&enclaves[eid].threads[0]);
+
+  printm("After enclave initialization\n"); 
 
   /* Platform create happens as the last thing before hashing/etc since
      it may modify the enclave struct */

@@ -380,6 +380,13 @@ pub extern "C" fn get_enclave_ped(enclave: *mut enclave) -> *mut platform_enclav
     &mut enclave.ped
 }
 
+#[no_mangle]
+pub extern "C" fn get_enclave_pa_params(enclave: *mut enclave) -> *mut runtime_pa_params {
+    let enclave = unsafe { Enclave::from_ffi_mut(enclave) };
+    &mut enclave.pa_params
+}
+
+
 fn is_create_args_valid(args: &keystone_sbi_create) -> bool {
     /* printm("[create args info]: \r\n\tepm_addr: %llx\r\n\tepmsize: %llx\r\n\tutm_addr: %llx\r\n\tutmsize: %llx\r\n\truntime_addr: %llx\r\n\tuser_addr: %llx\r\n\tfree_addr: %llx\r\n", */
     /*        args->epm_region.paddr, */
@@ -482,23 +489,6 @@ pub unsafe extern "C" fn get_enclave_region_base(eid: enclave_id, memid: c_int) 
         .map(|e| e.lock())
         .and_then(|e| e.as_ref().and_then(get_base))
         .unwrap_or(0)
-}
-
-/*
- * Init all metadata as needed for keeping track of ENCLAVES
- * Called once by the SM on startup
- */
-// TODO: There's nothing for platform_init_enclave to do with an enclave that hasn't been created yet... refactoring needed
-pub fn init_metadata() {
-    /*let mut enclave_arr = ENCLAVES.lock();
-
-    /* Assumes eids are incrementing values, which they are for now */
-    for enclave in enclave_arr.iter_mut().filter_map(|x|x.as_mut()) {
-        /* Fire all platform specific init for each enclave */
-        unsafe {
-            platform_init_enclave(enclave.to_ffi_mut());
-        }
-    }*/
 }
 
 fn attest_enclave(
@@ -685,6 +675,8 @@ fn create_enclave(create_args: keystone_sbi_create) -> EResult<()> {
     unsafe {
         /* Init enclave state (regs etc) */
         clean_state(&mut enc.threads[0]);
+
+        platform_init_enclave(enc.to_ffi_mut());
 
         /* Platform create happens as the last thing before hashing/etc since
         it may modify the enclave struct */
@@ -923,13 +915,16 @@ pub mod sbi_functions {
 
     #[no_mangle]
     pub extern "C" fn destroy_enclave(eid: enclave_id) -> enclave_ret_code {
-        ENCLAVES[eid as usize]
-            .lock()
-            .take()
-            .ok_or(encl_ret!(NOT_DESTROYABLE))
-            .and_then(|mut e| super::destroy_enclave(&mut e))
-            .err()
-            .unwrap_or(encl_ret!(SUCCESS))
+        if let Some(enc) = ENCLAVES.get(eid as usize) {
+            enc.lock()
+                .take()
+                .ok_or(encl_ret!(NOT_DESTROYABLE))
+                .and_then(|mut e| super::destroy_enclave(&mut e))
+                .err()
+                .unwrap_or(encl_ret!(SUCCESS))
+        } else {
+            encl_ret!(INVALID_ID)
+        }
     }
 }
 

@@ -9,17 +9,19 @@ cache:
   timeout: 1000 #In seconds
   directories:
     - $TRAVIS_BUILD_DIR/riscv
-    - $TRAVIS_BUILD_DIR/llvm-9
 
 git:
   submodules: false
   depth: 1
 
 env:
-  - RISCV=$TRAVIS_BUILD_DIR/riscv PATH=$PATH:$RISCV/bin:TRAVIS_BUILD_DIR/llvm-9
+  - RISCV=$TRAVIS_BUILD_DIR/riscv PATH=$PATH:$RISCV/bin
 
 addons:
   apt:
+    sources:
+    - sourceline: 'deb http://apt.llvm.org/xenial/ llvm-toolchain-xenial-9 main'
+      key_url: https://apt.llvm.org/llvm-snapshot.gpg.key
     packages:
     - autoconf
     - automake
@@ -27,6 +29,7 @@ addons:
     - build-essential
     - gcc
     - git
+    - llvm-9
 
 branches:
   only:

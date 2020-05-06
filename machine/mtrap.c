@@ -191,6 +191,9 @@ send_ipi:
     case SBI_SM_ATTEST_ENCLAVE:
       retval = mcall_sm_attest_enclave(arg0, arg1, arg2);
       break;
+    case SBI_SM_GET_SEALING_KEY:
+      retval = mcall_sm_get_sealing_key(arg0, arg1, arg2);
+      break;
     case SBI_SM_RANDOM:
       retval = mcall_sm_random();
       break;
@@ -270,6 +273,9 @@ send_ipi:
       break;
     case SBI_SM_ATTEST_ENCLAVE:
       retval = mcall_sm_attest_enclave(arg0, arg1, arg2);
+      break;
+    case SBI_SM_GET_SEALING_KEY:
+      retval = mcall_sm_get_sealing_key(arg0, arg1, arg2);
       break;
     case SBI_SM_RANDOM:
       retval = mcall_sm_random();

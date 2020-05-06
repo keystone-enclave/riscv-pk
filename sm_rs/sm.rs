@@ -77,6 +77,23 @@ fn copy_keys(init_data: &mut InitData) {
     }
 }
 
+pub fn sm_derive_sealing_key(
+    key: &mut [u8; enclave::SEALING_KEY_SIZE],
+    context: &[u8],
+) -> i32 {
+    let init_data = INIT_DATA.read();
+    let init_data = init_data.as_ref()
+        .expect("[SM] Tried to derive sealing key before initialization!");
+
+    let salt: [u8; 0] = [];
+
+    /*
+     * The key is derived without a salt because we have no entropy source
+     * available to generate the salt.
+     */
+    crypto::kdf(&salt, &init_data.sm_private_key, context, key)
+}
+
 /*
 void sm_print_cert()
 {

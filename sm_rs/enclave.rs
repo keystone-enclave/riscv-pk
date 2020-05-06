@@ -162,6 +162,14 @@ impl Report {
     }
 }
 
+/* sealing key struct */
+pub const SEALING_KEY_SIZE: usize = 128;
+#[repr(C)]
+pub struct SealingKey {
+    key: [u8; SEALING_KEY_SIZE],
+    signature: [u8; crypto::SIGNATURE_SIZE],
+}
+
 /****************************
  *
  * Enclave utility functions
@@ -537,6 +545,31 @@ fn attest_enclave(
     Ok(())
 }
 
+fn get_sealing_key(
+    sealing_key: &mut SealingKey,
+    key_ident: &[u8],
+    info_buffer: &mut [u8],
+    enclave: &Enclave,
+) -> EResult<()> {
+    let ret: i32;
+
+    info_buffer[..enclave.hash.len()].copy_from_slice(&enclave.hash);
+
+    info_buffer[enclave.hash.len()..].copy_from_slice(&key_ident);
+
+    /* derive key */
+    ret = sm::sm_derive_sealing_key(&mut sealing_key.key, info_buffer);
+
+    if ret != 0 {
+        Err(encl_ret!(UNKNOWN_ERROR))?;
+    }
+
+    /* sign key */
+    sm::sign(&mut sealing_key.signature, &sealing_key.key);
+
+    Ok(())
+}
+
 struct Eid {
     eid: enclave_id,
 }
@@ -811,6 +844,26 @@ pub mod sbi_functions {
         let report_out = unsafe { &mut *report_ptr };
         with_enclave!(eid, NOT_INITIALIZED, |enclave| {
             super::attest_enclave(enclave, report_out, data, size)
+        })
+    }
+
+    #[no_mangle]
+    pub extern "C" fn get_sealing_key(
+        sealing_key: *mut SealingKey,
+        key_ident: *const u8,
+        key_ident_size: usize,
+        info_buffer: *mut u8,
+        info_buffer_size: usize,
+        eid: enclave_id,
+    ) -> enclave_ret_code {
+        let sealing_key_out = unsafe { &mut *sealing_key };
+        let key_ident_slice = unsafe { slice::from_raw_parts(key_ident, key_ident_size) };
+        let info_buffer_slice = unsafe {
+            slice::from_raw_parts_mut(info_buffer, info_buffer_size)
+        };
+
+        with_enclave!(eid, NOT_INITIALIZED, |enclave| {
+            super::get_sealing_key(sealing_key_out, key_ident_slice, info_buffer_slice, enclave)
         })
     }
 

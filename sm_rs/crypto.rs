@@ -60,6 +60,20 @@ pub fn sign_bytes(sig_out: &mut [u8; SIGNATURE_SIZE], data: &[u8], pubkey: &[u8]
     }
 }
 
+pub fn kdf (
+    salt: &[u8],
+    ikm: &[u8],
+    info: &[u8],
+    okm: &mut [u8],
+) -> i32 {
+    unsafe {
+        hkdf_sha3_512(salt.as_ptr(), salt.len() as i32,
+                      ikm.as_ptr(), ikm.len() as i32,
+                      info.as_ptr(), info.len() as i32,
+                      okm.as_mut_ptr(), okm.len() as i32)
+    }
+}
+
 
 #[cfg(test)]
 mod test {

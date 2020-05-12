@@ -11,6 +11,7 @@ use crate::cpu;
 use crate::crypto;
 use crate::pmp;
 use crate::sm;
+use crate::mprv::{self, sptr};
 use util::ctypes::*;
 use util::insert_field;
 
@@ -117,6 +118,7 @@ impl Enclave {
 
 /* attestation reports */
 #[repr(C)]
+#[derive(Copy, Clone)]
 pub struct EnclaveReport {
     hash: [u8; crypto::HASH_SIZE],
     data_len: u64,
@@ -136,6 +138,7 @@ impl EnclaveReport {
 }
 
 #[repr(C)]
+#[derive(Copy, Clone)]
 pub struct SmReport {
     hash: [u8; crypto::HASH_SIZE],
     public_key: [u8; crypto::PUBKEY_SIZE],
@@ -143,6 +146,7 @@ pub struct SmReport {
 }
 
 #[repr(C)]
+#[derive(Copy, Clone)]
 pub struct Report {
     enclave: EnclaveReport,
     sm: SmReport,
@@ -297,71 +301,51 @@ unsafe fn clean_enclave_memory(utbase: usize, utsize: usize) {
  */
 unsafe fn copy_word_to_host(
     _enclave: &mut Enclave,
-    dest_ptr: *mut usize,
-    value: usize,
+    dest_ptr: sptr<u64>,
+    value: u64,
 ) -> Result<(), enclave_ret_code> {
     // lock here for functional safety
-    let region_overlap = pmp::detect_region_overlap(dest_ptr as usize, size_of::<usize>());
+    let region_overlap = pmp::detect_region_overlap(dest_ptr.raw(), size_of::<usize>());
     if region_overlap {
         Err(encl_ret!(REGION_OVERLAPS))?;
     }
 
-    *dest_ptr = value;
-    Ok(())
+    mprv::copy_out(dest_ptr, &value).map_err(|_| encl_ret!(ILLEGAL_ARGUMENT))
 }
 
-// TODO: This function is externally used by sm-sbi.c.
-// Change it to be internal (remove from the enclave.h and make static)
 /* Internal function enforcing a copy source is from the untrusted world.
- * Does NOT do verification of dest, assumes caller knows what that is.
- * Dest should be inside the SM memory.
  */
-#[no_mangle]
-pub unsafe extern "C" fn copy_from_host(
-    source: *mut c_void,
-    dest: *mut c_void,
-    size: usize,
-) -> enclave_ret_code {
-    let region_overlap = pmp::detect_region_overlap(source as usize, size);
-    if region_overlap {
-        return encl_ret!(REGION_OVERLAPS);
-    }
+fn copy_create_args(
+    source: sptr<keystone_sbi_create>,
+) -> EResult<keystone_sbi_create> {
+    
+    let mut out: keystone_sbi_create = unsafe { zeroed() };
 
-    // TODO: Validate that dest is inside the SM.
-    dest.copy_from_nonoverlapping(source, size);
-    encl_ret!(SUCCESS)
+    mprv::copy_in(&mut out, source)
+        .map(|_| out)
+        .map_err(|_| encl_ret!(REGION_OVERLAPS))
 }
 
 /* copies data from enclave, source must be inside EPM */
-unsafe fn copy_from_enclave(
+fn copy_enclave_data(
     enclave: &Enclave,
-    dest: *mut c_void,
-    source: *const c_void,
-    size: usize,
+    dest: &mut [u8],
+    source: sptr<u8>
 ) -> EResult<()> {
-    let legal = buffer_in_enclave_region(&*enclave, source, size);
-    if !legal {
-        return Err(encl_ret!(ILLEGAL_ARGUMENT));
-    }
 
-    dest.copy_from_nonoverlapping(source, size);
-    Ok(())
+    mprv::copy_buf_in(dest, source)
+        .map_err(|_| encl_ret!(REGION_OVERLAPS))
 }
 
 /* copies data into enclave, destination must be inside EPM */
-unsafe fn copy_to_enclave(
+fn copy_enclave_report(
     enclave: &Enclave,
-    dest: *mut c_void,
-    source: *const c_void,
-    size: usize,
+    dest: sptr<Report>,
+    source: &Report
 ) -> EResult<()> {
-    let legal = buffer_in_enclave_region(enclave, dest, size);
-    if !legal {
-        return Err(encl_ret!(ILLEGAL_ARGUMENT));
-    }
 
-    dest.copy_from_nonoverlapping(source, size);
-    Ok(())
+    mprv::copy_out(dest, source)
+        .map_err(|_| encl_ret!(REGION_OVERLAPS))
 }
 
 #[no_mangle]
@@ -493,8 +477,8 @@ pub unsafe extern "C" fn get_enclave_region_base(eid: enclave_id, memid: c_int) 
 
 fn attest_enclave(
     enclave: &Enclave,
-    report_out: &mut Report,
-    data: usize,
+    report_out: sptr<Report>,
+    data: sptr<u8>,
     size: usize,
 ) -> EResult<()> {
     let mut report = Report {
@@ -521,26 +505,15 @@ fn attest_enclave(
     }
 
     /* copy data to be signed */
-    let dst_data_ptr = report.enclave.data.as_mut_ptr() as *mut c_void;
-    let src_data_ptr = data as *mut c_void;
-
     report.enclave.data_len = size as u64;
     report.enclave.hash = enclave.hash;
 
-    unsafe {
-        copy_from_enclave(enclave, dst_data_ptr, src_data_ptr, size)?;
-    }
+    copy_enclave_data(enclave, &mut report.enclave.data[..size], data)?;
 
     report.copy_keys();
     report.enclave.sign();
 
-    /* copy report to the enclave */
-    let dst_report_ptr = report_out as *mut Report as *mut c_void;
-    let src_report_ptr = &mut report as *mut Report as *mut c_void;
-
-    unsafe {
-        copy_to_enclave(enclave, dst_report_ptr, src_report_ptr, size_of::<Report>())?;
-    }
+    copy_enclave_report(enclave, report_out, &report)?;
 
     Ok(())
 }
@@ -607,7 +580,9 @@ fn create_enclave(create_args: keystone_sbi_create) -> EResult<()> {
     let size = create_args.epm_region.size;
     let utbase = create_args.utm_region.paddr;
     let utsize = create_args.utm_region.size;
-    let eidptr = create_args.eid_pptr as *mut usize;
+    let eidptr = unsafe {
+        sptr::<u64>::from_vaddr(create_args.eid_vptr as usize)
+    };
 
     /* Runtime parameters */
     if !is_create_args_valid(&create_args) {
@@ -698,7 +673,7 @@ fn create_enclave(create_args: keystone_sbi_create) -> EResult<()> {
 
     /* EIDs are unsigned int in size, copy via simple copy */
     unsafe {
-        copy_word_to_host(&mut enc, eidptr, eid)?;
+        copy_word_to_host(&mut enc, eidptr, eid as u64)?;
     }
 
     let mut enclave = ENCLAVES[eid].lock();
@@ -828,22 +803,22 @@ pub mod sbi_functions {
     }
 
     #[no_mangle]
-    pub extern "C" fn create_enclave(create_args: keystone_sbi_create) -> enclave_ret_code {
-        super::create_enclave(create_args)
+    pub extern "C" fn create_enclave(create_args: sptr<keystone_sbi_create>) -> enclave_ret_code {
+        copy_create_args(create_args)
+            .and_then(super::create_enclave)
             .err()
             .unwrap_or(encl_ret!(SUCCESS))
     }
 
     #[no_mangle]
     pub extern "C" fn attest_enclave(
-        report_ptr: *mut Report,
-        data: usize,
+        report_ptr: sptr<Report>,
+        data: sptr<u8>,
         size: usize,
         eid: enclave_id,
     ) -> enclave_ret_code {
-        let report_out = unsafe { &mut *report_ptr };
         with_enclave!(eid, NOT_INITIALIZED, |enclave| {
-            super::attest_enclave(enclave, report_out, data, size)
+            super::attest_enclave(enclave, report_ptr, data, size)
         })
     }
 

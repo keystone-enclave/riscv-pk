@@ -408,8 +408,6 @@ enclave_ret_code create_enclave(struct keystone_sbi_create create_args)
   int i;
   int region_overlap = 0;
 
-  printm("Entering Create SBI\n"); 
-
   /* Runtime parameters */
   if(!is_create_args_valid(&create_args))
     return ENCLAVE_ILLEGAL_ARGUMENT;
@@ -445,7 +443,6 @@ enclave_ret_code create_enclave(struct keystone_sbi_create create_args)
   // cleanup some memory regions for sanity See issue #38
   clean_enclave_memory(utbase, utsize);
 
-  printm("After cleanup\n");
 
   // initialize enclave metadata
   enclaves[eid].eid = eid;
@@ -462,8 +459,6 @@ enclave_ret_code create_enclave(struct keystone_sbi_create create_args)
 
   /* Init enclave state (regs etc) */
   clean_state(&enclaves[eid].threads[0]);
-
-  printm("After enclave initialization\n"); 
 
   /* Platform create happens as the last thing before hashing/etc since
      it may modify the enclave struct */

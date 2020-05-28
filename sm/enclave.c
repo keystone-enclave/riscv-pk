@@ -11,7 +11,7 @@
 #include "platform.h"
 
 #define ENCL_MAX  16
-#define ENCL_TIME_SLICE 1000000
+#define ENCL_TIME_SLICE 100000
 
 struct enclave enclaves[ENCL_MAX];
 #define ENCLAVE_EXISTS(eid) (eid >= 0 && eid < ENCL_MAX && enclaves[eid].state >= 0)
@@ -74,8 +74,6 @@ static inline enclave_ret_code context_switch_to_enclave(uintptr_t* regs,
 
   switch_vector_enclave();
   
-   *(HLS()->timecmp) = *mtime + ENCL_TIME_SLICE; 
-  
   // set PMP
   osm_pmp_set(PMP_NO_PERM);
   int memid;
@@ -117,8 +115,7 @@ static inline void context_switch_to_host(uintptr_t* encl_regs,
   uintptr_t pending = read_csr(mip);
 
   if (pending & MIP_MTIP) {
-//    clear_csr(mip, MIP_MTIP);
-  *(HLS()->timecmp) = *mtime + ENCL_TIME_SLICE;
+    *(HLS()->timecmp) = *mtime + ENCL_TIME_SLICE;
     set_csr(mip, MIP_STIP);
   }
   if (pending & MIP_MSIP) {

@@ -98,7 +98,7 @@ int validate_and_hash_epm(hash_ctx* hash_ctx, int level,
       if(va_start >= encl->params.untrusted_ptr &&
          va_start < (encl->params.untrusted_ptr + encl->params.untrusted_size) &&
          !map_in_utm){
-	goto fatal_bail;
+	  goto fatal_bail;
       }
 
       /* Do linear mapping validation */

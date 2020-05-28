@@ -73,7 +73,7 @@ static inline enclave_ret_code context_switch_to_enclave(uintptr_t* regs,
   }
 
   switch_vector_enclave();
-  
+
   // set PMP
   osm_pmp_set(PMP_NO_PERM);
   int memid;

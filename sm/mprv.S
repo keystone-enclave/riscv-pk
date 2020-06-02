@@ -1,15 +1,16 @@
-.text
-
 #if __riscv_xlen == 64
 # define STORE    sd
 # define LOAD     ld
 # define LOG_REGBYTES 3
-#else
+#elif __riscv_xlen == 32
 # define STORE    sw
 # define LOAD     lw
 # define LOG_REGBYTES 2
 #endif
+
 #define REGBYTES (1 << LOG_REGBYTES)
+
+.text
 
 #define TRY(tryname, r_mtvec, r_mepc, r_mcause, r_mstatus) \
     la r_mtvec, tryname##_err     ;\

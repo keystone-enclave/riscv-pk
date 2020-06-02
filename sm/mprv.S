@@ -45,8 +45,8 @@
 
 
 
-.global copy64_to_sm
-copy64_to_sm:
+.global copy_block_to_sm
+copy_block_to_sm:
     # Arguments:
     # a0: dst
     # a1: src
@@ -55,7 +55,7 @@ copy64_to_sm:
     # a3: mepc
     # a4: mcause
     # a5: mstatus
-TRY(copy64in_check, a2, a3, a4, a5)
+TRY(copy_block_in_check, a2, a3, a4, a5)
     SET_MPRV(t0)
     LOAD t0, 0x00(a1)
     LOAD t1, 0x04(a1)
@@ -75,27 +75,27 @@ TRY(copy64in_check, a2, a3, a4, a5)
     STORE t6, 0x18(a0)
     STORE a6, 0x1c(a0)
     li a0, 0
-CATCH_ERR(copy64in_check, a1)
+CATCH_ERR(copy_block_in_check, a1)
     li a0, -1
-TRY_END(copy64in_check, a2, a3, a4, a5)
+TRY_END(copy_block_in_check, a2, a3, a4, a5)
 
     UNSET_MPRV(t0)
     ret
 
 
-.global copy8_to_sm
-copy8_to_sm:
+.global copy_word_to_sm
+copy_word_to_sm:
     # a0: dst
     # a1: src
-TRY(copy8in_check, t1, t2, t3, t4)
+TRY(copy_word_in_check, t1, t2, t3, t4)
     SET_MPRV(t5)
     LOAD t0, 0x00(a1)
     UNSET_MPRV(t5)
     STORE t0, 0x00(a0)
     li a0, 0
-CATCH_ERR(copy8in_check, t5)
+CATCH_ERR(copy_word_in_check, t5)
     li a0, -1
-TRY_END(copy8in_check, t1, t2, t3, t4)
+TRY_END(copy_word_in_check, t1, t2, t3, t4)
 
     UNSET_MPRV(t5)
     ret
@@ -119,8 +119,8 @@ TRY_END(copy1in_check, t1, t2, t3, t4)
     ret
 
 
-.global copy64_from_sm
-copy64_from_sm:
+.global copy_block_from_sm
+copy_block_from_sm:
     # Arguments:
     # a0: dst
     # a1: src
@@ -129,7 +129,7 @@ copy64_from_sm:
     # a3: mepc
     # a4: mcause
     # a5: mstatus
-TRY(copy64out_check, a2, a3, a4, a5)
+TRY(copy_block_out_check, a2, a3, a4, a5)
     LOAD t0, 0x00(a1)
     LOAD t1, 0x04(a1)
     LOAD t2, 0x08(a1)
@@ -149,26 +149,26 @@ TRY(copy64out_check, a2, a3, a4, a5)
     STORE a6, 0x1c(a0)
     UNSET_MPRV(a1)
     li a0, 0
-CATCH_ERR(copy64out_check, a1)
+CATCH_ERR(copy_block_out_check, a1)
     li a0, -1
-TRY_END(copy64out_check, a2, a3, a4, a5)
+TRY_END(copy_block_out_check, a2, a3, a4, a5)
 
     UNSET_MPRV(a1)
     ret
 
 
-.global copy8_from_sm
-copy8_from_sm:
+.global copy_word_from_sm
+copy_word_from_sm:
     # a0: dst
     # a1: src
-TRY(copy8out_check, t1, t2, t3, t4)
+TRY(copy_word_out_check, t1, t2, t3, t4)
     LOAD t0, 0x00(a1)
     SET_MPRV(t5)
     STORE t0, 0x00(a0)
     li a0, 0
-CATCH_ERR(copy8out_check, t5)
+CATCH_ERR(copy_word_out_check, t5)
     li a0, -1
-TRY_END(copy8out_check, t1, t2, t3, t4)
+TRY_END(copy_word_out_check, t1, t2, t3, t4)
 
     UNSET_MPRV(t5)
     ret

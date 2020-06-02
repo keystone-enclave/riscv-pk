@@ -3,10 +3,13 @@
 #if __riscv_xlen == 64
 # define STORE    sd
 # define LOAD     ld
+# define LOG_REGBYTES 3
 #else
 # define STORE    sw
 # define LOAD     lw
+# define LOG_REGBYTES 2
 #endif
+#define REGBYTES (1 << LOG_REGBYTES)
 
 #define TRY(tryname, r_mtvec, r_mepc, r_mcause, r_mstatus) \
     la r_mtvec, tryname##_err     ;\
@@ -57,23 +60,23 @@ copy_block_to_sm:
     # a5: mstatus
 TRY(copy_block_in_check, a2, a3, a4, a5)
     SET_MPRV(t0)
-    LOAD t0, 0x00(a1)
-    LOAD t1, 0x04(a1)
-    LOAD t2, 0x08(a1)
-    LOAD t3, 0x0c(a1)
-    LOAD t4, 0x10(a1)
-    LOAD t5, 0x14(a1)
-    LOAD t6, 0x18(a1)
-    LOAD a6, 0x1c(a1)
+    LOAD t0, 0*REGBYTES(a1)
+    LOAD t1, 1*REGBYTES(a1)
+    LOAD t2, 2*REGBYTES(a1)
+    LOAD t3, 3*REGBYTES(a1)
+    LOAD t4, 4*REGBYTES(a1)
+    LOAD t5, 5*REGBYTES(a1)
+    LOAD t6, 6*REGBYTES(a1)
+    LOAD a6, 7*REGBYTES(a1)
     UNSET_MPRV(a1)
-    STORE t0, 0x00(a0)
-    STORE t1, 0x04(a0)
-    STORE t2, 0x08(a0)
-    STORE t3, 0x0c(a0)
-    STORE t4, 0x10(a0)
-    STORE t5, 0x14(a0)
-    STORE t6, 0x18(a0)
-    STORE a6, 0x1c(a0)
+    STORE t0, 0*REGBYTES(a0)
+    STORE t1, 1*REGBYTES(a0)
+    STORE t2, 2*REGBYTES(a0)
+    STORE t3, 3*REGBYTES(a0)
+    STORE t4, 4*REGBYTES(a0)
+    STORE t5, 5*REGBYTES(a0)
+    STORE t6, 6*REGBYTES(a0)
+    STORE a6, 7*REGBYTES(a0)
     li a0, 0
 CATCH_ERR(copy_block_in_check, a1)
     li a0, -1
@@ -130,23 +133,23 @@ copy_block_from_sm:
     # a4: mcause
     # a5: mstatus
 TRY(copy_block_out_check, a2, a3, a4, a5)
-    LOAD t0, 0x00(a1)
-    LOAD t1, 0x04(a1)
-    LOAD t2, 0x08(a1)
-    LOAD t3, 0x0c(a1)
-    LOAD t4, 0x10(a1)
-    LOAD t5, 0x14(a1)
-    LOAD t6, 0x18(a1)
-    LOAD a6, 0x1c(a1)
+    LOAD t0, 0*REGBYTES(a1)
+    LOAD t1, 1*REGBYTES(a1)
+    LOAD t2, 2*REGBYTES(a1)
+    LOAD t3, 3*REGBYTES(a1)
+    LOAD t4, 4*REGBYTES(a1)
+    LOAD t5, 5*REGBYTES(a1)
+    LOAD t6, 6*REGBYTES(a1)
+    LOAD a6, 7*REGBYTES(a1)
     SET_MPRV(a1)
-    STORE t0, 0x00(a0)
-    STORE t1, 0x04(a0)
-    STORE t2, 0x08(a0)
-    STORE t3, 0x0c(a0)
-    STORE t4, 0x10(a0)
-    STORE t5, 0x14(a0)
-    STORE t6, 0x18(a0)
-    STORE a6, 0x1c(a0)
+    STORE t0, 0*REGBYTES(a0)
+    STORE t1, 1*REGBYTES(a0)
+    STORE t2, 2*REGBYTES(a0)
+    STORE t3, 3*REGBYTES(a0)
+    STORE t4, 4*REGBYTES(a0)
+    STORE t5, 5*REGBYTES(a0)
+    STORE t6, 6*REGBYTES(a0)
+    STORE a6, 7*REGBYTES(a0)
     UNSET_MPRV(a1)
     li a0, 0
 CATCH_ERR(copy_block_out_check, a1)

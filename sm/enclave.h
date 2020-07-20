@@ -21,6 +21,7 @@
 
 #define ATTEST_DATA_MAXLEN  1024
 #define ENCLAVE_REGIONS_MAX 8
+#define MAILBOX_SIZE 256
 /* TODO: does not support multithreaded enclave yet */
 #define MAX_ENCL_THREADS 1
 
@@ -106,6 +107,16 @@ struct report
   struct sm_report sm;
   byte dev_public_key[PUBLIC_KEY_SIZE];
 };
+
+struct mailbox
+{
+  size_t capacity; 
+  size_t size; 
+  bool enabled; 
+  spinlock_t lock; 
+  byte data[MAILBOX_SIZE]; 
+  
+}; 
 
 /*** SBI functions & external functions ***/
 // callables from the host

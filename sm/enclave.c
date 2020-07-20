@@ -14,6 +14,10 @@
 #define ENCL_TIME_SLICE 100000
 
 struct enclave enclaves[ENCL_MAX];
+
+//Enclave mailbox metadata
+struct metadata_mailbox enclave_mailbox[ENCL_MAX]; 
+
 #define ENCLAVE_EXISTS(eid) (eid >= 0 && eid < ENCL_MAX && enclaves[eid].state >= 0)
 
 static spinlock_t encl_lock = SPINLOCK_INIT;

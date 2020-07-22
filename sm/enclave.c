@@ -16,7 +16,7 @@
 struct enclave enclaves[ENCL_MAX];
 
 //Enclave mailbox metadata
-struct metadata_mailbox enclave_mailbox[ENCL_MAX]; 
+struct mailbox enclave_mailbox[ENCL_MAX]; 
 
 #define ENCLAVE_EXISTS(eid) (eid >= 0 && eid < ENCL_MAX && enclaves[eid].state >= 0)
 

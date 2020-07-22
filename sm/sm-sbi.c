@@ -123,6 +123,19 @@ uintptr_t mcall_sm_call_plugin(uintptr_t plugin_id, uintptr_t call_id, uintptr_t
   return call_plugin(cpu_get_enclave_id(), plugin_id, call_id, arg0, arg1);
 }
 
+uintptr_t mcall_sm_mailbox_register(uintptr_t *regs, uintptr_t mailbox){
+  /* only an enclave itself can call this SBI */
+
+  if (!cpu_is_enclave_context()) {
+    return ENCLAVE_SBI_PROHIBITED;
+  }
+
+  int ret = 1; 
+
+  return ret; 
+
+}
+
 /* TODO: this should be removed in the future. */
 uintptr_t mcall_sm_not_implemented(uintptr_t* encl_regs, unsigned long cause)
 {

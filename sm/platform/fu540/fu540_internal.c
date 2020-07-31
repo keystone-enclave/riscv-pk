@@ -40,16 +40,16 @@ enclave_ret_code scratch_init(){
   uintptr_t addr;
 
   addr = scratch_start;
-  /* We will be directly setting the master d$ mask to avoid any cache
+  /* We will be directly setting the controller d$ mask to avoid any cache
      pollution issues */
-  waymask_t* master_mask = WM_REG_ADDR(core*2);
+  waymask_t* controller_mask = WM_REG_ADDR(core*2);
   /* Go through the mask one way at a time to control the allocations */
   for(tmp_mask=0x80;
       tmp_mask <= scratchpad_allocated_ways;
       tmp_mask = tmp_mask << 1){
     uintptr_t way_end  = addr + L2_WAY_SIZE;
     /* Assign a temporary mask of 1 way to the d$ */
-    *master_mask = tmp_mask;
+    *controller_mask = tmp_mask;
     /* Write a known value to every L2_LINE_SIZE offset */
     for(;
         addr < way_end;
@@ -57,10 +57,10 @@ enclave_ret_code scratch_init(){
       *(uintptr_t*)addr = 64;
     }
     /* Disable as soon as possible */
-    *master_mask = invert_mask;
+    *controller_mask = invert_mask;
   }
 
-  /* At this point, no master has waymasks for the scratchpad ways,
+  /* At this point, no controller has waymasks for the scratchpad ways,
      and all scratchpad addresses have L2 lines */
 
   /* We try and check it now, any error SHOULD be immediately detectable. */
@@ -216,7 +216,7 @@ void platform_switch_to_enclave(struct enclave* enclave){
     /* Assign the ways to all cores */
     waymask_apply_allocated_mask(enclave->ped.saved_mask, core);
 
-    /* Clear out these ways MUST first apply mask to other masters */
+    /* Clear out these ways MUST first apply mask to other controllers */
     waymask_clear_ways(enclave->ped.saved_mask, core);
   }
 

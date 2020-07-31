@@ -2,12 +2,12 @@
 
 void waymask_debug_printstatus(){
   unsigned int hartid = read_csr(mhartid);
-  printm("mhartid: %x, coremasters: %x & %x\r\n",hartid, (hartid)*2, (hartid)*2 + 1);
+  printm("mhartid: %x, corecontrollers: %x & %x\r\n",hartid, (hartid)*2, (hartid)*2 + 1);
 
-  unsigned int master;
-  for(master=0;master<WM_NUM_MASTERS;master++){
-    waymask_t* master_mask = WM_REG_ADDR(master);
-    printm("Master %x : %0.8x\r\n",master, *master_mask);
+  unsigned int controller;
+  for(controller=0;controller<WM_NUM_CONTROLLERS;controller++){
+    waymask_t* controller_mask = WM_REG_ADDR(controller);
+    printm("Controller %x : %0.8x\r\n",controller, *controller_mask);
   }
 }
 
@@ -31,33 +31,33 @@ size_t waymask_allocate_ways(size_t n_ways, unsigned int target_hart,
   return remaining;
 }
 
-int master_is_for_hart(unsigned int master, unsigned int hart){
-  return(master == hart*2 || master == hart*2 + 1);
+int controller_is_for_hart(unsigned int controller, unsigned int hart){
+  return(controller == hart*2 || controller == hart*2 + 1);
 }
 
 void waymask_apply_allocated_mask(waymask_t mask, unsigned int target_hart){
 
-  // Lockout/assign masters from these ways
-  unsigned int master;
-  for(master=0;master<WM_NUM_MASTERS;master++){
+  // Lockout/assign controllers from these ways
+  unsigned int controller;
+  for(controller=0;controller<WM_NUM_CONTROLLERS;controller++){
 
-    // Hard assign if the master is ours, otherwise lockout
-    // If its our master, we want it ONLY using this mask
-    if(master_is_for_hart(master, target_hart)){
-      _wm_assign_mask(mask, master);
+    // Hard assign if the controller is ours, otherwise lockout
+    // If its our controller, we want it ONLY using this mask
+    if(controller_is_for_hart(controller, target_hart)){
+      _wm_assign_mask(mask, controller);
     }
     else{
-      _wm_lockout_ways(mask, master);
+      _wm_lockout_ways(mask, controller);
     }
   }
 }
 
 void waymask_free_ways(waymask_t _mask){
-  unsigned int master;
-  for(master=0; master < WM_NUM_MASTERS; master++){
-    if(IS_MASTER_RUNNING_UNTRUSTED( master )){
+  unsigned int controller;
+  for(controller=0; controller < WM_NUM_CONTROLLERS; controller++){
+    if(IS_CONTROLLER_RUNNING_UNTRUSTED( controller )){
       // Grant it
-      _wm_grant_ways(_mask, master);
+      _wm_grant_ways(_mask, controller);
     }
     // We don't enable new free ways on harts running trusted code
   }
@@ -97,44 +97,44 @@ int _wm_choose_ways_for_hart(size_t n_ways, waymask_t* mask, unsigned int target
 }
 
 // This will DISABLE the given ways
-int _wm_lockout_ways(waymask_t mask, unsigned int master){
+int _wm_lockout_ways(waymask_t mask, unsigned int controller){
 
-  if(master > WM_NUM_MASTERS){
+  if(controller > WM_NUM_CONTROLLERS){
     return  -1;
   }
 
-  //Note that we DO allow entirely locking out a master
+  //Note that we DO allow entirely locking out a controller
   // Supposedly this isn't allowed, we'll see what happens.
   // "At least one cache way must be enabled. "
-  waymask_t* master_mask = WM_REG_ADDR(master);
-  waymask_t current_mask = *master_mask;
-  *master_mask = current_mask & WM_FLIP_MASK(mask);
+  waymask_t* controller_mask = WM_REG_ADDR(controller);
+  waymask_t current_mask = *controller_mask;
+  *controller_mask = current_mask & WM_FLIP_MASK(mask);
   return 0;
 }
 
 // This will GRANT ACCESS to the given ways
-int _wm_grant_ways(waymask_t mask, unsigned int master){
+int _wm_grant_ways(waymask_t mask, unsigned int controller){
 
-  if(master > WM_NUM_MASTERS){
+  if(controller > WM_NUM_CONTROLLERS){
     return  -1;
   }
 
-  waymask_t* master_mask = WM_REG_ADDR(master);
+  waymask_t* controller_mask = WM_REG_ADDR(controller);
 
-  *master_mask |= mask;
+  *controller_mask |= mask;
   return 0;
 }
 
-// Just hard set ways for a master
-int _wm_assign_mask(waymask_t mask, unsigned int master){
+// Just hard set ways for a controller
+int _wm_assign_mask(waymask_t mask, unsigned int controller){
 
-  if(master > WM_NUM_MASTERS){
+  if(controller > WM_NUM_CONTROLLERS){
     return  -1;
   }
 
-  waymask_t* master_mask = WM_REG_ADDR(master);
+  waymask_t* controller_mask = WM_REG_ADDR(controller);
 
-  *master_mask = mask;
+  *controller_mask = mask;
   return 0;
 }
 

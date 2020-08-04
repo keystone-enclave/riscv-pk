@@ -125,12 +125,13 @@ uintptr_t mcall_sm_call_plugin(uintptr_t plugin_id, uintptr_t call_id, uintptr_t
 
 uintptr_t mcall_sm_mailbox_register(uintptr_t *regs, uintptr_t mailbox){
   /* only an enclave itself can call this SBI */
+  enclave_ret_code ret;
 
   if (!cpu_is_enclave_context()) {
     return ENCLAVE_SBI_PROHIBITED;
   }
 
-  int ret = 1; 
+  ret = mailbox_register(cpu_get_enclave_id(), mailbox); 
 
   return ret; 
 

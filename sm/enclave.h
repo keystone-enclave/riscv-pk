@@ -15,6 +15,7 @@
 #include "pmp.h"
 #include "thread.h"
 #include "crypto.h"
+#include "atomic.h"
 
 // Special target platform header, set by configure script
 #include TARGET_PLATFORM_HEADER
@@ -110,13 +111,19 @@ struct report
 
 struct mailbox
 {
-  size_t capacity; 
-  size_t size; 
-  uint8_t enabled; 
-  int lock; 
-  byte data[MAILBOX_SIZE]; 
-  
-}; 
+  size_t capacity;
+  size_t size;
+  uint8_t enabled;
+  spinlock_t lock;
+  uint8_t data[MAILBOX_SIZE];
+};
+
+struct mailbox_header
+{
+  size_t send_eid;
+  size_t size;
+  uint8_t data[0];
+};
 
 /*** SBI functions & external functions ***/
 // callables from the host
@@ -128,6 +135,7 @@ enclave_ret_code resume_enclave(uintptr_t* regs, enclave_id eid);
 enclave_ret_code exit_enclave(uintptr_t* regs, unsigned long retval, enclave_id eid);
 enclave_ret_code stop_enclave(uintptr_t* regs, uint64_t request, enclave_id eid);
 enclave_ret_code attest_enclave(uintptr_t report, uintptr_t data, uintptr_t size, enclave_id eid);
+enclave_ret_code mailbox_register(enclave_id eid, uintptr_t mailbox);
 /* attestation and virtual mapping validation */
 enclave_ret_code validate_and_hash_enclave(struct enclave* enclave);
 // TODO: These functions are supposed to be internal functions.

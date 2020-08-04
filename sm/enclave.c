@@ -16,7 +16,7 @@
 struct enclave enclaves[ENCL_MAX];
 
 //Enclave mailbox metadata
-struct mailbox enclave_mailbox[ENCL_MAX]; 
+struct mailbox *enclave_mailbox[ENCL_MAX]; 
 
 #define ENCLAVE_EXISTS(eid) (eid >= 0 && eid < ENCL_MAX && enclaves[eid].state >= 0)
 
@@ -702,4 +702,17 @@ enclave_ret_code attest_enclave(uintptr_t report_ptr, uintptr_t data, uintptr_t 
   }
 
   return ENCLAVE_SUCCESS;
+}
+
+enclave_ret_code mailbox_register(enclave_id eid, uintptr_t mailbox){
+  int ret; 
+  struct mailbox *mbox = (struct mailbox *) mailbox; 
+  
+  if(ENCLAVE_EXISTS(eid)){
+      enclave_mailbox[eid] = mbox; 	
+      ret = 1;
+  } 
+  return ENCLAVE_SUCCESS; 
+
+
 }

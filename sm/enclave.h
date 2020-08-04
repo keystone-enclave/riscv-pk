@@ -120,7 +120,7 @@ struct mailbox
 
 struct mailbox_header
 {
-  size_t send_eid;
+  size_t send_uid;
   size_t size;
   uint8_t data[0];
 };
@@ -136,6 +136,7 @@ enclave_ret_code exit_enclave(uintptr_t* regs, unsigned long retval, enclave_id 
 enclave_ret_code stop_enclave(uintptr_t* regs, uint64_t request, enclave_id eid);
 enclave_ret_code attest_enclave(uintptr_t report, uintptr_t data, uintptr_t size, enclave_id eid);
 enclave_ret_code mailbox_register(enclave_id eid, uintptr_t mailbox);
+enclave_ret_code send_msg(enclave_id eid, size_t uid, void *buf, size_t msg_size);
 /* attestation and virtual mapping validation */
 enclave_ret_code validate_and_hash_enclave(struct enclave* enclave);
 // TODO: These functions are supposed to be internal functions.

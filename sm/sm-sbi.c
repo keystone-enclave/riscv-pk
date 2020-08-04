@@ -137,6 +137,19 @@ uintptr_t mcall_sm_mailbox_register(uintptr_t *regs, uintptr_t mailbox){
 
 }
 
+uintptr_t mcall_sm_send_msg(uintptr_t *regs, size_t uid, uintptr_t buf, size_t msg_size){
+  /* only an enclave itself can call this SBI */
+  enclave_ret_code ret;
+
+  if (!cpu_is_enclave_context()) {
+    return ENCLAVE_SBI_PROHIBITED;
+  }
+
+  ret = send_msg(cpu_get_enclave_id(), uid, (void *) buf, msg_size); 
+
+  return ret; 
+}
+
 /* TODO: this should be removed in the future. */
 uintptr_t mcall_sm_not_implemented(uintptr_t* encl_regs, unsigned long cause)
 {

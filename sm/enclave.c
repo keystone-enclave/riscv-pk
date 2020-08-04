@@ -716,3 +716,28 @@ enclave_ret_code mailbox_register(enclave_id eid, uintptr_t mailbox){
 
 
 }
+
+enclave_ret_code send_msg(enclave_id eid, size_t uid, void *buf, size_t msg_size){
+   struct mailbox *mbox = enclave_mailbox[eid];
+
+   //Check if the mailbox is registered
+   if(!mbox){
+      return 1;  
+   }
+
+   //Check if the message + header can fit in the mailbox. 
+   if(mbox->capacity - mbox->size < msg_size + sizeof(struct mailbox_header)){
+      return 1; 
+   }
+
+   struct mailbox_header hdr;
+   hdr.send_uid = uid; 
+   hdr.size = msg_size;
+ 
+   memcpy(mbox->data + mbox->size, &hdr, sizeof(hdr));
+   memcpy(mbox->data + mbox->size + sizeof(hdr), buf, msg_size);  
+
+   mbox->size += msg_size + sizeof(hdr);  
+   
+   return ENCLAVE_SUCCESS;
+}

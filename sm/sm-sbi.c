@@ -123,7 +123,7 @@ uintptr_t mcall_sm_call_plugin(uintptr_t plugin_id, uintptr_t call_id, uintptr_t
   return call_plugin(cpu_get_enclave_id(), plugin_id, call_id, arg0, arg1);
 }
 
-uintptr_t mcall_sm_mailbox_register(uintptr_t *regs, uintptr_t mailbox){
+uintptr_t mcall_sm_mailbox_register(uintptr_t mailbox){
   /* only an enclave itself can call this SBI */
   enclave_ret_code ret;
 
@@ -132,12 +132,11 @@ uintptr_t mcall_sm_mailbox_register(uintptr_t *regs, uintptr_t mailbox){
   }
 
   ret = mailbox_register(cpu_get_enclave_id(), mailbox); 
-
   return ret; 
 
 }
 
-uintptr_t mcall_sm_send_msg(uintptr_t *regs, size_t uid, uintptr_t buf, size_t msg_size){
+uintptr_t mcall_sm_send_msg(size_t uid, uintptr_t buf, size_t msg_size){
   /* only an enclave itself can call this SBI */
   enclave_ret_code ret;
 

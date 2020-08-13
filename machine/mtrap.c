@@ -128,7 +128,6 @@ static void send_ipi_many(uintptr_t* pmask, int event)
 void mcall_trap_enclave(uintptr_t* regs, uintptr_t mcause, uintptr_t mepc)
 {
   uintptr_t n = regs[17], arg0 = regs[10], arg1 = regs[11], arg2 = regs[12], arg3 = regs[13], retval, ipi_type;
-
   switch (n)
   {
     case SBI_CONSOLE_PUTCHAR:
@@ -187,6 +186,12 @@ send_ipi:
       break;
     case SBI_SM_RANDOM:
       retval = mcall_sm_random();
+      break;
+    case SBI_SM_MAILBOX_REGISTER:
+      retval = mcall_sm_mailbox_register(arg0);
+      break;
+    case SBI_SM_MAILBOX_SEND:
+      retval = mcall_sm_send_msg(arg0, arg1, arg2);
       break;
     case SBI_SM_NOT_IMPLEMENTED:
       retval = mcall_sm_not_implemented(regs, arg0);
@@ -272,8 +277,11 @@ send_ipi:
       retval = mcall_sm_call_plugin(arg0, arg1, arg2, arg3);
       break;
     case SBI_SM_MAILBOX_REGISTER:
-      retval = mcall_sm_mailbox_register(regs, arg0); 
+      retval = mcall_sm_mailbox_register(arg0); 
       break; 
+    case SBI_SM_MAILBOX_SEND:
+      retval = mcall_sm_send_msg(arg0, arg1, arg2);
+      break;  
     case SBI_SM_NOT_IMPLEMENTED:
       retval = mcall_sm_not_implemented(regs, arg0);
       break;

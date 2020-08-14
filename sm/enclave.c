@@ -742,15 +742,15 @@ enclave_ret_code send_msg(enclave_id eid, size_t uid, void *buf, size_t msg_size
 
    //Check if the mailbox is registered
    if(!mbox){
-      return 1;  
+      return ENCLAVE_NO_MAILBOX;  
    }
-   //printm("[SM] uid: %u\n", uid);
 
    spinlock_lock(&(mbox->lock));
  
    //Check if the message + header can fit in the mailbox. 
    if(mbox->capacity - mbox->size < msg_size + sizeof(struct mailbox_header)){
-      return 1; 
+      spinlock_unlock(&(mbox->lock));
+      return ENCLAVE_MAILBOX_FULL; 
    }
 
    struct mailbox_header hdr;

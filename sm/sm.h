@@ -46,6 +46,8 @@
 #define ENCLAVE_SBI_PROHIBITED              (enclave_ret_code)14
 #define ENCLAVE_ILLEGAL_PTE                 (enclave_ret_code)15
 #define ENCLAVE_NOT_FRESH                   (enclave_ret_code)16
+#define ENCLAVE_NO_MAILBOX		    (enclave_ret_code)17
+#define ENCLAVE_MAILBOX_FULL 		    (enclave_ret_code)18 
 
 #define PMP_UNKNOWN_ERROR                   -1U
 #define PMP_SUCCESS                         0

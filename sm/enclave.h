@@ -117,6 +117,7 @@ struct mailbox
   size_t capacity;
   size_t size;
   uint8_t enabled;
+  size_t uid; 
   spinlock_t lock;
   uint8_t data[MAILBOX_SIZE];
 };

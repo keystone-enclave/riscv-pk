@@ -721,6 +721,7 @@ enclave_ret_code mailbox_register(enclave_id eid, uintptr_t mailbox){
   
   if(ENCLAVE_EXISTS(eid)){
       enclaves[eid].mailbox = mbox; 	
+      enclaves[eid].mailbox->uid = enclaves[eid].uid; 
       ret = 1;
   } 
   return ENCLAVE_SUCCESS; 
@@ -731,7 +732,6 @@ enclave_ret_code mailbox_register(enclave_id eid, uintptr_t mailbox){
 enclave_ret_code send_msg(enclave_id eid, size_t uid, void *buf, size_t msg_size){
    struct mailbox *mbox = (void *) 0; 
 
-   uid = 0; 
    for(int eid=0; eid<ENCL_MAX; eid++)
   {
     if(ENCLAVE_EXISTS(eid) && enclaves[eid].uid == uid){
@@ -744,7 +744,7 @@ enclave_ret_code send_msg(enclave_id eid, size_t uid, void *buf, size_t msg_size
    if(!mbox){
       return 1;  
    }
-   printm("[SM] uid: %u\n", uid);
+   //printm("[SM] uid: %u\n", uid);
 
    spinlock_lock(&(mbox->lock));
  
@@ -754,7 +754,7 @@ enclave_ret_code send_msg(enclave_id eid, size_t uid, void *buf, size_t msg_size
    }
 
    struct mailbox_header hdr;
-   hdr.send_uid = 0; 
+   hdr.send_uid = uid; 
    hdr.size = msg_size;
  
    memcpy(mbox->data + mbox->size, &hdr, sizeof(hdr));

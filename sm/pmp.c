@@ -21,47 +21,47 @@ static struct pmp_region regions[PMP_MAX_N_REGION];
 static uint32_t reg_bitmap = 0;
 static uint32_t region_def_bitmap = 0;
 
-static inline int region_register_idx(region_id i)
+static __attribute__ ((noinline))  int region_register_idx(region_id i)
 {
   return regions[i].reg_idx;
 }
 
-static inline int region_allows_overlap(region_id i)
+static __attribute__ ((noinline)) int region_allows_overlap(region_id i)
 {
   return regions[i].allow_overlap;
 }
 
-static inline uintptr_t region_get_addr(region_id i)
+static __attribute__ ((noinline)) uintptr_t region_get_addr(region_id i)
 {
   return regions[i].addr;
 }
 
-static inline uint64_t region_get_size(region_id i)
+static __attribute__ ((noinline)) uint64_t region_get_size(region_id i)
 {
   return regions[i].size;
 }
 
-static inline int region_is_napot(region_id i)
+static __attribute__ ((noinline)) int region_is_napot(region_id i)
 {
   return regions[i].addrmode == PMP_NAPOT;
 }
 
-static inline int region_is_tor(region_id i)
+static __attribute__ ((noinline)) int region_is_tor(region_id i)
 {
   return regions[i].addrmode == PMP_TOR;
 }
 
-static inline int region_needs_two_entries(region_id i)
+static __attribute__ ((noinline)) int region_needs_two_entries(region_id i)
 {
   return region_is_tor(i) && regions[i].reg_idx > 0;
 }
 
-static inline int region_is_napot_all(region_id i)
+static __attribute__ ((noinline)) int region_is_napot_all(region_id i)
 {
   return regions[i].addr == 0 && regions[i].size == -1UL;
 }
 
-static inline uintptr_t region_pmpaddr_val(region_id i)
+static __attribute__ ((noinline)) uintptr_t region_pmpaddr_val(region_id i)
 {
   if(region_is_napot_all(i))
     return (-1UL);
@@ -73,12 +73,12 @@ static inline uintptr_t region_pmpaddr_val(region_id i)
     return 0;
 }
 
-static inline uintptr_t region_pmpcfg_val(region_id i, pmpreg_id reg_idx, uint8_t perm_bits)
+static __attribute__ ((noinline)) uintptr_t region_pmpcfg_val(region_id i, pmpreg_id reg_idx, uint8_t perm_bits)
 {
   return (uintptr_t) (regions[i].addrmode | perm_bits) << (8*(reg_idx%PMP_PER_GROUP));
 }
 
-static void region_clear_all(region_id i)
+static __attribute__ ((noinline)) void region_clear_all(region_id i)
 {
   regions[i].addr = 0;
   regions[i].size = 0;
@@ -87,7 +87,7 @@ static void region_clear_all(region_id i)
   regions[i].reg_idx = 0;
 }
 
-static void region_init(region_id i,
+static __attribute__ ((noinline)) void region_init(region_id i,
                         uintptr_t addr,
                         uint64_t size,
                         uint8_t addrmode,
@@ -101,12 +101,12 @@ static void region_init(region_id i,
   regions[i].reg_idx = (addrmode == PMP_TOR && reg_idx > 0 ? reg_idx + 1 : reg_idx);
 }
 
-static int is_pmp_region_valid(region_id region_idx)
+static __attribute__ ((noinline)) int is_pmp_region_valid(region_id region_idx)
 {
   return TEST_BIT(region_def_bitmap, region_idx);
 }
 
-static int search_rightmost_unset(uint32_t bitmap, int max, uint32_t mask)
+static __attribute__ ((noinline)) int search_rightmost_unset(uint32_t bitmap, int max, uint32_t mask)
 {
   int i = 0;
 
@@ -284,17 +284,17 @@ static int search_rightmost_unset(uint32_t bitmap, int max, uint32_t mask)
   return -1;
 }
 
-static region_id get_free_region_idx()
+static __attribute__ ((noinline)) region_id get_free_region_idx()
 {
   return search_rightmost_unset(region_def_bitmap, PMP_MAX_N_REGION, 0x1);
 }
 
-static pmpreg_id get_free_reg_idx()
+static __attribute__ ((noinline)) pmpreg_id get_free_reg_idx()
 {
   return search_rightmost_unset(reg_bitmap, PMP_N_REG, 0x1);
 }
 
-static pmpreg_id get_conseq_free_reg_idx()
+static __attribute__ ((noinline)) pmpreg_id get_conseq_free_reg_idx()
 {
   return search_rightmost_unset(reg_bitmap, PMP_N_REG, 0x3);
 }
@@ -306,7 +306,7 @@ static enum ipi_type {IPI_PMP_INVALID=-1,
                       IPI_PMP_SET,
                       IPI_PMP_UNSET} ipi_type = IPI_PMP_INVALID;
 
-void handle_pmp_ipi(uintptr_t* regs, uintptr_t dummy, uintptr_t mepc)
+void __attribute__ ((noinline)) handle_pmp_ipi(uintptr_t* regs, uintptr_t dummy, uintptr_t mepc)
 {
   pmp_ipi_update();
   return;
@@ -319,7 +319,7 @@ void handle_pmp_ipi(uintptr_t* regs, uintptr_t dummy, uintptr_t mepc)
  * On a failed addr + size overflow, we return failure, since this
  * cannot be a valid addr and size anyway.
  */
-static int detect_region_overlap(uintptr_t addr, uintptr_t size)
+static __attribute__ ((noinline)) int detect_region_overlap(uintptr_t addr, uintptr_t size)
 {
   void* epm_base;
   size_t epm_size;

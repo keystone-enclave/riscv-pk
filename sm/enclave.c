@@ -14,8 +14,6 @@
 #define ENCL_TIME_SLICE 100000
 
 struct enclave enclaves[ENCL_MAX];
-
-
 #define ENCLAVE_EXISTS(eid) (eid >= 0 && eid < ENCL_MAX && enclaves[eid].state >= 0)
 
 static spinlock_t encl_lock = SPINLOCK_INIT;
@@ -469,6 +467,8 @@ enclave_ret_code create_enclave(struct keystone_sbi_create create_args)
   enclaves[eid].params = params;
   enclaves[eid].pa_params = pa_params;
 
+  init_mailbox(&enclaves[eid].mailbox); 
+
   /* Init enclave state (regs etc) */
   clean_state(&enclaves[eid].threads[0]);
 
@@ -715,6 +715,7 @@ enclave_ret_code attest_enclave(uintptr_t report_ptr, uintptr_t data, uintptr_t 
   return ENCLAVE_SUCCESS;
 }
 
+/*
 enclave_ret_code mailbox_register(enclave_id eid, uintptr_t mailbox){
   int ret; 
   struct mailbox *mbox = (struct mailbox *) mailbox; 
@@ -727,7 +728,57 @@ enclave_ret_code mailbox_register(enclave_id eid, uintptr_t mailbox){
   return ENCLAVE_SUCCESS; 
 
 
+}*/ 
+
+/* Initializes mailbox and registers it to the SM */
+void init_mailbox(struct mailbox* mailbox){
+   mailbox->capacity = MAILBOX_SIZE;
+   mailbox->size = 0;
+   mailbox->lock.lock = 0;
+   memset(mailbox->data, 0, MAILBOX_SIZE);
 }
+
+enclave_ret_code recv_msg(enclave_id eid, size_t uid, void *buf, size_t msg_size) {
+	struct mailbox* mailbox = &enclaves[eid].mailbox;
+	uint8_t *ptr = (uint8_t *) &enclaves[eid].mailbox.data;
+  	struct mailbox_header *hdr = (struct mailbox_header *) ptr;  
+  	size_t size = 0; 
+  	size_t hdr_size = 0; 
+
+	spinlock_lock(&(mailbox->lock));
+
+	while (size < mailbox->size){
+
+		hdr_size = hdr->size; 
+
+     	if(hdr->send_uid == uid){
+        	//Check if the message is bigger than the buffer. 
+        	if(hdr->size > msg_size){
+            		spinlock_unlock(&(mailbox->lock));
+            		return 1; 
+		}
+
+        	memcpy(buf, hdr->data, msg_size); 
+
+        	//Clear the message from the mailbox
+        	memset(hdr->data, 0, hdr->size);
+        	memset(hdr, 0, sizeof(struct mailbox_header));
+        	memcpy(hdr, ptr + hdr_size + sizeof(struct mailbox_header), mailbox->size - (size + sizeof(struct mailbox_header) + hdr_size)); 
+
+        	mailbox->size -= hdr_size + sizeof(struct mailbox_header); 
+        	spinlock_unlock(&(mailbox->lock));
+		return 0; 
+     	}
+  		size += sizeof(struct mailbox_header) + hdr_size;
+    		ptr += sizeof(struct mailbox_header) + hdr_size;    
+    		hdr = (struct mailbox_header *) ptr;
+	}
+	//Release lock on mailbox 
+  	spinlock_unlock(&(mailbox->lock));
+	return 1;
+
+}
+
 
 enclave_ret_code send_msg(enclave_id eid, size_t uid, void *buf, size_t msg_size){
    struct mailbox *mbox = (void *) 0; 
@@ -735,14 +786,14 @@ enclave_ret_code send_msg(enclave_id eid, size_t uid, void *buf, size_t msg_size
    for(int eid=0; eid<ENCL_MAX; eid++)
   {
     if(ENCLAVE_EXISTS(eid) && enclaves[eid].uid == uid){
-      mbox = enclaves[eid].mailbox;
+      mbox = &enclaves[eid].mailbox;
       break; 
     }
   }
 
    //Check if the mailbox is registered
    if(!mbox){
-      return ENCLAVE_NO_MAILBOX;  
+      return 1;  
    }
 
    spinlock_lock(&(mbox->lock));
@@ -750,11 +801,11 @@ enclave_ret_code send_msg(enclave_id eid, size_t uid, void *buf, size_t msg_size
    //Check if the message + header can fit in the mailbox. 
    if(mbox->capacity - mbox->size < msg_size + sizeof(struct mailbox_header)){
       spinlock_unlock(&(mbox->lock));
-      return ENCLAVE_MAILBOX_FULL; 
+      return 0; 
    }
 
    struct mailbox_header hdr;
-   hdr.send_uid = uid; 
+   hdr.send_uid = enclaves[eid].uid; 
    hdr.size = msg_size;
  
    memcpy(mbox->data + mbox->size, &hdr, sizeof(hdr));
@@ -763,5 +814,5 @@ enclave_ret_code send_msg(enclave_id eid, size_t uid, void *buf, size_t msg_size
 
    spinlock_unlock(&(mbox->lock));
    
-   return ENCLAVE_SUCCESS;
+   return 0;
 }

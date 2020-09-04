@@ -62,6 +62,16 @@ struct enclave_region
   enum enclave_region_type type;
 };
 
+struct mailbox
+{
+  size_t capacity;
+  size_t size;
+  uint8_t enabled;
+  size_t uid;
+  spinlock_t lock;
+  uint8_t data[MAILBOX_SIZE];
+};
+
 /* enclave metadata */
 struct enclave
 {
@@ -87,8 +97,7 @@ struct enclave
   struct thread_state threads[MAX_ENCL_THREADS];
 
   struct platform_enclave_data ped;
-
-  struct mailbox *mailbox; 
+  struct mailbox mailbox; 
 };
 
 /* attestation reports */
@@ -112,16 +121,6 @@ struct report
   byte dev_public_key[PUBLIC_KEY_SIZE];
 };
 
-struct mailbox
-{
-  size_t capacity;
-  size_t size;
-  uint8_t enabled;
-  size_t uid; 
-  spinlock_t lock;
-  uint8_t data[MAILBOX_SIZE];
-};
-
 struct mailbox_header
 {
   size_t send_uid;
@@ -141,10 +140,12 @@ enclave_ret_code stop_enclave(uintptr_t* regs, uint64_t request, enclave_id eid)
 enclave_ret_code attest_enclave(uintptr_t report, uintptr_t data, uintptr_t size, enclave_id eid);
 enclave_ret_code mailbox_register(enclave_id eid, uintptr_t mailbox);
 enclave_ret_code send_msg(enclave_id eid, size_t uid, void *buf, size_t msg_size);
+enclave_ret_code recv_msg(enclave_id eid, size_t uid, void *buf, size_t msg_size);
 /* attestation and virtual mapping validation */
 enclave_ret_code validate_and_hash_enclave(struct enclave* enclave);
 // TODO: These functions are supposed to be internal functions.
 void enclave_init_metadata();
+void init_mailbox(struct mailbox *mailbox);
 enclave_ret_code copy_from_host(void* source, void* dest, size_t size);
 int get_enclave_region_index(enclave_id eid, enum enclave_region_type type);
 uintptr_t get_enclave_region_base(enclave_id eid, int memid);

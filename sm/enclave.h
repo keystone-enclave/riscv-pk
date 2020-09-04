@@ -138,7 +138,6 @@ enclave_ret_code resume_enclave(uintptr_t* regs, enclave_id eid);
 enclave_ret_code exit_enclave(uintptr_t* regs, unsigned long retval, enclave_id eid);
 enclave_ret_code stop_enclave(uintptr_t* regs, uint64_t request, enclave_id eid);
 enclave_ret_code attest_enclave(uintptr_t report, uintptr_t data, uintptr_t size, enclave_id eid);
-enclave_ret_code mailbox_register(enclave_id eid, uintptr_t mailbox);
 enclave_ret_code send_msg(enclave_id eid, size_t uid, void *buf, size_t msg_size);
 enclave_ret_code recv_msg(enclave_id eid, size_t uid, void *buf, size_t msg_size);
 /* attestation and virtual mapping validation */

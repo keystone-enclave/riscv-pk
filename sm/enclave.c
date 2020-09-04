@@ -715,22 +715,7 @@ enclave_ret_code attest_enclave(uintptr_t report_ptr, uintptr_t data, uintptr_t 
   return ENCLAVE_SUCCESS;
 }
 
-/*
-enclave_ret_code mailbox_register(enclave_id eid, uintptr_t mailbox){
-  int ret; 
-  struct mailbox *mbox = (struct mailbox *) mailbox; 
-  
-  if(ENCLAVE_EXISTS(eid)){
-      enclaves[eid].mailbox = mbox; 	
-      enclaves[eid].mailbox->uid = enclaves[eid].uid; 
-      ret = 1;
-  } 
-  return ENCLAVE_SUCCESS; 
-
-
-}*/ 
-
-/* Initializes mailbox and registers it to the SM */
+/* Initializes enclave mailbox */
 void init_mailbox(struct mailbox* mailbox){
    mailbox->capacity = MAILBOX_SIZE;
    mailbox->size = 0;

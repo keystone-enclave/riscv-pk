@@ -194,6 +194,12 @@ send_ipi:
     case SBI_SM_MAILBOX_SEND:
       retval = mcall_sm_recv_msg(arg0, arg1, arg2);
       break;  
+    case SBI_SM_MEM_SHARE:
+      retval = mcall_sm_mem_share(arg0); 
+      break;
+    case SBI_SM_MEM_STOP:
+      retval = mcall_sm_mem_stop(arg0);
+      break;
     case SBI_SM_NOT_IMPLEMENTED:
       retval = mcall_sm_not_implemented(regs, arg0);
       break;
@@ -283,6 +289,12 @@ send_ipi:
     case SBI_SM_MAILBOX_RECV:
       retval = mcall_sm_recv_msg(arg0, arg1, arg2);
       break;
+    case SBI_SM_MEM_SHARE: 
+      retval = mcall_sm_mem_share(arg0);
+      break;
+    case SBI_SM_MEM_STOP:
+      retval = mcall_sm_mem_stop(arg0); 
+      break; 
     case SBI_SM_NOT_IMPLEMENTED:
       retval = mcall_sm_not_implemented(regs, arg0);
       break;

@@ -801,3 +801,59 @@ enclave_ret_code send_msg(enclave_id eid, size_t uid, void *buf, size_t msg_size
    
    return 0;
 }
+
+enclave_ret_code mem_share(enclave_id eid, size_t uid){
+   struct enclave *grantee = (void *) 0; 
+
+   //Find the enclave with the corresponding uid
+   for(int eid=0; eid<ENCL_MAX; eid++)
+  {
+    if(ENCLAVE_EXISTS(eid) && enclaves[eid].uid == uid){
+      grantee = &enclaves[eid];
+      break;
+    }
+  }   	
+
+  if(!grantee){
+      return 1; 
+  }
+
+  //Set PMP of the granter enclave with grantee
+  int memid;
+  for(memid=0; memid < ENCLAVE_REGIONS_MAX; memid++) {
+    if(enclaves[eid].regions[memid].type != REGION_INVALID) {
+      pmp_set(grantee->regions[memid].pmp_rid, PMP_ALL_PERM);
+    }
+  }
+
+  return 0; 
+}
+
+
+enclave_ret_code mem_stop(enclave_id eid, size_t uid){
+   struct enclave *granter = (void *) 0;
+
+   //Find the enclave with the corresponding uid
+   for(int eid=0; eid<ENCL_MAX; eid++)
+  {
+    if(ENCLAVE_EXISTS(eid) && enclaves[eid].uid == uid){
+      granter = &enclaves[eid];
+      break;
+    }
+  }
+
+  if(!granter){
+      return 1;
+  }
+
+  //Set PMP of the granter enclave turned off
+  int memid;
+  for(memid=0; memid < ENCLAVE_REGIONS_MAX; memid++) {
+    if(granter->regions[memid].type != REGION_INVALID) {
+      pmp_set(enclaves[eid].regions[memid].pmp_rid, REGION_INVALID);
+    }
+  }
+
+
+  return 0; 
+}

@@ -23,6 +23,8 @@
 #define SBI_SM_UID  		 109
 #define SBI_SM_MAILBOX_SEND      110
 #define SBI_SM_MAILBOX_RECV      111
+#define SBI_SM_MEM_SHARE	 112 
+#define SBI_SM_MEM_STOP          113 
 #define SBI_SM_EXIT_ENCLAVE     1101
 #define SBI_SM_CALL_PLUGIN      1000
 #define SBI_SM_NOT_IMPLEMENTED  1111

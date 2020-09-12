@@ -140,6 +140,8 @@ enclave_ret_code stop_enclave(uintptr_t* regs, uint64_t request, enclave_id eid)
 enclave_ret_code attest_enclave(uintptr_t report, uintptr_t data, uintptr_t size, enclave_id eid);
 enclave_ret_code send_msg(enclave_id eid, size_t uid, void *buf, size_t msg_size);
 enclave_ret_code recv_msg(enclave_id eid, size_t uid, void *buf, size_t msg_size);
+enclave_ret_code mem_share(enclave_id eid, size_t uid);
+enclave_ret_code mem_stop(enclave_id eid, size_t uid); 
 /* attestation and virtual mapping validation */
 enclave_ret_code validate_and_hash_enclave(struct enclave* enclave);
 // TODO: These functions are supposed to be internal functions.

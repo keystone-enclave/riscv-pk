@@ -20,7 +20,7 @@
 #define SBI_SM_STOP_ENCLAVE      106
 #define SBI_SM_RESUME_ENCLAVE    107
 #define SBI_SM_RANDOM            108
-#define SBI_SM_MAILBOX_REGISTER  109
+#define SBI_SM_UID  		 109
 #define SBI_SM_MAILBOX_SEND      110
 #define SBI_SM_MAILBOX_RECV      111
 #define SBI_SM_EXIT_ENCLAVE     1101

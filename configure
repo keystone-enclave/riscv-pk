@@ -671,7 +671,6 @@ ac_user_opts='
 enable_option_checking
 enable_stow
 enable_32bit
-enable_opt
 enable_print_device_tree
 enable_optional_subprojects
 enable_vm
@@ -1313,7 +1312,6 @@ Optional Features:
   --enable-FEATURE[=ARG]  include FEATURE [ARG=yes]
   --enable-stow           Enable stow-based install
   --enable-32bit          Build a 32-bit pk
-  --enable-opt            Build with optimizations
   --enable-print-device-tree
                           Print DTS when booting
   --enable-optional-subprojects
@@ -4069,7 +4067,7 @@ fi
 # Set compiler flags
 #-------------------------------------------------------------------------
 
-default_CFLAGS="-Wall -Werror -D__NO_INLINE__ -mcmodel=medany -std=gnu99 -Wno-unused -Wno-attributes -fno-delete-null-pointer-checks -fno-strict-aliasing"
+default_CFLAGS="-Wall -Werror -D__NO_INLINE__ -mcmodel=medany -O2 -std=gnu99 -Wno-unused -Wno-attributes -fno-delete-null-pointer-checks -fno-strict-aliasing"
 
 # Check whether --enable-32bit was given.
 if test "${enable_32bit+set}" = set; then :
@@ -4090,28 +4088,6 @@ case "${BUILD_32BIT}" in
 	CFLAGS="$default_CFLAGS"
 	LDFLAGS=
 	install_subdir=$host_alias
-	;;
-esac
-
-
-# Check whether --enable-opt was given.
-if test "${enable_opt+set}" = set; then :
-  enableval=$enable_opt; BUILD_OPT=$enableval
-else
-  BUILD_OPT=no
-fi
-
-
-case "${BUILD_OPT}" in
-  no|default|0)
-	echo "Building without optimizations"
-	CFLAGS="$CFLAGS -O0"
-	RUST_OPT="debug"
-	;;
-  *)
-	echo "Building at optimization level ${BUILD_OPT}"
-	CFLAGS="$CFLAGS -O${BUILD_OPT}"
-	RUST_OPT="release"
 	;;
 esac
 

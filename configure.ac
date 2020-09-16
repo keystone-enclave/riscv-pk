@@ -78,7 +78,7 @@ AC_ARG_VAR(RISCV, [top-level RISC-V install directory])
 # Set compiler flags
 #-------------------------------------------------------------------------
 
-default_CFLAGS="-Wall -Werror -D__NO_INLINE__ -mcmodel=medany -std=gnu99 -Wno-unused -Wno-attributes -fno-delete-null-pointer-checks -fno-strict-aliasing"
+default_CFLAGS="-Wall -Werror -D__NO_INLINE__ -mcmodel=medany -O2 -std=gnu99 -Wno-unused -Wno-attributes -fno-delete-null-pointer-checks -fno-strict-aliasing"
 
 AC_ARG_ENABLE([32bit],
 	AS_HELP_STRING([--enable-32bit], [Build a 32-bit pk]),
@@ -96,25 +96,6 @@ case "${BUILD_32BIT}" in
 	CFLAGS="$default_CFLAGS"
 	LDFLAGS=
 	install_subdir=$host_alias
-	;;
-esac
-
-
-AC_ARG_ENABLE([opt],
-	AS_HELP_STRING([--enable-opt], [Build with optimizations]),
-	BUILD_OPT=$enableval,
-	BUILD_OPT=no)
-
-case "${BUILD_OPT}" in
-  no|default|0)
-	echo "Building without optimizations"
-	CFLAGS="$CFLAGS -O0"
-	RUST_OPT="debug"
-	;;
-  *)
-	echo "Building at optimization level ${BUILD_OPT}"
-	CFLAGS="$CFLAGS -O${BUILD_OPT}"
-	RUST_OPT="release"
 	;;
 esac
 

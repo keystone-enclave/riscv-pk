@@ -870,14 +870,18 @@ enclave_ret_code mem_stop(enclave_id eid, size_t uid){
   }
 
   //Set PMP of the granter enclave turned off
-  int memid;
-  int count = 2; 
-  for(memid=0; memid < ENCLAVE_REGIONS_MAX; memid++) {
-    if(granter->regions[memid].type == REGION_INVALID) {
-      
-      enclaves[eid].regions[count].pmp_rid = 0;
-      enclaves[eid].regions[count].type = REGION_INVALID;
-      pmp_unset(granter->regions[memid].pmp_rid);
+  int granter_memid;
+
+  for(granter_memid=0; granter_memid < ENCLAVE_REGIONS_MAX; granter_memid++) {
+    if(granter->regions[granter_memid].type == REGION_EPM) {
+      for(int memid = 0; memid < ENCLAVE_REGIONS_MAX; memid++){
+	  if(enclaves[eid].regions[memid].pmp_rid == granter->regions[granter_memid].pmp_rid){
+	     pmp_unset(granter->regions[granter_memid].pmp_rid);
+	     enclaves[eid].regions[memid].pmp_rid = 0; 
+	     enclaves[eid].regions[memid].type = REGION_INVALID;
+	     break; 
+	}
+      }
     }
   }
 

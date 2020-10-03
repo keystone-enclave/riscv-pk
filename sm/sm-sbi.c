@@ -150,7 +150,7 @@ uintptr_t mcall_sm_recv_msg(size_t uid, uintptr_t buf, size_t msg_size){
 }
 
 
-uintptr_t mcall_sm_mem_share(size_t uid){
+uintptr_t mcall_sm_mem_share(size_t uid, uintptr_t enclave_addr, uintptr_t enclave_size){
    
   /* only an enclave itself can call this SBI */
   enclave_ret_code ret;
@@ -159,7 +159,7 @@ uintptr_t mcall_sm_mem_share(size_t uid){
      return ENCLAVE_SBI_PROHIBITED;
   }
 
-  ret = mem_share(cpu_get_enclave_id(), uid); 
+  ret = mem_share(cpu_get_enclave_id(), uid, (void *) enclave_addr, (void *) enclave_size); 
 
   return ret; 
 }
@@ -178,6 +178,18 @@ uintptr_t mcall_sm_mem_stop(size_t uid){
   return ret;
 }
 
+uintptr_t mcall_sm_uid(uintptr_t uid){
+  /* only an enclave itself can call this SBI */
+  enclave_ret_code ret;
+
+  if (!cpu_is_enclave_context()) {
+     return ENCLAVE_SBI_PROHIBITED;
+ }
+
+  ret = get_uid(cpu_get_enclave_id(), (size_t *) uid);
+  return ret; 
+
+}
 
 /* TODO: this should be removed in the future. */
 uintptr_t mcall_sm_not_implemented(uintptr_t* encl_regs, unsigned long cause)

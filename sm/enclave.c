@@ -81,6 +81,7 @@ static inline enclave_ret_code context_switch_to_enclave(uintptr_t* regs,
   int memid;
   for(memid=0; memid < ENCLAVE_REGIONS_MAX; memid++) {
     if(enclaves[eid].regions[memid].type != REGION_INVALID) {
+      //printm("[sm] in switch enclave eid: %u, enclaves[eid].regions[memid].type: %p\n", eid, (void *) enclaves[eid].regions[memid].type); 
       pmp_set(enclaves[eid].regions[memid].pmp_rid, PMP_ALL_PERM);
     }
   }
@@ -802,14 +803,16 @@ enclave_ret_code send_msg(enclave_id eid, size_t uid, void *buf, size_t msg_size
    return 0;
 }
 
-enclave_ret_code mem_share(enclave_id eid, size_t uid){
+enclave_ret_code mem_share(enclave_id eid, size_t uid, uintptr_t *enclave_addr, uintptr_t *enclave_size){
    struct enclave *grantee = (void *) 0; 
-
+   int grantee_eid; 
+   //return ENCLAVE_SUCCESS; 
    //Find the enclave with the corresponding uid
    for(int eid=0; eid<ENCL_MAX; eid++)
   {
     if(ENCLAVE_EXISTS(eid) && enclaves[eid].uid == uid){
       grantee = &enclaves[eid];
+      grantee_eid = eid; 
       break;
     }
   }   	
@@ -821,14 +824,34 @@ enclave_ret_code mem_share(enclave_id eid, size_t uid){
   //Set PMP of the granter enclave with grantee
   int memid;
   for(memid=0; memid < ENCLAVE_REGIONS_MAX; memid++) {
-    if(enclaves[eid].regions[memid].type != REGION_INVALID) {
-      pmp_set(grantee->regions[memid].pmp_rid, PMP_ALL_PERM);
+    if(enclaves[eid].regions[memid].type == REGION_EPM) {
+      /* Find empty memory region slot in grantee */
+      for(int grantee_memid = 0; grantee_memid < ENCLAVE_REGIONS_MAX; grantee_memid++){
+	if(grantee->regions[grantee_memid].type == REGION_INVALID){
+		grantee->regions[grantee_memid].pmp_rid = enclaves[eid].regions[memid].pmp_rid;
+		grantee->regions[grantee_memid].type = enclaves[eid].regions[memid].type;
+		break;
+	}
+      }
     }
   }
+
+  if(enclave_addr)
+     *enclave_addr = enclaves[eid].pa_params.dram_base;
+
+  if(enclave_size)
+     *enclave_size = enclaves[eid].pa_params.dram_size;
 
   return 0; 
 }
 
+enclave_ret_code get_uid(enclave_id eid, size_t *uid){
+  
+  if(uid)
+      *uid = enclaves[eid].uid;
+
+  return ENCLAVE_SUCCESS; 
+}
 
 enclave_ret_code mem_stop(enclave_id eid, size_t uid){
    struct enclave *granter = (void *) 0;
@@ -848,9 +871,13 @@ enclave_ret_code mem_stop(enclave_id eid, size_t uid){
 
   //Set PMP of the granter enclave turned off
   int memid;
+  int count = 2; 
   for(memid=0; memid < ENCLAVE_REGIONS_MAX; memid++) {
-    if(granter->regions[memid].type != REGION_INVALID) {
-      pmp_set(enclaves[eid].regions[memid].pmp_rid, REGION_INVALID);
+    if(granter->regions[memid].type == REGION_INVALID) {
+      
+      enclaves[eid].regions[count].pmp_rid = 0;
+      enclaves[eid].regions[count].type = REGION_INVALID;
+      pmp_unset(granter->regions[memid].pmp_rid);
     }
   }
 

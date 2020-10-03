@@ -121,20 +121,18 @@ struct report
   byte dev_public_key[PUBLIC_KEY_SIZE];
 };
 
-<<<<<<< HEAD
 struct mailbox_header
 {
   size_t send_uid;
   size_t size;
   uint8_t data[0];
-=======
+};
 /* sealing key structure */
 #define SEALING_KEY_SIZE 128
 struct sealing_key
 {
   uint8_t key[SEALING_KEY_SIZE];
   uint8_t signature[SIGNATURE_SIZE];
->>>>>>> f855a56f919142a0fa9987be79a3c1ad09384e66
 };
 
 /*** SBI functions & external functions ***/

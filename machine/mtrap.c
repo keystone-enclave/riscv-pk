@@ -17,6 +17,12 @@
 #ifdef SM_ENABLED
 #include "sm.h"
 #endif
+
+hls_t *get_hls()
+{
+  return HLS();
+}
+
 void __attribute__((noreturn)) bad_trap(uintptr_t* regs, uintptr_t dummy, uintptr_t mepc)
 {
   die("machine mode: unhandlable trap %d @ %p", read_csr(mcause), mepc);
@@ -185,6 +191,9 @@ send_ipi:
     case SBI_SM_ATTEST_ENCLAVE:
       retval = mcall_sm_attest_enclave(arg0, arg1, arg2);
       break;
+    case SBI_SM_GET_SEALING_KEY:
+      retval = mcall_sm_get_sealing_key(arg0, arg1, arg2);
+      break;
     case SBI_SM_RANDOM:
       retval = mcall_sm_random();
       break;
@@ -279,6 +288,9 @@ send_ipi:
       break;
     case SBI_SM_ATTEST_ENCLAVE:
       retval = mcall_sm_attest_enclave(arg0, arg1, arg2);
+      break;
+    case SBI_SM_GET_SEALING_KEY:
+      retval = mcall_sm_get_sealing_key(arg0, arg1, arg2);
       break;
     case SBI_SM_RANDOM:
       retval = mcall_sm_random();

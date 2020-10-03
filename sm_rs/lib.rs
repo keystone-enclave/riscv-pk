@@ -1,4 +1,5 @@
 #![no_std]
+#![feature(concat_idents)]
 #[deny(warnings)]
 
 #[cfg(test)]
@@ -8,6 +9,7 @@ pub mod attest;
 pub mod cpu;
 pub mod sm;
 pub mod enclave;
+mod mprv;
 mod crypto;
 mod pmp;
 

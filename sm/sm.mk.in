@@ -17,11 +17,14 @@ sm_c_srcs = \
   ed25519/fe.c \
   ed25519/ge.c \
   ed25519/sc.c \
+  hkdf_sha3_512/hkdf_sha3_512.c \
+  hmac_sha3/hmac_sha3.c \
   platform/@TARGET_PLATFORM@/@TARGET_PLATFORM@.c \
 	plugins/plugins.c \
 
 sm_asm_srcs = \
-   trap.S \
+  trap.S \
+  mprv.S \
 
 sm_test_srcs =
 

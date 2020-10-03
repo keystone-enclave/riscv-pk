@@ -16,6 +16,7 @@
 #define SBI_SM_CREATE_ENCLAVE    101
 #define SBI_SM_DESTROY_ENCLAVE   102
 #define SBI_SM_ATTEST_ENCLAVE    103
+#define SBI_SM_GET_SEALING_KEY   104
 #define SBI_SM_RUN_ENCLAVE       105
 #define SBI_SM_STOP_ENCLAVE      106
 #define SBI_SM_RESUME_ENCLAVE    107
@@ -43,6 +44,7 @@
 #define ENCLAVE_NO_FREE_RESOURCE            13
 #define ENCLAVE_SBI_PROHIBITED              14
 #define ENCLAVE_ILLEGAL_PTE                 15
+#define ENCLAVE_SM_NOT_READY                16
 
 #define PMP_UNKNOWN_ERROR                   -1U
 #define PMP_SUCCESS                         0
@@ -93,7 +95,7 @@ struct keystone_sbi_create
   uintptr_t free_paddr;
 
   struct runtime_va_params_t params;
-  unsigned int* eid_pptr;
+  uint64_t* eid_vptr;
 };
 
 int osm_pmp_set(uint8_t perm);

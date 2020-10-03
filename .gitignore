@@ -11,3 +11,4 @@ autom4te.cache/
 *~
 target/
 Cargo.lock
+test-build/

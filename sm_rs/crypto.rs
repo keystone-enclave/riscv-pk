@@ -4,7 +4,10 @@ use core::slice;
 use util::ctypes::*;
 use crate::bindings::*;
 
-pub const HASH_SIZE: usize = MDSIZE as usize;
+pub const SIGNATURE_SIZE: usize = crate::bindings::SIGNATURE_SIZE as usize;
+pub const PRIVKEY_SIZE: usize = crate::bindings::PRIVATE_KEY_SIZE as usize;
+pub const PUBKEY_SIZE: usize = crate::bindings::PUBLIC_KEY_SIZE as usize;
+pub const HASH_SIZE: usize = crate::bindings::MDSIZE as usize;
 
 pub struct Hasher {
     _inner: hash_ctx
@@ -40,11 +43,7 @@ impl Hasher {
 
 
 
-const SIGN_SIZE: usize = SIGNATURE_SIZE as usize;
-const PUBKEY_SIZE: usize = PUBLIC_KEY_SIZE as usize;
-const PRIVKEY_SIZE: usize = PRIVATE_KEY_SIZE as usize;
-
-pub fn _sign<T: Copy>(sig_out: &mut [u8; SIGN_SIZE], data: &T, pubkey: &[u8], privkey: &[u8]) {
+pub fn _sign<T: Copy>(sig_out: &mut [u8; SIGNATURE_SIZE], data: &T, pubkey: &[u8], privkey: &[u8]) {
     let data_bytes_ptr = data as *const T as *const u8;
     let data_bytes = unsafe {
         slice::from_raw_parts(data_bytes_ptr, size_of::<T>())
@@ -52,12 +51,26 @@ pub fn _sign<T: Copy>(sig_out: &mut [u8; SIGN_SIZE], data: &T, pubkey: &[u8], pr
     sign_bytes(sig_out, data_bytes, pubkey, privkey);
 }
 
-pub fn sign_bytes(sig_out: &mut [u8; SIGN_SIZE], data: &[u8], pubkey: &[u8], privkey: &[u8]) {
+pub fn sign_bytes(sig_out: &mut [u8; SIGNATURE_SIZE], data: &[u8], pubkey: &[u8], privkey: &[u8]) {
     assert_eq!(pubkey.len(), PUBKEY_SIZE, "Attempted to sign with bad pubkey size!");
     assert_eq!(privkey.len(), PRIVKEY_SIZE, "Attempted to sign with bad privkey size!");
 
     unsafe {
         ed25519_sign(sig_out.as_mut_ptr(), data.as_ptr(), data.len(), pubkey.as_ptr(), privkey.as_ptr());
+    }
+}
+
+pub fn kdf (
+    salt: &[u8],
+    ikm: &[u8],
+    info: &[u8],
+    okm: &mut [u8],
+) -> i32 {
+    unsafe {
+        hkdf_sha3_512(salt.as_ptr(), salt.len() as i32,
+                      ikm.as_ptr(), ikm.len() as i32,
+                      info.as_ptr(), info.len() as i32,
+                      okm.as_mut_ptr(), okm.len() as i32)
     }
 }
 

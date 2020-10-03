@@ -121,11 +121,20 @@ struct report
   byte dev_public_key[PUBLIC_KEY_SIZE];
 };
 
+<<<<<<< HEAD
 struct mailbox_header
 {
   size_t send_uid;
   size_t size;
   uint8_t data[0];
+=======
+/* sealing key structure */
+#define SEALING_KEY_SIZE 128
+struct sealing_key
+{
+  uint8_t key[SEALING_KEY_SIZE];
+  uint8_t signature[SIGNATURE_SIZE];
+>>>>>>> f855a56f919142a0fa9987be79a3c1ad09384e66
 };
 
 /*** SBI functions & external functions ***/
@@ -149,8 +158,9 @@ enclave_ret_code validate_and_hash_enclave(struct enclave* enclave);
 // TODO: These functions are supposed to be internal functions.
 void enclave_init_metadata();
 void init_mailbox(struct mailbox *mailbox);
-enclave_ret_code copy_from_host(void* source, void* dest, size_t size);
+enclave_ret_code copy_enclave_create_args(uintptr_t src, struct keystone_sbi_create* dest);
 int get_enclave_region_index(enclave_id eid, enum enclave_region_type type);
 uintptr_t get_enclave_region_base(enclave_id eid, int memid);
 uintptr_t get_enclave_region_size(enclave_id eid, int memid);
+enclave_ret_code get_sealing_key(uintptr_t seal_key, uintptr_t key_ident, size_t key_ident_size, enclave_id eid);
 #endif

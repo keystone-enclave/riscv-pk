@@ -21,14 +21,7 @@ uintptr_t mcall_sm_create_enclave(uintptr_t create_args)
     return ENCLAVE_SBI_PROHIBITED;
   }
 
-  ret = copy_from_host((struct keystone_sbi_create*)create_args,
-                       &create_args_local,
-                       sizeof(struct keystone_sbi_create));
-
-  if( ret != ENCLAVE_SUCCESS )
-    return ret;
-
-  ret = create_enclave(create_args_local);
+  ret = create_enclave(create_args);
   return ret;
 }
 
@@ -105,6 +98,22 @@ uintptr_t mcall_sm_attest_enclave(uintptr_t report, uintptr_t data, uintptr_t si
 
   ret = attest_enclave(report, data, size, cpu_get_enclave_id());
   return ret;
+}
+
+uintptr_t mcall_sm_get_sealing_key(uintptr_t sealing_key, uintptr_t key_ident,
+                                   size_t key_ident_size)
+{
+  size_t info_buffer_size = key_ident_size + MDSIZE;
+  unsigned char info_buffer[info_buffer_size];
+
+  /* only an enclave itself can call this SBI */
+  if (!cpu_is_enclave_context()) {
+    return ENCLAVE_SBI_PROHIBITED;
+  }
+
+  return get_sealing_key(sealing_key, key_ident, key_ident_size,
+                         (uintptr_t)info_buffer, info_buffer_size,
+                         cpu_get_enclave_id());
 }
 
 uintptr_t mcall_sm_random()

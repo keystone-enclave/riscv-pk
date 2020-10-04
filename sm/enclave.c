@@ -82,7 +82,6 @@ static inline enclave_ret_code context_switch_to_enclave(uintptr_t* regs,
   int memid;
   for(memid=0; memid < ENCLAVE_REGIONS_MAX; memid++) {
     if(enclaves[eid].regions[memid].type != REGION_INVALID) {
-      //printm("[sm] in switch enclave eid: %u, enclaves[eid].regions[memid].type: %p\n", eid, (void *) enclaves[eid].regions[memid].type); 
       pmp_set(enclaves[eid].regions[memid].pmp_rid, PMP_ALL_PERM);
     }
   }

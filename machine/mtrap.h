@@ -46,6 +46,8 @@ typedef struct {
   volatile uintptr_t* plic_s_ie;
 } hls_t;
 
+hls_t *get_hls();
+
 #define MACHINE_STACK_TOP() ({ \
   register uintptr_t sp asm ("sp"); \
   (void*)((sp + RISCV_PGSIZE) & -RISCV_PGSIZE); })

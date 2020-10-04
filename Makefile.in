@@ -198,8 +198,8 @@ $(2)_crate_libs := $$(addprefix lib, $$(addsuffix .a, $$($(2)_crates)))
 
 .PHONY: $$($(2)_crates)
 
-ifeq (debug,release)
-	RUST_OPT_FLAG := --release
+ifeq (@RUST_OPT@,release)
+  RUST_OPT_FLAG := --release
 endif
 
 $$($(2)_provides_libs) : lib$(1).a
@@ -212,7 +212,9 @@ $$($(2)_crate_libs) : lib%.a : %
 	$(eval RUST_TARGET_NAME := $(shell basename $(RUST_TARGET) .json))
 	cd $(src_dir)/$(2) ;\
 	  export CFLAGS=$(PLATFORM_FLAG) ;\
-	  cargo +nightly xrustc --verbose --target $(RUST_TARGET) $(RUST_OPT_FLAG) --target-dir $(_PWD)/$$< -- -Clto
+	  export CARGO_PROFILE_RELEASE_LTO=true ;\
+	  export CARGO_PROFILE_DEBUG_LTO=true ;\
+	  cargo +nightly xbuild --verbose --target $(RUST_TARGET) $(RUST_OPT_FLAG) --target-dir $(_PWD)/$$<
 	cp $$</$(RUST_TARGET_NAME)/@RUST_OPT@/lib$$(subst -,_,$$<).a $$@
 
 $(2)_junk += $$($(2)_c_objs) $$($(2)_c_deps) $$($(2)_asm_objs)

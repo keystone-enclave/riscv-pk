@@ -5,4 +5,3 @@
 #include "enclave.h"
 #include "page.h"
 #include "platform.h"
-#include "enclave_copy.h"

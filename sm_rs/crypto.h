@@ -8,6 +8,7 @@
 #include <stdint.h>
 #include "sha3/sha3.h"
 #include "ed25519/ed25519.h"
+#include "hkdf_sha3_512/hkdf_sha3_512.h"
 
 typedef sha3_ctx_t hash_ctx;
 #define MDSIZE  64
@@ -17,10 +18,5 @@ typedef sha3_ctx_t hash_ctx;
 #define PUBLIC_KEY_SIZE 32
 
 typedef unsigned char byte;
-
-extern byte sm_hash[MDSIZE];
-extern byte sm_signature[SIGNATURE_SIZE];
-extern byte sm_public_key[PUBLIC_KEY_SIZE];
-extern byte sm_private_key[PRIVATE_KEY_SIZE];
 
 #endif /* crypto.h */

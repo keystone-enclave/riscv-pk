@@ -11,14 +11,16 @@ pub enum Priority {
 
 pub struct PmpRegion {
     region: c_int,
+    should_unset: bool,
+    should_unset_global: bool,
     should_free: bool,
 }
 
 impl PmpRegion {
-    pub fn reserve(base: usize, size: usize, prio: Priority) -> Result<Self, c_int> {
+    pub fn reserve(base: usize, size: usize, prio: Priority, allow_overlap: bool) -> Result<Self, c_int> {
         let region = unsafe {
             let mut region = 0;
-            let err = pmp_region_init_atomic(base, size as u64, prio as u32, &mut region, 0);
+            let err = pmp_region_init_atomic(base, size as u64, prio as u32, &mut region, allow_overlap as c_int);
             if err != 0 {
                 return Err(err);
             }
@@ -27,6 +29,8 @@ impl PmpRegion {
 
         Ok(Self {
             region,
+            should_unset: false,
+            should_unset_global: false,
             should_free: true,
         })
     }
@@ -50,6 +54,7 @@ impl PmpRegion {
     pub fn unset_perm(&mut self) -> Result<(), c_int> {
         let err = unsafe { pmp_unset(self.region) };
         if err == 0 {
+            self.should_unset = true;
             Ok(())
         } else {
             Err(err)
@@ -59,6 +64,7 @@ impl PmpRegion {
     pub fn set_global(&mut self, perm: u8) -> Result<(), c_int> {
         let err = unsafe { pmp_set_global(self.region, perm) };
         if err == 0 {
+            self.should_unset_global = true;
             Ok(())
         } else {
             Err(err)
@@ -89,6 +95,12 @@ impl Drop for PmpRegion {
     fn drop(&mut self) {
         if self.should_free {
             unsafe {
+                if self.should_unset {
+                    self.unset_perm();
+                }
+                if self.should_unset_global {
+                    self.unset_global();
+                }
                 pmp_region_free_atomic(self.region);
             }
         }

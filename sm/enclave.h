@@ -15,12 +15,14 @@
 #include "pmp.h"
 #include "thread.h"
 #include "crypto.h"
+#include "atomic.h"
 
 // Special target platform header, set by configure script
 #include TARGET_PLATFORM_HEADER
 
 #define ATTEST_DATA_MAXLEN  1024
 #define ENCLAVE_REGIONS_MAX 8
+#define MAILBOX_SIZE 256
 /* TODO: does not support multithreaded enclave yet */
 #define MAX_ENCL_THREADS 1
 
@@ -60,11 +62,22 @@ struct enclave_region
   enum enclave_region_type type;
 };
 
+struct mailbox
+{
+  size_t capacity;
+  size_t size;
+  uint8_t enabled;
+  size_t uid;
+  spinlock_t lock;
+  uint8_t data[MAILBOX_SIZE];
+};
+
 /* enclave metadata */
 struct enclave
 {
   //spinlock_t lock; //local enclave lock. we don't need this until we have multithreaded enclave
   enclave_id eid; //enclave id
+  size_t uid; 
   unsigned long encl_satp; // enclave's page table base
   enclave_state state; // global state of the enclave
 
@@ -84,6 +97,7 @@ struct enclave
   struct thread_state threads[MAX_ENCL_THREADS];
 
   struct platform_enclave_data ped;
+  struct mailbox mailbox;
 };
 
 /* attestation reports */
@@ -107,6 +121,13 @@ struct report
   byte dev_public_key[PUBLIC_KEY_SIZE];
 };
 
+struct mailbox_header
+{
+  size_t send_uid;
+  size_t size;
+  uint8_t data[0];
+};
+
 /* sealing key structure */
 #define SEALING_KEY_SIZE 128
 struct sealing_key
@@ -125,10 +146,17 @@ enclave_ret_code resume_enclave(uintptr_t* regs, enclave_id eid);
 enclave_ret_code exit_enclave(uintptr_t* regs, unsigned long retval, enclave_id eid);
 enclave_ret_code stop_enclave(uintptr_t* regs, uint64_t request, enclave_id eid);
 enclave_ret_code attest_enclave(uintptr_t report, uintptr_t data, uintptr_t size, enclave_id eid);
+enclave_ret_code send_msg(enclave_id eid, size_t uid, void *buf, size_t msg_size);
+enclave_ret_code recv_msg(enclave_id eid, size_t uid, void *buf, size_t msg_size);
+enclave_ret_code mem_share(enclave_id eid, size_t uid, uintptr_t *enclave_addr, uintptr_t *enclave_size);
+enclave_ret_code mem_stop(enclave_id eid, size_t uid); 
+enclave_ret_code get_uid(enclave_id eid, size_t *uid); 
+
 /* attestation and virtual mapping validation */
 enclave_ret_code validate_and_hash_enclave(struct enclave* enclave);
 // TODO: These functions are supposed to be internal functions.
 void enclave_init_metadata();
+void init_mailbox(struct mailbox *mailbox);
 enclave_ret_code copy_enclave_create_args(uintptr_t src, struct keystone_sbi_create* dest);
 int get_enclave_region_index(enclave_id eid, enum enclave_region_type type);
 uintptr_t get_enclave_region_base(enclave_id eid, int memid);

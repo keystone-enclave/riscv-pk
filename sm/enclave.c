@@ -18,6 +18,8 @@ struct enclave enclaves[ENCL_MAX];
 #define ENCLAVE_EXISTS(eid) (eid >= 0 && eid < ENCL_MAX && enclaves[eid].state >= 0)
 
 static spinlock_t encl_lock = SPINLOCK_INIT;
+static spinlock_t uid_lock = SPINLOCK_INIT; 
+static size_t uid = 0;
 
 extern void save_host_regs(void);
 extern void restore_host_regs(void);
@@ -172,6 +174,16 @@ static enclave_ret_code clean_enclave_memory(uintptr_t utbase, uintptr_t utsize)
   memset((void*)utbase, 0, utsize);
 
   return ENCLAVE_SUCCESS;
+}
+
+static int enc_alloc_uid(){
+   int ret_uid; 
+
+   spinlock_lock(&uid_lock);
+   ret_uid = uid++; 
+   spinlock_unlock(&uid_lock);
+
+   return ret_uid; 
 }
 
 static enclave_ret_code encl_alloc_eid(enclave_id* _eid)
@@ -425,6 +437,7 @@ enclave_ret_code create_enclave(struct keystone_sbi_create create_args)
 
   // initialize enclave metadata
   enclaves[eid].eid = eid;
+  enclaves[eid].uid = enc_alloc_uid(); 
 
   enclaves[eid].regions[0].pmp_rid = region;
   enclaves[eid].regions[0].type = REGION_EPM;
@@ -435,6 +448,8 @@ enclave_ret_code create_enclave(struct keystone_sbi_create create_args)
   enclaves[eid].n_thread = 0;
   enclaves[eid].params = params;
   enclaves[eid].pa_params = pa_params;
+
+  init_mailbox(&enclaves[eid].mailbox); 
 
   /* Init enclave state (regs etc) */
   clean_state(&enclaves[eid].threads[0]);
@@ -716,4 +731,177 @@ enclave_ret_code get_sealing_key(uintptr_t sealing_key, uintptr_t key_ident,
           SEALING_KEY_SIZE);
 
   return ENCLAVE_SUCCESS;
+}
+
+/* Initializes enclave mailbox */
+void init_mailbox(struct mailbox* mailbox){
+   mailbox->capacity = MAILBOX_SIZE;
+   mailbox->size = 0;
+   mailbox->lock.lock = 0;
+   memset(mailbox->data, 0, MAILBOX_SIZE);
+}
+
+enclave_ret_code recv_msg(enclave_id eid, size_t uid, void *buf, size_t msg_size) {
+	struct mailbox* mailbox = &enclaves[eid].mailbox;
+	uint8_t *ptr = (uint8_t *) &enclaves[eid].mailbox.data;
+  	struct mailbox_header *hdr = (struct mailbox_header *) ptr;  
+  	size_t size = 0; 
+  	size_t hdr_size = 0; 
+
+	spinlock_lock(&(mailbox->lock));
+
+	while (size < mailbox->size){
+
+		hdr_size = hdr->size; 
+
+     	if(hdr->send_uid == uid){
+        	//Check if the message is bigger than the buffer. 
+        	if(hdr->size > msg_size){
+            		spinlock_unlock(&(mailbox->lock));
+            		return 1; 
+		}
+
+        	memcpy(buf, hdr->data, msg_size); 
+
+        	//Clear the message from the mailbox
+        	memset(hdr->data, 0, hdr->size);
+        	memset(hdr, 0, sizeof(struct mailbox_header));
+        	memcpy(hdr, ptr + hdr_size + sizeof(struct mailbox_header), mailbox->size - (size + sizeof(struct mailbox_header) + hdr_size)); 
+
+        	mailbox->size -= hdr_size + sizeof(struct mailbox_header); 
+        	spinlock_unlock(&(mailbox->lock));
+		return 0; 
+     	}
+  		size += sizeof(struct mailbox_header) + hdr_size;
+    		ptr += sizeof(struct mailbox_header) + hdr_size;    
+    		hdr = (struct mailbox_header *) ptr;
+	}
+	//Release lock on mailbox 
+  	spinlock_unlock(&(mailbox->lock));
+	return 1;
+
+}
+
+
+enclave_ret_code send_msg(enclave_id eid, size_t uid, void *buf, size_t msg_size){
+   struct mailbox *mbox = (void *) 0; 
+
+   for(int eid=0; eid<ENCL_MAX; eid++)
+  {
+    if(ENCLAVE_EXISTS(eid) && enclaves[eid].uid == uid){
+      mbox = &enclaves[eid].mailbox;
+      break; 
+    }
+  }
+
+   //Check if the mailbox is registered
+   if(!mbox){
+      return 1;  
+   }
+
+   spinlock_lock(&(mbox->lock));
+ 
+   //Check if the message + header can fit in the mailbox. 
+   if(mbox->capacity - mbox->size < msg_size + sizeof(struct mailbox_header)){
+      spinlock_unlock(&(mbox->lock));
+      return 0; 
+   }
+
+   struct mailbox_header hdr;
+   hdr.send_uid = enclaves[eid].uid; 
+   hdr.size = msg_size;
+ 
+   memcpy(mbox->data + mbox->size, &hdr, sizeof(hdr));
+   memcpy(mbox->data + mbox->size + sizeof(hdr), buf, msg_size);  
+   mbox->size += msg_size + sizeof(hdr);  
+
+   spinlock_unlock(&(mbox->lock));
+   
+   return 0;
+}
+
+enclave_ret_code mem_share(enclave_id eid, size_t uid, uintptr_t *enclave_addr, uintptr_t *enclave_size){
+   struct enclave *grantee = (void *) 0; 
+   int grantee_eid; 
+   //return ENCLAVE_SUCCESS; 
+   //Find the enclave with the corresponding uid
+   for(int eid=0; eid<ENCL_MAX; eid++)
+  {
+    if(ENCLAVE_EXISTS(eid) && enclaves[eid].uid == uid){
+      grantee = &enclaves[eid];
+      grantee_eid = eid; 
+      break;
+    }
+  }   	
+
+  if(!grantee){
+      return 1; 
+  }
+
+  //Set PMP of the granter enclave with grantee
+  int memid;
+  for(memid=0; memid < ENCLAVE_REGIONS_MAX; memid++) {
+    if(enclaves[eid].regions[memid].type == REGION_EPM) {
+      /* Find empty memory region slot in grantee */
+      for(int grantee_memid = 0; grantee_memid < ENCLAVE_REGIONS_MAX; grantee_memid++){
+	if(grantee->regions[grantee_memid].type == REGION_INVALID){
+		grantee->regions[grantee_memid].pmp_rid = enclaves[eid].regions[memid].pmp_rid;
+		grantee->regions[grantee_memid].type = enclaves[eid].regions[memid].type;
+		break;
+	}
+      }
+    }
+  }
+
+  if(enclave_addr)
+     *enclave_addr = enclaves[eid].pa_params.dram_base;
+
+  if(enclave_size)
+     *enclave_size = enclaves[eid].pa_params.dram_size;
+
+  return 0; 
+}
+
+enclave_ret_code get_uid(enclave_id eid, size_t *uid){
+  
+  if(uid)
+      *uid = enclaves[eid].uid;
+
+  return ENCLAVE_SUCCESS; 
+}
+
+enclave_ret_code mem_stop(enclave_id eid, size_t uid){
+   struct enclave *granter = (void *) 0;
+
+   //Find the enclave with the corresponding uid
+   for(int eid=0; eid<ENCL_MAX; eid++)
+  {
+    if(ENCLAVE_EXISTS(eid) && enclaves[eid].uid == uid){
+      granter = &enclaves[eid];
+      break;
+    }
+  }
+
+  if(!granter){
+      return 1;
+  }
+
+  //Set PMP of the granter enclave turned off
+  int granter_memid;
+
+  for(granter_memid=0; granter_memid < ENCLAVE_REGIONS_MAX; granter_memid++) {
+    if(granter->regions[granter_memid].type == REGION_EPM) {
+      for(int memid = 0; memid < ENCLAVE_REGIONS_MAX; memid++){
+	  if(enclaves[eid].regions[memid].pmp_rid == granter->regions[granter_memid].pmp_rid){
+	     pmp_unset(granter->regions[granter_memid].pmp_rid);
+	     enclaves[eid].regions[memid].pmp_rid = 0; 
+	     enclaves[eid].regions[memid].type = REGION_INVALID;
+	     break; 
+	}
+      }
+    }
+  }
+
+
+  return 0; 
 }

@@ -106,7 +106,7 @@ static inline void context_switch_to_host(uintptr_t* encl_regs,
   }
   osm_pmp_set(PMP_ALL_PERM);
 
-  uintptr_t interrupts = MIP_SSIP | MIP_STIP | MIP_SEIP;
+  uintptr_t interrupts = 0;
   write_csr(mideleg, interrupts);
 
   /* restore host context */

@@ -10,6 +10,7 @@
 #include "fdt.h"
 #include "unprivileged_memory.h"
 #include "disabled_hart_mask.h"
+#include "task.h"
 #include <errno.h>
 #include <stdarg.h>
 #include <stdio.h>
@@ -209,6 +210,93 @@ send_ipi:
 }
 
 
+void ucall_trap(uintptr_t* regs, uintptr_t mcause, uintptr_t mepc){
+    write_csr(mepc, mepc + 4);
+    uintptr_t n = regs[17], arg0 = regs[10], arg1 = regs[11], arg2 = regs[12], arg3 = regs[13], retval, ipi_type;
+
+    switch (n)
+  {
+    case SBI_CONSOLE_PUTCHAR:
+      retval = mcall_console_putchar(arg0);
+      break;
+    case SBI_CONSOLE_GETCHAR:
+      retval = mcall_console_getchar();
+      break;
+    case SBI_SEND_IPI:
+      ipi_type = IPI_SOFT;
+      goto send_ipi;
+    case SBI_REMOTE_SFENCE_VMA:
+    case SBI_REMOTE_SFENCE_VMA_ASID:
+      ipi_type = IPI_SFENCE_VMA;
+      goto send_ipi;
+    case SBI_REMOTE_FENCE_I:
+      ipi_type = IPI_FENCE_I;
+send_ipi:
+      send_ipi_many((uintptr_t*)arg0, ipi_type);
+      retval = 0;
+      break;
+    case SBI_CLEAR_IPI:
+      retval = mcall_clear_ipi();
+      break;
+    case SBI_SHUTDOWN:
+      retval = mcall_shutdown();
+      break;
+    case SBI_SET_TIMER:
+#if __riscv_xlen == 32
+      retval = mcall_set_timer(arg0 + ((uint64_t)arg1 << 32));
+#else
+      retval = mcall_set_timer(arg0);
+#endif
+      break;
+#ifdef RTOS_ENABLED
+    case SBI_REGISTER_TASK:
+      retval = mcall_register_task(arg0);
+      break; 
+    case SBI_SWITCH_TASK:
+      retval = mcall_switch_task(regs, arg0, arg1);
+      break; 
+    case SBI_ENABLE_INTERRUPT:
+      retval = mcall_enable_interrupt(arg0);
+      break; 
+#endif
+#ifdef SM_ENABLED
+    case SBI_SM_CREATE_ENCLAVE:
+      retval = mcall_sm_create_enclave(arg0);
+      break;
+    case SBI_SM_DESTROY_ENCLAVE:
+      retval = mcall_sm_destroy_enclave(arg0);
+      break;
+    case SBI_SM_RUN_ENCLAVE:
+      retval = mcall_sm_run_enclave(regs, arg0);
+      break;
+    case SBI_SM_EXIT_ENCLAVE:
+      retval = mcall_sm_exit_enclave(regs, arg0);
+      break;
+    case SBI_SM_STOP_ENCLAVE:
+      retval = mcall_sm_stop_enclave(regs, arg0);
+      break;
+    case SBI_SM_RESUME_ENCLAVE:
+      retval = mcall_sm_resume_enclave(regs, arg0);
+      break;
+    case SBI_SM_ATTEST_ENCLAVE:
+      retval = mcall_sm_attest_enclave(arg0, arg1, arg2);
+      break;
+    case SBI_SM_GET_SEALING_KEY:
+      retval = mcall_sm_get_sealing_key(arg0, arg1, arg2);
+      break;
+    case SBI_SM_RANDOM:
+      retval = mcall_sm_random();
+      break;
+    case SBI_SM_NOT_IMPLEMENTED:
+      retval = mcall_sm_not_implemented(regs, arg0);
+      break;
+#endif
+    default:
+      retval = -ENOSYS;
+      break;
+  }
+  regs[10] = retval;
+}
 
 void mcall_trap(uintptr_t* regs, uintptr_t mcause, uintptr_t mepc)
 {

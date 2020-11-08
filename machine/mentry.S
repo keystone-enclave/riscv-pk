@@ -15,8 +15,8 @@ trap_table:
   .word pmp_trap
   .word misaligned_store_trap
   .word pmp_trap
-  .word bad_trap
-  .word mcall_trap // 9 --> ECALL from S-mode
+  .word ucall_trap // 8 --> ECALL from U-mode
+  .word mcall_trap   // 9 --> ECALL from S-mode
   .word bad_trap
   .word bad_trap
   .word bad_trap
@@ -61,6 +61,7 @@ trap_vector:
   csrc mie, a0
   li a0, MIP_STIP
   csrs mip, a0
+  j .Lhandle_trap_in_machine_mode
 
 .Lmret:
   # Go back whence we came.

@@ -10,6 +10,7 @@
 #include "htif.h"
 #include <string.h>
 #include <limits.h>
+#include "cpu.h"
 
 #ifdef SM_ENABLED
 # include "sm.h"
@@ -51,8 +52,8 @@ static void delegate_traps()
     (1U << CAUSE_FETCH_PAGE_FAULT) |
     (1U << CAUSE_BREAKPOINT) |
     (1U << CAUSE_LOAD_PAGE_FAULT) |
-    (1U << CAUSE_STORE_PAGE_FAULT) |
-    (1U << CAUSE_USER_ECALL);
+    (1U << CAUSE_STORE_PAGE_FAULT); /*|
+    (1U << CAUSE_USER_ECALL); */
 
   write_csr(mideleg, interrupts);
   write_csr(medeleg, exceptions);
@@ -188,11 +189,14 @@ void enter_supervisor_mode(void (*fn)(uintptr_t), uintptr_t arg0, uintptr_t arg1
                 : : "r" (pmpc), "r" (-1UL) : "t0");
   
 	uintptr_t mstatus = read_csr(mstatus);
-  mstatus = INSERT_FIELD(mstatus, MSTATUS_MPP, PRV_S);
+  mstatus = INSERT_FIELD(mstatus, MSTATUS_MPP, PRV_U);
   mstatus = INSERT_FIELD(mstatus, MSTATUS_MPIE, 0);
   write_csr(mstatus, mstatus);
   write_csr(mscratch, MACHINE_STACK_TOP() - MENTRY_FRAME_SIZE);
   write_csr(mepc, fn);
+
+  //Sets initial task_id to SCHEDULER_ID
+  cpu_enter_task_context(0);
 
 #ifdef SM_ENABLED
 	printm("initializing sm\r\n");

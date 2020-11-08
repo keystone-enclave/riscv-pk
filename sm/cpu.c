@@ -16,10 +16,20 @@ int cpu_get_enclave_id()
   return cpus[read_csr(mhartid)].eid;
 }
 
+int cpu_get_task_id()
+{
+  return cpus[read_csr(mhartid)].task_id;
+}
+
 void cpu_enter_enclave_context(enclave_id eid)
 {
   cpus[read_csr(mhartid)].is_enclave = 1;
   cpus[read_csr(mhartid)].eid = eid;
+}
+
+void cpu_enter_task_context(int task_id)
+{
+  cpus[read_csr(mhartid)].task_id = task_id;
 }
 
 void cpu_exit_enclave_context()

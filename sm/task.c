@@ -41,16 +41,38 @@ uintptr_t mcall_register_task(uintptr_t args){
     return ret; 
 }
 
+uintptr_t handle_time_interrupt(uintptr_t* regs){
+
+    /* Set next timer interrupt */
+    unsigned long next_cycle = get_cycles64() + DEFAULT_CLOCK_DELAY;
+    *HLS()->timecmp = next_cycle;
+    clear_csr(mip, MIP_STIP);
+    set_csr(mie, MIP_MTIP);
+
+    return mcall_switch_task(regs, 0, RET_TIMER);
+}
+
 uintptr_t mcall_switch_task(uintptr_t* regs, uintptr_t next_task_id, uintptr_t ret_type){
 
     // struct switch_sbi_arg *switch_args = (struct switch_sbi_arg *) args;
 
     struct task *next_task = NULL; 
+    struct task *curr_task = NULL; 
+
     uintptr_t ret; 
 
-    for(int i = SCHEDULER_TID + 1; i < MAX_TASKS_NUM; i++){
+    /* Get next task */
+    for(int i = SCHEDULER_TID; i < MAX_TASKS_NUM; i++){
         if(tasks[i].task_id == next_task_id){
             next_task = &tasks[i]; 
+            break; 
+        }
+    }
+
+    /* Get current task */
+    for(int i = SCHEDULER_TID; i < MAX_TASKS_NUM; i++){
+        if(tasks[i].task_id == cpu_get_task_id()){
+            curr_task = &tasks[i]; 
             break; 
         }
     }
@@ -68,14 +90,37 @@ uintptr_t mcall_switch_task(uintptr_t* regs, uintptr_t next_task_id, uintptr_t r
         tasks[SCHEDULER_TID].mepc = read_csr(mepc);
         memcpy(tasks[SCHEDULER_TID].regs, regs, 32 * sizeof(uintptr_t));
 
+        //Copy the next task to current registers 
+        memcpy(regs, next_task->regs, 32 * sizeof(uintptr_t));
         write_csr(mepc, next_task->mepc); 
         cpu_enter_task_context(next_task->task_id);
     } else {
+
+        switch(ret_type){
+            /* If the return type is EXIT, scrub the current task */
+            case RET_EXIT:
+                memset(curr_task, 0, sizeof(struct task)); 
+                break;
+            /* If the return type is YIELD, save the old registers */
+            case RET_YIELD:
+                memcpy(curr_task->regs, regs, 32 * sizeof(uintptr_t));
+                curr_task->mepc = read_csr(mepc) + 4;
+                break;
+            /* If the return type is an interrupt, restart the instruction */
+            case RET_TIMER:
+                memcpy(curr_task->regs, regs, 32 * sizeof(uintptr_t));
+                curr_task->mepc = read_csr(mepc);
+                break;
+            default:
+                ret = ERROR_RET_INVALID;
+                return ret; 
+        }
+
         /* All tasks that call switch yields control back to the scheduler */
         memcpy(regs, tasks[SCHEDULER_TID].regs, 32 * sizeof(uintptr_t));
         write_csr(mepc, tasks[SCHEDULER_TID].mepc);
         cpu_enter_task_context(SCHEDULER_TID);
     }
-    
+
     return ret; 
 }

@@ -19,8 +19,14 @@
 #define SBI_SWITCH_TASK          201
 #define SBI_REGISTER_TASK        202
 
+#define RET_EXIT 0 
+#define RET_YIELD 1
+#define RET_TIMER 2
 
 #define ERROR_TASK_INVALID 10
+#define ERROR_RET_INVALID 11
+
+#define DEFAULT_CLOCK_DELAY 10000
 
 struct switch_sbi_arg {
     uintptr_t mepc;
@@ -77,6 +83,34 @@ struct task {
 
 uintptr_t mcall_switch_task(uintptr_t* regs, uintptr_t next_task_id, uintptr_t ret_type);
 uintptr_t mcall_register_task(uintptr_t args);
+uintptr_t handle_time_interrupt(uintptr_t* regs); 
+
+
+typedef unsigned long cycles_t;
+
+static inline cycles_t get_cycles_inline(void)
+{
+	cycles_t n;
+
+	__asm__ __volatile__ (
+		"rdtime %0"
+		: "=r" (n));
+	return n;
+}
+#define get_cycles get_cycles_inline
+
+static inline uint64_t get_cycles64(void)
+{
+        return get_cycles();
+}
+
+#define ARCH_HAS_READ_CURRENT_TIMER
+
+static inline int read_current_timer(unsigned long *timer_val)
+{
+	*timer_val = get_cycles();
+	return 0;
+}
 
 
 #endif

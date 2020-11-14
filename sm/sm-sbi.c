@@ -125,28 +125,6 @@ uintptr_t mcall_sm_random()
   return platform_random();
 }
 
-
-// uintptr_t mcall_switch_task()
-// {
-//   /* Anyone may call this interface. */
-//   set_csr(mip, MIP_SSIP);
-//   return 0;
-// }
-
-uintptr_t mcall_enable_interrupt(uintptr_t enable){
-
-  uintptr_t old_enable = read_csr(mstatus) & MSTATUS_MIE;
-
-  if(enable){
-    set_csr(mstatus, MSTATUS_MIE);
-  } else {
-    clear_csr(mstatus, MSTATUS_MIE);
-  }
-
-  return old_enable;
-
-}
-
 uintptr_t mcall_sm_call_plugin(uintptr_t plugin_id, uintptr_t call_id, uintptr_t arg0, uintptr_t arg1)
 {
   if(!cpu_is_enclave_context()) {

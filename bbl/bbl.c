@@ -48,6 +48,10 @@ void boot_other_hart(uintptr_t unused __attribute__((unused)))
     }
   }
 
+  // extern char payload;
+  // extern char _end;
+  // printm("Payload at %p-%p\n", &payload, &_end);
+
   enter_supervisor_mode(entry, hartid, dtb_output());
 }
 

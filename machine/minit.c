@@ -11,6 +11,7 @@
 #include <string.h>
 #include <limits.h>
 #include "cpu.h"
+#include "task.h"
 
 #ifdef SM_ENABLED
 # include "sm.h"
@@ -194,15 +195,31 @@ void enter_supervisor_mode(void (*fn)(uintptr_t), uintptr_t arg0, uintptr_t arg1
   write_csr(mstatus, mstatus);
   write_csr(mscratch, MACHINE_STACK_TOP() - MENTRY_FRAME_SIZE);
   write_csr(mepc, fn);
-
-  //Sets initial task_id to SCHEDULER_ID
-  cpu_enter_task_context(0);
+ 
 
 #ifdef SM_ENABLED
 	printm("initializing sm\r\n");
 	sm_init();
 	printm("initialized sm\r\n");
 #endif
+
+  //Sets initial task_id to SCHEDULER_ID
+  cpu_enter_task_context(0);
+
+  int rtos_region;
+  if(pmp_region_init_atomic(RTOS_START, RTOS_SIZE, PMP_PRI_ANY, &rtos_region, 0))
+    die("FAILED PMP ALLOCATION FOR RTOS KERNEL!\n"); 
+
+  if(pmp_set_global(rtos_region, PMP_NO_PERM))
+    die("FAILED PMP SET GLOBAL FOR RTOS KERNEL!\n");
+
+  pmp_set(rtos_region, PMP_ALL_PERM);
+
+  extern struct task tasks[MAX_TASKS_NUM];
+  tasks[SCHEDULER_TID].region.pmp_rid = rtos_region; 
+  tasks[SCHEDULER_TID].region.type = REGION_EPM; 
+  tasks[SCHEDULER_TID].valid = TASK_VALID; 
+
   register uintptr_t a0 asm ("a0") = arg0;
   register uintptr_t a1 asm ("a1") = arg1;
 	asm volatile ("mret" : : "r" (a0), "r" (a1));

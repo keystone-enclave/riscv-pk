@@ -13,6 +13,8 @@
 struct task tasks[MAX_TASKS_NUM]; 
 static spinlock_t task_lock = SPINLOCK_INIT;
 
+extern byte dev_public_key[PUBLIC_KEY_SIZE];
+
 /* 
     Task ID is a monotonic counter 
     Assigns unique ID to each task.
@@ -211,4 +213,57 @@ uintptr_t mcall_enable_interrupt(uintptr_t enable){
 
   return old_enable;
 
+}
+
+
+
+enclave_ret_code mcall_attest_task(uintptr_t report_ptr, uintptr_t data, uintptr_t size)
+{
+    uintptr_t task_id = cpu_get_task_id(); 
+  int attestable;
+  struct report report;
+  int ret;
+
+  if (size > ATTEST_DATA_MAXLEN)
+    return -1;
+
+  spinlock_lock(&task_lock);
+  
+  attestable = ((task_id < 32|| task_id >= 0)
+                && tasks[task_id].valid == TASK_VALID);
+
+  if(!attestable) {
+    ret = ENCLAVE_NOT_INITIALIZED;
+    goto err_unlock;
+  }
+
+  /* copy data to be signed */
+  memcpy(report.enclave.data,
+      (void *) data, size);
+  report.enclave.data_len = size;
+
+
+  spinlock_unlock(&task_lock); // Don't need to wait while signing, which might take some time
+
+  memcpy(report.dev_public_key, dev_public_key, PUBLIC_KEY_SIZE);
+  memcpy(report.sm.hash, sm_hash, MDSIZE);
+  memcpy(report.sm.public_key, sm_public_key, PUBLIC_KEY_SIZE);
+  memcpy(report.sm.signature, sm_signature, SIGNATURE_SIZE);
+  memcpy(report.enclave.hash, tasks[task_id].hash, MDSIZE);
+  sm_sign(report.enclave.signature,
+      &report.enclave,
+      sizeof(struct enclave_report)
+      - SIGNATURE_SIZE
+      - ATTEST_DATA_MAXLEN + size);
+
+  spinlock_lock(&task_lock);
+
+  /* copy report to the enclave */
+  memcpy((void *) report_ptr, &report, sizeof(struct report));
+      
+  ret = ENCLAVE_SUCCESS;
+
+err_unlock:
+  spinlock_unlock(&task_lock);
+  return ret;
 }

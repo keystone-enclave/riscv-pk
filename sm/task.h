@@ -19,6 +19,7 @@
 #define SBI_ENABLE_INTERRUPT     200
 #define SBI_SWITCH_TASK          201
 #define SBI_REGISTER_TASK        202
+#define SBI_ATTEST_TASK          203
 
 #define RET_EXIT 0 
 #define RET_YIELD 1
@@ -73,6 +74,9 @@ uintptr_t mcall_enable_interrupt();
 uintptr_t handle_time_interrupt(uintptr_t* regs); 
 
 uintptr_t validate_and_hash_task(struct task *task, struct register_sbi_arg *register_args);
+
+enclave_ret_code mcall_attest_task(uintptr_t report_ptr, uintptr_t data, uintptr_t size);
+
 
 
 typedef unsigned long cycles_t;

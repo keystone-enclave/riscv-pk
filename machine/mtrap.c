@@ -258,6 +258,9 @@ send_ipi:
     case SBI_ENABLE_INTERRUPT:
       retval = mcall_enable_interrupt(arg0);
       break; 
+    case SBI_ATTEST_TASK:
+      retval = mcall_attest_task(arg0, arg1, arg2);
+      break;
 #endif
 #ifdef SM_ENABLED
     case SBI_SM_CREATE_ENCLAVE:

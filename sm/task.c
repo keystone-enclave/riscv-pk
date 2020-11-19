@@ -61,6 +61,7 @@ uintptr_t mcall_register_task(uintptr_t args){
            tasks[i].valid = TASK_VALID;
            tasks[i].task_id = task_id++;
            tasks[i].regs[0] = register_args->pc;
+           tasks[i].regs[10] = register_args->arg; 
            tasks[i].enclave = register_args->enclave;
 
            if (register_args->enclave)
@@ -153,6 +154,7 @@ uintptr_t mcall_switch_task(uintptr_t* regs, uintptr_t next_task_id, uintptr_t r
         tasks[SCHEDULER_TID].regs[0] = read_csr(mepc); 
 
         switch_into_task(regs, next_task);
+        ret = regs[10]; 
 
         if(next_task->enclave){
             /* Flip PMP registers ONLY if the next task is an enclave 

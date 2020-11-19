@@ -62,9 +62,9 @@ void boot_loader(uintptr_t dtb)
 #ifdef PK_ENABLE_LOGO
   print_logo();
 #endif
-#ifdef PK_PRINT_DEVICE_TREE
+// #ifdef PK_PRINT_DEVICE_TREE
   fdt_print(dtb_output());
-#endif
+// #endif
   mb();
   entry_point = &_payload_start;
   boot_other_hart(0);

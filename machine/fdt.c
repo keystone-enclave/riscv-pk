@@ -628,7 +628,7 @@ void filter_harts(uintptr_t fdt, long *disabled_hart_mask)
 
 //////////////////////////////////////////// PRINT //////////////////////////////////////////////
 
-#ifdef PK_PRINT_DEVICE_TREE
+// #ifdef PK_PRINT_DEVICE_TREE
 #define FDT_PRINT_MAX_DEPTH 32
 
 struct fdt_print_info {
@@ -737,4 +737,4 @@ void fdt_print(uintptr_t fdt)
     fdt_print_printm(&info, "}\r\n");
   }
 }
-#endif
+// #endif

@@ -103,6 +103,28 @@ uintptr_t handle_time_interrupt(uintptr_t* regs){
     return mcall_switch_task(regs, 0, RET_TIMER);
 }
 
+struct task *find_task(int task_id){
+    struct task *ptr = NULL; 
+
+    for(int i = SCHEDULER_TID; i < MAX_TASKS_NUM; i++){
+        if(tasks[i].task_id == task_id){
+            ptr = &tasks[i];
+            goto find_task_done;
+        }
+    }
+
+find_task_done:
+    return ptr; 
+}
+
+
+void switch_into_task(uintptr_t* regs, struct task *next_task){
+    //Copy the next task to current registers 
+    memcpy(regs, next_task->regs, 32 * sizeof(uintptr_t));
+    write_csr(mepc, next_task->regs[0]); 
+    cpu_enter_task_context(next_task->task_id);
+}
+
 uintptr_t mcall_switch_task(uintptr_t* regs, uintptr_t next_task_id, uintptr_t ret_type){
 
     struct task *next_task = NULL; 
@@ -111,21 +133,11 @@ uintptr_t mcall_switch_task(uintptr_t* regs, uintptr_t next_task_id, uintptr_t r
     uintptr_t ret; 
 
     spinlock_lock(&task_lock);
-    /* Get next task */
-    for(int i = SCHEDULER_TID; i < MAX_TASKS_NUM; i++){
-        if(tasks[i].task_id == next_task_id){
-            next_task = &tasks[i]; 
-            break; 
-        }
-    }
 
+    /* Get next task */
+    next_task = find_task(next_task_id);
     /* Get current task */
-    for(int i = SCHEDULER_TID; i < MAX_TASKS_NUM; i++){
-        if(tasks[i].task_id == cpu_get_task_id()){
-            curr_task = &tasks[i]; 
-            break; 
-        }
-    }
+    curr_task = find_task(cpu_get_task_id()); 
 
     /* Check if task to switch into is found or if the task switching into is the scheduler. */
     if(!next_task && next_task_id != SCHEDULER_TID){
@@ -140,23 +152,17 @@ uintptr_t mcall_switch_task(uintptr_t* regs, uintptr_t next_task_id, uintptr_t r
         memcpy(tasks[SCHEDULER_TID].regs, regs, 32 * sizeof(uintptr_t));
         tasks[SCHEDULER_TID].regs[0] = read_csr(mepc); 
 
-        //Copy the next task to current registers 
-        memcpy(regs, next_task->regs, 32 * sizeof(uintptr_t));
-        write_csr(mepc, next_task->regs[0]); 
-        cpu_enter_task_context(next_task->task_id);
-
+        switch_into_task(regs, next_task);
 
         if(next_task->enclave){
             /* Flip PMP registers ONLY if the next task is an enclave 
                 Not necessary if the next task is unprotected and runs in the scheduler space. 
             */
-    
             pmp_set(tasks[SCHEDULER_TID].region.pmp_rid, PMP_NO_PERM);
             pmp_set(next_task->region.pmp_rid, PMP_ALL_PERM);
         }
         
     } else {
-
 
         if(curr_task->enclave){
             /* If the task is an enclave, flip the PMP registers */
@@ -185,10 +191,7 @@ uintptr_t mcall_switch_task(uintptr_t* regs, uintptr_t next_task_id, uintptr_t r
         }
 
         /* All tasks that call switch yields control back to the scheduler */
-        memcpy(regs, tasks[SCHEDULER_TID].regs, 32 * sizeof(uintptr_t));
-        write_csr(mepc, tasks[SCHEDULER_TID].regs[0]);
-        cpu_enter_task_context(SCHEDULER_TID);
-
+        switch_into_task(regs, next_task); 
     }
 
     spinlock_unlock(&task_lock);

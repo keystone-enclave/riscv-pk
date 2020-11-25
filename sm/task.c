@@ -63,6 +63,7 @@ uintptr_t mcall_register_task(uintptr_t args){
            tasks[i].regs[0] = register_args->pc;
            tasks[i].regs[10] = register_args->arg; 
            tasks[i].enclave = register_args->enclave;
+           init_mailbox(&tasks[i].mailbox);
 
            if (register_args->enclave)
            {
@@ -271,4 +272,80 @@ enclave_ret_code mcall_attest_task(uintptr_t report_ptr, uintptr_t data, uintptr
 err_unlock:
   spinlock_unlock(&task_lock);
   return ret;
+}
+
+int task_recv_msg(int tid, void *buf, size_t msg_size)
+{
+
+    struct task *task = find_task(cpu_get_task_id());
+
+    struct mailbox *mailbox = &task->mailbox;
+    uint8_t *ptr = (uint8_t *)mailbox->data;
+    struct mailbox_header *hdr = (struct mailbox_header *)ptr;
+    size_t size = 0;
+    size_t hdr_size = 0;
+
+    spinlock_lock(&(mailbox->lock));
+
+    while (size < mailbox->size)
+    {
+
+        hdr_size = hdr->size;
+
+        if (hdr->send_uid == tid)
+        {
+            //Check if the message is bigger than the buffer.
+            if (hdr->size > msg_size)
+            {
+                spinlock_unlock(&(mailbox->lock));
+                return 1;
+            }
+
+            memcpy(buf, hdr->data, msg_size);
+
+            //Clear the message from the mailbox
+            memset(hdr->data, 0, hdr->size);
+            memset(hdr, 0, sizeof(struct mailbox_header));
+            memcpy(hdr, ptr + hdr_size + sizeof(struct mailbox_header), mailbox->size - (size + sizeof(struct mailbox_header) + hdr_size));
+
+            mailbox->size -= hdr_size + sizeof(struct mailbox_header);
+            spinlock_unlock(&(mailbox->lock));
+            return 0;
+        }
+        size += sizeof(struct mailbox_header) + hdr_size;
+        ptr += sizeof(struct mailbox_header) + hdr_size;
+        hdr = (struct mailbox_header *)ptr;
+    }
+    //Release lock on mailbox
+    spinlock_unlock(&(mailbox->lock));
+    return 1;
+}
+
+int task_send_msg(int tid, void *buf, size_t msg_size)
+{
+
+    struct task *task = find_task(tid);
+
+    struct mailbox *mbox = &task->mailbox;
+
+    spinlock_lock(&(mbox->lock));
+
+    //Check if the message + header can fit in the mailbox.
+    if (mbox->capacity - mbox->size < msg_size + sizeof(struct mailbox_header))
+    {
+        spinlock_unlock(&(mbox->lock));
+        return 0;
+    }
+
+    struct mailbox_header hdr;
+    hdr.send_uid = cpu_get_task_id();
+    hdr.size = msg_size;
+
+    memcpy(mbox->data + mbox->size, &hdr, sizeof(hdr));
+    memcpy(mbox->data + mbox->size + sizeof(hdr), buf, msg_size);
+    mbox->size += msg_size + sizeof(hdr);
+
+    spinlock_unlock(&(mbox->lock));
+
+    return 0;
 }

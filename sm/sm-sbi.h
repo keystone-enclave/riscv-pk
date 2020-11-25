@@ -24,6 +24,8 @@ uintptr_t mcall_sm_get_sealing_key(uintptr_t seal_key, uintptr_t key_ident,
                                    size_t key_ident_size);
 uintptr_t mcall_sm_random();
 
+uintptr_t mcall_sm_send_msg(size_t uid, uintptr_t buf, size_t msg_size);
+uintptr_t mcall_sm_recv_msg(size_t uid, uintptr_t buf, size_t msg_size);
 uintptr_t mcall_sm_call_plugin(uintptr_t plugin_id, uintptr_t call_id, uintptr_t arg0, uintptr_t arg1);
 
 #endif

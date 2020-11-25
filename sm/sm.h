@@ -21,6 +21,9 @@
 #define SBI_SM_STOP_ENCLAVE      106
 #define SBI_SM_RESUME_ENCLAVE    107
 #define SBI_SM_RANDOM            108
+#define SBI_SM_UID  		 109
+#define SBI_SM_MAILBOX_SEND      110
+#define SBI_SM_MAILBOX_RECV      111
 #define SBI_SM_EXIT_ENCLAVE     1101
 #define SBI_SM_CALL_PLUGIN      1000
 #define SBI_SM_NOT_IMPLEMENTED  1111
@@ -45,6 +48,8 @@
 #define ENCLAVE_SBI_PROHIBITED              (enclave_ret_code)14
 #define ENCLAVE_ILLEGAL_PTE                 (enclave_ret_code)15
 #define ENCLAVE_NOT_FRESH                   (enclave_ret_code)16
+#define ENCLAVE_NO_MAILBOX		    (enclave_ret_code)17
+#define ENCLAVE_MAILBOX_FULL 		    (enclave_ret_code)18 
 
 #define PMP_UNKNOWN_ERROR                   -1U
 #define PMP_SUCCESS                         0

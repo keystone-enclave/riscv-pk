@@ -20,6 +20,8 @@
 #define SBI_SWITCH_TASK          201
 #define SBI_REGISTER_TASK        202
 #define SBI_ATTEST_TASK          203
+#define SBI_SEND_TASK        	 204
+#define SBI_RECV_TASK            205
 
 #define RET_EXIT 0 
 #define RET_YIELD 1
@@ -64,6 +66,8 @@ struct task {
 	byte hash[MDSIZE];
 	byte sign[SIGNATURE_SIZE];
 
+	struct mailbox mailbox; 
+
 	/* Whether task slot is valid */
     uintptr_t valid; 
 }; 
@@ -75,6 +79,9 @@ uintptr_t mcall_enable_interrupt();
 uintptr_t handle_time_interrupt(uintptr_t* regs); 
 
 uintptr_t validate_and_hash_task(struct task *task, struct register_sbi_arg *register_args);
+
+int task_recv_msg(int tid, void *buf, size_t msg_size);
+int task_send_msg(int tid, void *buf, size_t msg_size);
 
 enclave_ret_code mcall_attest_task(uintptr_t report_ptr, uintptr_t data, uintptr_t size);
 

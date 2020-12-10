@@ -188,6 +188,10 @@ uintptr_t mcall_switch_task(uintptr_t* regs, uintptr_t next_task_id, uintptr_t r
                 memcpy(curr_task->regs, regs, 32 * sizeof(uintptr_t));
                 curr_task->regs[0] = read_csr(mepc);
                 break;
+            case RET_RECV_WAIT:
+                memcpy(curr_task->regs, regs, 32 * sizeof(uintptr_t));
+                curr_task->regs[0] = read_csr(mepc);
+                break;
             default:
                 ret = ERROR_RET_INVALID;
                 return ret; 
@@ -274,7 +278,7 @@ err_unlock:
   return ret;
 }
 
-int task_recv_msg(int tid, void *buf, size_t msg_size)
+int task_recv_msg(uintptr_t* regs, int tid, void *buf, size_t msg_size)
 {
 
     struct task *task = find_task(cpu_get_task_id());
@@ -318,7 +322,10 @@ int task_recv_msg(int tid, void *buf, size_t msg_size)
     }
     //Release lock on mailbox
     spinlock_unlock(&(mailbox->lock));
-    return 1;
+
+    //Message doesn't exist!
+
+    return mcall_switch_task(regs, 0, RET_RECV_WAIT);
 }
 
 int task_send_msg(int tid, void *buf, size_t msg_size)

@@ -26,6 +26,7 @@
 #define RET_EXIT 0 
 #define RET_YIELD 1
 #define RET_TIMER 2
+#define RET_RECV_WAIT 3 
 
 #define ERROR_TASK_INVALID 10
 #define ERROR_RET_INVALID 11
@@ -80,7 +81,7 @@ uintptr_t handle_time_interrupt(uintptr_t* regs);
 
 uintptr_t validate_and_hash_task(struct task *task, struct register_sbi_arg *register_args);
 
-int task_recv_msg(int tid, void *buf, size_t msg_size);
+int task_recv_msg(uintptr_t* regs, int tid, void *buf, size_t msg_size);
 int task_send_msg(int tid, void *buf, size_t msg_size);
 
 enclave_ret_code mcall_attest_task(uintptr_t report_ptr, uintptr_t data, uintptr_t size);

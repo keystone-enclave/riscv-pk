@@ -271,7 +271,7 @@ send_ipi:
       retval = task_send_msg(arg0, (void *) arg1, arg2);
       break;
     case SBI_RECV_TASK:
-      retval = task_recv_msg(arg0, (void *) arg1, arg2);
+      retval = task_recv_msg(regs, arg0, (void *) arg1, arg2);
       break;
 #endif
 #ifdef SM_ENABLED
@@ -423,7 +423,7 @@ void redirect_trap(uintptr_t epc, uintptr_t mstatus, uintptr_t badaddr)
 
 void pmp_trap(uintptr_t* regs, uintptr_t mcause, uintptr_t mepc)
 {
-  printm("mcause: %d, mepc: %p\n", mcause, mepc);
+  // printm("mcause: %d, mepc: %p\n", mcause, mepc);
   redirect_trap(mepc, read_csr(mstatus), read_csr(mbadaddr));
 }
 

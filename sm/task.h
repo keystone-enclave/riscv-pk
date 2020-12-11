@@ -63,6 +63,9 @@ struct task {
 	/* Unique identifier for task ID */
 	uintptr_t task_id; 
 
+	uintptr_t ret_task_id; 
+	uintptr_t destroyed; 
+
 	/* measurement */
 	byte hash[MDSIZE];
 	byte sign[SIGNATURE_SIZE];

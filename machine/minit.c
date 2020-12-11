@@ -219,6 +219,8 @@ void enter_supervisor_mode(void (*fn)(uintptr_t), uintptr_t arg0, uintptr_t arg1
   tasks[SCHEDULER_TID].region.pmp_rid = rtos_region; 
   tasks[SCHEDULER_TID].region.type = REGION_EPM; 
   tasks[SCHEDULER_TID].valid = TASK_VALID; 
+  tasks[SCHEDULER_TID].enclave = 1;
+  init_mailbox(&tasks[SCHEDULER_TID].mailbox);
 
   register uintptr_t a0 asm ("a0") = arg0;
   register uintptr_t a1 asm ("a1") = arg1;

@@ -10,6 +10,8 @@
 #include "crypto.h"
 #include "page.h"
 
+// #define ENCLAVE_DIRECT_SWITCH
+
 struct task tasks[MAX_TASKS_NUM]; 
 static spinlock_t task_lock = SPINLOCK_INIT;
 
@@ -169,7 +171,9 @@ uintptr_t mcall_switch_task(uintptr_t* regs, uintptr_t next_task_id, uintptr_t r
 
         if(curr_task->enclave){
             /* If the task is an enclave, flip the PMP registers */
-            pmp_set(tasks[SCHEDULER_TID].region.pmp_rid, PMP_ALL_PERM);
+
+            // pmp_set(tasks[SCHEDULER_TID].region.pmp_rid, PMP_ALL_PERM);
+            pmp_set(next_task->region.pmp_rid, PMP_ALL_PERM);
             pmp_set(curr_task->region.pmp_rid, PMP_NO_PERM);
         }
 
@@ -324,8 +328,11 @@ int task_recv_msg(uintptr_t* regs, int tid, void *buf, size_t msg_size)
     spinlock_unlock(&(mailbox->lock));
 
     //Message doesn't exist!
-
+    #ifdef ENCLAVE_DIRECT_SWITCH
+    return mcall_switch_task(regs, tid, RET_RECV_WAIT);
+    #else
     return mcall_switch_task(regs, 0, RET_RECV_WAIT);
+    #endif
 }
 
 int task_send_msg(int tid, void *buf, size_t msg_size)

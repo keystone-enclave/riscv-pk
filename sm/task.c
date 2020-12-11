@@ -11,6 +11,7 @@
 #include "page.h"
 
 #define ENCLAVE_DIRECT_SWITCH
+// #define SEND_YIELD
 
 struct task tasks[MAX_TASKS_NUM]; 
 static spinlock_t task_lock = SPINLOCK_INIT;
@@ -349,8 +350,8 @@ int task_recv_msg(uintptr_t* regs, int tid, void *buf, size_t msg_size)
             memcpy(buf, hdr->data, msg_size);
 
             //Clear the message from the mailbox
-            memset(hdr->data, 0, hdr->size);
-            memset(hdr, 0, sizeof(struct mailbox_header));
+            // memset(hdr->data, 0, hdr->size);
+            // memset(hdr, 0, sizeof(struct mailbox_header));
             memcpy(hdr, ptr + hdr_size + sizeof(struct mailbox_header), mailbox->size - (size + sizeof(struct mailbox_header) + hdr_size));
 
             mailbox->size -= hdr_size + sizeof(struct mailbox_header);
@@ -372,7 +373,7 @@ int task_recv_msg(uintptr_t* regs, int tid, void *buf, size_t msg_size)
     #endif
 }
 
-int task_send_msg(int tid, void *buf, size_t msg_size)
+int task_send_msg(uintptr_t* regs, int tid, void *buf, size_t msg_size)
 {
 
     struct task *task = find_task(tid);
@@ -400,6 +401,13 @@ int task_send_msg(int tid, void *buf, size_t msg_size)
     mbox->size += msg_size + sizeof(hdr);
 
     spinlock_unlock(&(mbox->lock));
-
-    return 0;
+    #ifdef SEND_YIELD
+        #ifdef ENCLAVE_DIRECT_SWITCH
+        return mcall_switch_task(regs, tid, RET_RECV_WAIT);
+        #else
+        return mcall_switch_task(regs, 0, RET_RECV_WAIT);
+        #endif
+    #else 
+        return 0;
+    #endif
 }

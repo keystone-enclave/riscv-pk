@@ -85,7 +85,7 @@ uintptr_t handle_time_interrupt(uintptr_t* regs);
 uintptr_t validate_and_hash_task(struct task *task, struct register_sbi_arg *register_args);
 
 int task_recv_msg(uintptr_t* regs, int tid, void *buf, size_t msg_size);
-int task_send_msg(int tid, void *buf, size_t msg_size);
+int task_send_msg(uintptr_t* regs, int tid, void *buf, size_t msg_size);
 
 enclave_ret_code mcall_attest_task(uintptr_t report_ptr, uintptr_t data, uintptr_t size);
 

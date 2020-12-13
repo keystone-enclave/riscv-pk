@@ -268,7 +268,7 @@ send_ipi:
       retval = mcall_attest_task(arg0, arg1, arg2);
       break;
     case SBI_SEND_TASK:
-      retval = task_send_msg(regs, arg0, (void *) arg1, arg2);
+      retval = task_send_msg(regs, arg0, (void *) arg1, arg2, arg3);
       break;
     case SBI_RECV_TASK:
       retval = task_recv_msg(regs, arg0, (void *) arg1, arg2);

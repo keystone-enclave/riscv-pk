@@ -11,7 +11,7 @@
 #include "page.h"
 
 #define ENCLAVE_DIRECT_SWITCH
-// #define SEND_YIELD
+#define SEND_YIELD
 
 struct task tasks[MAX_TASKS_NUM]; 
 static spinlock_t task_lock = SPINLOCK_INIT;
@@ -165,7 +165,7 @@ uintptr_t mcall_switch_task(uintptr_t* regs, uintptr_t next_task_id, uintptr_t r
 
         next_task->ret_task_id = cpu_get_task_id();
         switch_into_task(regs, next_task);
-        ret = regs[10]; 
+        // ret = regs[10]; 
 
         if(next_task->enclave){
             /* Flip PMP registers ONLY if the next task is an enclave 
@@ -197,7 +197,7 @@ uintptr_t mcall_switch_task(uintptr_t* regs, uintptr_t next_task_id, uintptr_t r
                     struct task *ret_task = find_task(curr_task->ret_task_id);
                     if (ret_task->destroyed)
                     {
-                        memset(curr_task, 0, sizeof(struct task));
+                        curr_task->destroyed = 1;
                         break;
                     }
 
@@ -206,9 +206,9 @@ uintptr_t mcall_switch_task(uintptr_t* regs, uintptr_t next_task_id, uintptr_t r
                     if (curr_task->enclave)
                     {
                         struct task *ret_task = find_task(curr_task->ret_task_id);
-                        pmp_set(ret_task->region.pmp_rid, PMP_ALL_PERM);
                         pmp_set(next_task->region.pmp_rid, PMP_NO_PERM);
                         pmp_set(curr_task->region.pmp_rid, PMP_NO_PERM);
+                        pmp_set(ret_task->region.pmp_rid, PMP_ALL_PERM);
                     }
                     curr_task->destroyed = 1; 
                     goto unlock;
@@ -373,7 +373,7 @@ int task_recv_msg(uintptr_t* regs, int tid, void *buf, size_t msg_size)
     #endif
 }
 
-int task_send_msg(uintptr_t* regs, int tid, void *buf, size_t msg_size)
+int task_send_msg(uintptr_t* regs, int tid, void *buf, size_t msg_size, uintptr_t yield)
 {
 
     struct task *task = find_task(tid);
@@ -401,13 +401,24 @@ int task_send_msg(uintptr_t* regs, int tid, void *buf, size_t msg_size)
     mbox->size += msg_size + sizeof(hdr);
 
     spinlock_unlock(&(mbox->lock));
-    #ifdef SEND_YIELD
+
+    if(yield) {
         #ifdef ENCLAVE_DIRECT_SWITCH
         return mcall_switch_task(regs, tid, RET_RECV_WAIT);
         #else
         return mcall_switch_task(regs, 0, RET_RECV_WAIT);
         #endif
-    #else 
-        return 0;
-    #endif
+    } else{
+        return 0; 
+    }
+
+    // #ifdef SEND_YIELD
+    //     #ifdef ENCLAVE_DIRECT_SWITCH
+    //     return mcall_switch_task(regs, tid, RET_RECV_WAIT);
+    //     #else
+    //     return mcall_switch_task(regs, 0, RET_RECV_WAIT);
+    //     #endif
+    // #else 
+    //     return 0;
+    // #endif
 }

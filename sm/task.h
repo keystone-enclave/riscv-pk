@@ -36,6 +36,12 @@
 #define RTOS_START 0x80400000
 #define RTOS_SIZE 0x16000
 
+typedef enum {
+	TASK_DESTROYING,
+	TASK_FRESH,
+	TASK_RUNNING,
+} task_state;
+
 struct register_sbi_arg {
     uintptr_t pc;
 	uintptr_t sp; 
@@ -57,8 +63,8 @@ struct task {
 	//PMP region of the task. 
 	struct enclave_region region; 
 
-	// global state of the enclave
-	enclave_state state; 
+	// global state of the task
+	task_state state; 
 
 	/* Unique identifier for task ID */
 	uintptr_t task_id; 

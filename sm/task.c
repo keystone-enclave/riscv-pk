@@ -11,7 +11,6 @@
 #include "page.h"
 
 #define ENCLAVE_DIRECT_SWITCH
-#define SEND_YIELD
 
 struct task tasks[MAX_TASKS_NUM]; 
 static spinlock_t task_lock = SPINLOCK_INIT;
@@ -68,6 +67,7 @@ uintptr_t mcall_register_task(uintptr_t args){
            tasks[i].enclave = register_args->enclave;
            tasks[i].ret_task_id = 0;
            tasks[i].destroyed = 0; 
+           tasks[i].state = TASK_FRESH;
            init_mailbox(&tasks[i].mailbox);
 
            if (register_args->enclave)
@@ -149,10 +149,12 @@ uintptr_t mcall_switch_task(uintptr_t* regs, uintptr_t next_task_id, uintptr_t r
     /* Check if task to switch into is found or if the task switching into is the scheduler. */
     if(!next_task && next_task_id != SCHEDULER_TID){
         ret = ERROR_TASK_INVALID;
+        spinlock_unlock(&task_lock);
         return ret; 
     }
 
     if(next_task->destroyed){
+        spinlock_unlock(&task_lock);
         return RET_EXIT; 
     }
 
@@ -165,7 +167,11 @@ uintptr_t mcall_switch_task(uintptr_t* regs, uintptr_t next_task_id, uintptr_t r
 
         next_task->ret_task_id = cpu_get_task_id();
         switch_into_task(regs, next_task);
-        // ret = regs[10]; 
+
+        if(next_task->state == TASK_FRESH){
+             ret = regs[10]; 
+             next_task->state = TASK_RUNNING; 
+        }
 
         if(next_task->enclave){
             /* Flip PMP registers ONLY if the next task is an enclave 
@@ -185,8 +191,6 @@ uintptr_t mcall_switch_task(uintptr_t* regs, uintptr_t next_task_id, uintptr_t r
             pmp_set(next_task->region.pmp_rid, PMP_ALL_PERM);
             pmp_set(curr_task->region.pmp_rid, PMP_NO_PERM);
         }
-
-
 
         switch(ret_type){
             /* If the return type is EXIT, scrub the current task */
@@ -222,7 +226,7 @@ uintptr_t mcall_switch_task(uintptr_t* regs, uintptr_t next_task_id, uintptr_t r
             /* If the return type is YIELD, save the old registers */
             case RET_YIELD:
                 memcpy(curr_task->regs, regs, 32 * sizeof(uintptr_t));
-                curr_task->regs[0] = read_csr(mepc) + 4;
+                curr_task->regs[0] = read_csr(mepc);
                 break;
             /* If the return type is an interrupt, restart the instruction */
             case RET_TIMER:
@@ -240,6 +244,10 @@ uintptr_t mcall_switch_task(uintptr_t* regs, uintptr_t next_task_id, uintptr_t r
 
         /* All tasks that call switch yields control back to the scheduler */
         switch_into_task(regs, next_task); 
+        if(next_task->state == TASK_FRESH){
+             ret = regs[10]; 
+             next_task->state = TASK_RUNNING; 
+        }
     }
 
 unlock:
@@ -348,10 +356,6 @@ int task_recv_msg(uintptr_t* regs, int tid, void *buf, size_t msg_size)
             }
 
             memcpy(buf, hdr->data, msg_size);
-
-            //Clear the message from the mailbox
-            // memset(hdr->data, 0, hdr->size);
-            // memset(hdr, 0, sizeof(struct mailbox_header));
             memcpy(hdr, ptr + hdr_size + sizeof(struct mailbox_header), mailbox->size - (size + sizeof(struct mailbox_header) + hdr_size));
 
             mailbox->size -= hdr_size + sizeof(struct mailbox_header);
@@ -411,14 +415,4 @@ int task_send_msg(uintptr_t* regs, int tid, void *buf, size_t msg_size, uintptr_
     } else{
         return 0; 
     }
-
-    // #ifdef SEND_YIELD
-    //     #ifdef ENCLAVE_DIRECT_SWITCH
-    //     return mcall_switch_task(regs, tid, RET_RECV_WAIT);
-    //     #else
-    //     return mcall_switch_task(regs, 0, RET_RECV_WAIT);
-    //     #endif
-    // #else 
-    //     return 0;
-    // #endif
 }

@@ -85,7 +85,8 @@ uintptr_t mcall_register_task(uintptr_t args){
                 validate_and_hash_task(&tasks[i], register_args); 
 
            } else {
-                tasks[i].regs[2] = register_args->sp; 
+                tasks[i].regs[2] = register_args->sp;
+                tasks[i].region.pmp_rid = tasks[SCHEDULER_TID].region.pmp_rid; 
            }
            
            ret = tasks[i].task_id;
@@ -172,36 +173,13 @@ uintptr_t mcall_switch_task(uintptr_t* regs, uintptr_t next_task_id, uintptr_t r
              ret = regs[10]; 
              next_task->state = TASK_RUNNING; 
         }
+        pmp_set(tasks[SCHEDULER_TID].region.pmp_rid, PMP_NO_PERM);
+        pmp_set(next_task->region.pmp_rid, PMP_ALL_PERM);
 
-        if(next_task->enclave){
-            /* Flip PMP registers ONLY if the next task is an enclave 
-                Not necessary if the next task is unprotected and runs in the scheduler space. 
-            */
-            pmp_set(tasks[SCHEDULER_TID].region.pmp_rid, PMP_NO_PERM);
-            pmp_set(next_task->region.pmp_rid, PMP_ALL_PERM);
-        }
-        
     } else {
 
-        if(curr_task->enclave){
-            /* If the task is an enclave, flip the PMP registers */
-            if(next_task_id != 0){
-                next_task->ret_task_id = cpu_get_task_id();
-            }
-            if(next_task->enclave){
-                pmp_set(next_task->region.pmp_rid, PMP_ALL_PERM);
-            } else {
-                //If the next task is not an enclave, then flip the scheduler enclave PMP registers
-                pmp_set(tasks[SCHEDULER_TID].region.pmp_rid, PMP_ALL_PERM);
-            }
-
-            pmp_set(curr_task->region.pmp_rid, PMP_NO_PERM);
-        }
-
-        if(next_task->enclave){
-                pmp_set(next_task->region.pmp_rid, PMP_ALL_PERM);
-                pmp_set(tasks[SCHEDULER_TID].region.pmp_rid, PMP_ALL_PERM);
-        }
+        pmp_set(curr_task->region.pmp_rid, PMP_NO_PERM);
+        pmp_set(next_task->region.pmp_rid, PMP_ALL_PERM);
 
         switch(ret_type){
             /* If the return type is EXIT, scrub the current task */

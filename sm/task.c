@@ -188,8 +188,19 @@ uintptr_t mcall_switch_task(uintptr_t* regs, uintptr_t next_task_id, uintptr_t r
             if(next_task_id != 0){
                 next_task->ret_task_id = cpu_get_task_id();
             }
-            pmp_set(next_task->region.pmp_rid, PMP_ALL_PERM);
+            if(next_task->enclave){
+                pmp_set(next_task->region.pmp_rid, PMP_ALL_PERM);
+            } else {
+                //If the next task is not an enclave, then flip the scheduler enclave PMP registers
+                pmp_set(tasks[SCHEDULER_TID].region.pmp_rid, PMP_ALL_PERM);
+            }
+
             pmp_set(curr_task->region.pmp_rid, PMP_NO_PERM);
+        }
+
+        if(next_task->enclave){
+                pmp_set(next_task->region.pmp_rid, PMP_ALL_PERM);
+                pmp_set(tasks[SCHEDULER_TID].region.pmp_rid, PMP_ALL_PERM);
         }
 
         switch(ret_type){

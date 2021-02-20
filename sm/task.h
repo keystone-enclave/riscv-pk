@@ -94,6 +94,7 @@ int task_recv_msg(uintptr_t* regs, int tid, void *buf, size_t msg_size);
 int task_send_msg(uintptr_t* regs, int tid, void *buf, size_t msg_size, uintptr_t yield);
 enclave_ret_code mcall_attest_task(uintptr_t report_ptr, uintptr_t data, uintptr_t size);
 
+struct task *find_task(int task_id); 
 
 
 typedef unsigned long cycles_t;

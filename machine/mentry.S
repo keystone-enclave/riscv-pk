@@ -80,7 +80,7 @@ trap_table:
   LOAD t2, 7*REGBYTES(sp)
   LOAD s0, 8*REGBYTES(sp)
   LOAD s1, 9*REGBYTES(sp)
-  # LOAD a0,10*REGBYTES(sp)
+  LOAD a0,10*REGBYTES(sp)
   LOAD a1,11*REGBYTES(sp)
   LOAD a2,12*REGBYTES(sp)
   LOAD a3,13*REGBYTES(sp)

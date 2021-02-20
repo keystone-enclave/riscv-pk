@@ -10,7 +10,7 @@
 #include "crypto.h"
 #include "page.h"
 
-#define ENCLAVE_DIRECT_SWITCH
+// #define ENCLAVE_DIRECT_SWITCH
 
 struct task tasks[MAX_TASKS_NUM]; 
 static spinlock_t task_lock = SPINLOCK_INIT;
@@ -108,7 +108,13 @@ uintptr_t handle_time_interrupt(uintptr_t* regs){
     clear_csr(mip, MIP_STIP);
     set_csr(mie, MIP_MTIP);
 
+#ifdef ENCLAVE_DIRECT_SWITCH
+    struct task *curr_task = NULL; 
+    curr_task = find_task(cpu_get_task_id()); 
+    return mcall_switch_task(regs, curr_task->ret_task_id, RET_TIMER);
+#else 
     return mcall_switch_task(regs, 0, RET_TIMER);
+#endif
 }
 
 struct task *find_task(int task_id){
@@ -169,6 +175,8 @@ uintptr_t mcall_switch_task(uintptr_t* regs, uintptr_t next_task_id, uintptr_t r
         next_task->ret_task_id = cpu_get_task_id();
         switch_into_task(regs, next_task);
 
+        ret = regs[10]; 
+
         if(next_task->state == TASK_FRESH){
              ret = regs[10]; 
              next_task->state = TASK_RUNNING; 
@@ -216,15 +224,18 @@ uintptr_t mcall_switch_task(uintptr_t* regs, uintptr_t next_task_id, uintptr_t r
             case RET_YIELD:
                 memcpy(curr_task->regs, regs, 32 * sizeof(uintptr_t));
                 curr_task->regs[0] = read_csr(mepc);
+                ret = curr_task->regs[10];
                 break;
             /* If the return type is an interrupt, restart the instruction */
             case RET_TIMER:
                 memcpy(curr_task->regs, regs, 32 * sizeof(uintptr_t));
                 curr_task->regs[0] = read_csr(mepc);
+                ret = curr_task->regs[10];
                 break;
             case RET_RECV_WAIT:
                 memcpy(curr_task->regs, regs, 32 * sizeof(uintptr_t));
                 curr_task->regs[0] = read_csr(mepc);
+                ret = curr_task->regs[10];
                 break;
             default:
                 ret = ERROR_RET_INVALID;
@@ -359,11 +370,11 @@ int task_recv_msg(uintptr_t* regs, int tid, void *buf, size_t msg_size)
     spinlock_unlock(&(mailbox->lock));
 
     //Message doesn't exist!
-    #ifdef ENCLAVE_DIRECT_SWITCH
+#ifdef ENCLAVE_DIRECT_SWITCH
     return mcall_switch_task(regs, tid, RET_RECV_WAIT);
-    #else
+#else
     return mcall_switch_task(regs, 0, RET_RECV_WAIT);
-    #endif
+#endif
 }
 
 int task_send_msg(uintptr_t* regs, int tid, void *buf, size_t msg_size, uintptr_t yield)

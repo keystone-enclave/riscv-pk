@@ -738,7 +738,7 @@ void init_mailbox(struct mailbox* mailbox){
    mailbox->capacity = MAILBOX_SIZE;
    mailbox->size = 0;
    mailbox->lock.lock = 0;
-   memset(mailbox->data, 0, MAILBOX_SIZE);
+  //  memset(mailbox->data, 0, MAILBOX_SIZE);
 }
 
 enclave_ret_code recv_msg(enclave_id eid, size_t uid, void *buf, size_t msg_size) {

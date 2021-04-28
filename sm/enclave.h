@@ -22,7 +22,8 @@
 
 #define ATTEST_DATA_MAXLEN  1024
 #define ENCLAVE_REGIONS_MAX 8
-#define MAILBOX_SIZE 256
+#define MAILBOX_SIZE 32
+#define MSG_BODY_SIZE 256 
 /* TODO: does not support multithreaded enclave yet */
 #define MAX_ENCL_THREADS 1
 
@@ -62,14 +63,30 @@ struct enclave_region
   enum enclave_region_type type;
 };
 
+struct mailbox_body{
+  uint8_t body[MSG_BODY_SIZE];
+};
+
+struct mailbox_header
+{
+  size_t send_uid;
+  size_t size;
+  size_t taken; 
+};
+
+struct mailbox_msg {
+  struct mailbox_header hdr; 
+  struct mailbox_body body; 
+};
+
 struct mailbox
 {
-  size_t capacity;
-  size_t size;
+  // size_t capacity;
+  size_t msg_count;
   uint8_t enabled;
-  size_t uid;
+  // size_t uid;
   spinlock_t lock;
-  uint8_t data[MAILBOX_SIZE];
+  struct mailbox_msg messages[MAILBOX_SIZE];
 };
 
 /* enclave metadata */
@@ -128,13 +145,6 @@ struct sealing_key
   uint8_t key[SEALING_KEY_SIZE];
   uint8_t signature[SIGNATURE_SIZE];
 }; 
-
-struct mailbox_header
-{
-  size_t send_uid;
-  size_t size;
-  uint8_t data[0];
-};
 
 /*** SBI functions & external functions ***/
 // callables from the host

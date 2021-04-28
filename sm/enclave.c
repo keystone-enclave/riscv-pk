@@ -735,87 +735,88 @@ enclave_ret_code get_sealing_key(uintptr_t sealing_key, uintptr_t key_ident,
 
 /* Initializes enclave mailbox */
 void init_mailbox(struct mailbox* mailbox){
-   mailbox->capacity = MAILBOX_SIZE;
-   mailbox->size = 0;
+   mailbox->msg_count = MAILBOX_SIZE;
    mailbox->lock.lock = 0;
-  //  memset(mailbox->data, 0, MAILBOX_SIZE);
+   mailbox->enabled = 1; 
+   memset(mailbox->messages, 0, sizeof(struct mailbox_msg) * 32);
 }
 
 enclave_ret_code recv_msg(enclave_id eid, size_t uid, void *buf, size_t msg_size) {
+  // printm("mailbox: %p\n", (void *) mailbox); 
 	struct mailbox* mailbox = &enclaves[eid].mailbox;
-	uint8_t *ptr = (uint8_t *) &enclaves[eid].mailbox.data;
-  	struct mailbox_header *hdr = (struct mailbox_header *) ptr;  
-  	size_t size = 0; 
-  	size_t hdr_size = 0; 
 
-	spinlock_lock(&(mailbox->lock));
+  if(!mailbox){
+    //No mailbox enabled 
+    return 1; 
+  }
 
-	while (size < mailbox->size){
+  spinlock_lock(&(mailbox->lock));
 
-		hdr_size = hdr->size; 
+  for(int i = 0; i < MAILBOX_SIZE; i++){
+    if(!mailbox->messages[i].hdr.taken){
+      //Mailbox slot is empty
+      continue;
+    }
 
-     	if(hdr->send_uid == uid){
-        	//Check if the message is bigger than the buffer. 
-        	if(hdr->size > msg_size){
-            		spinlock_unlock(&(mailbox->lock));
-            		return 1; 
-		}
+    if(mailbox->messages[i].hdr.send_uid != uid){
+      //Mailbox message doesn't match the sender uid we are expecting
+      continue;
+    }
 
-        	memcpy(buf, hdr->data, msg_size); 
 
-        	//Clear the message from the mailbox
-        	memset(hdr->data, 0, hdr->size);
-        	memset(hdr, 0, sizeof(struct mailbox_header));
-        	memcpy(hdr, ptr + hdr_size + sizeof(struct mailbox_header), mailbox->size - (size + sizeof(struct mailbox_header) + hdr_size)); 
-
-        	mailbox->size -= hdr_size + sizeof(struct mailbox_header); 
-        	spinlock_unlock(&(mailbox->lock));
-		return 0; 
-     	}
-  		size += sizeof(struct mailbox_header) + hdr_size;
-    		ptr += sizeof(struct mailbox_header) + hdr_size;    
-    		hdr = (struct mailbox_header *) ptr;
-	}
-	//Release lock on mailbox 
-  	spinlock_unlock(&(mailbox->lock));
-	return 1;
-
+    if(mailbox->messages[i].hdr.size <= msg_size){
+      //Check whether message size is less than user's buffer size
+      mailbox->messages[i].hdr.taken = 0; 
+      memcpy(buf, (void *) mailbox->messages[i].body.body, mailbox->messages[i].hdr.size); 
+      spinlock_unlock(&(mailbox->lock));
+      break; 
+    }
+  }
+  spinlock_unlock(&(mailbox->lock));
+  return 1;
 }
 
 
 enclave_ret_code send_msg(enclave_id eid, size_t uid, void *buf, size_t msg_size){
-   struct mailbox *mbox = (void *) 0; 
+
+
+  if(msg_size > MSG_BODY_SIZE){
+    //Message is bigger than the max message size
+    return 1;
+  }
+
+   struct mailbox *mailbox = (void *) 0; 
 
    for(int eid=0; eid<ENCL_MAX; eid++)
   {
     if(ENCLAVE_EXISTS(eid) && enclaves[eid].uid == uid){
-      mbox = &enclaves[eid].mailbox;
+      mailbox = &enclaves[eid].mailbox;
       break; 
     }
   }
 
    //Check if the mailbox is registered
-   if(!mbox){
+   if(!mailbox){
       return 1;  
    }
 
-   spinlock_lock(&(mbox->lock));
- 
-   //Check if the message + header can fit in the mailbox. 
-   if(mbox->capacity - mbox->size < msg_size + sizeof(struct mailbox_header)){
-      spinlock_unlock(&(mbox->lock));
-      return 0; 
-   }
+  spinlock_lock(&(mailbox->lock));
 
-   struct mailbox_header hdr;
-   hdr.send_uid = enclaves[eid].uid; 
-   hdr.size = msg_size;
- 
-   memcpy(mbox->data + mbox->size, &hdr, sizeof(hdr));
-   memcpy(mbox->data + mbox->size + sizeof(hdr), buf, msg_size);  
-   mbox->size += msg_size + sizeof(hdr);  
+  for(int i = 0; i < MAILBOX_SIZE; i++){
+    if(!mailbox->messages[i].hdr.taken){
+      //Mailbox slot is empty
+      continue;
+    }
 
-   spinlock_unlock(&(mbox->lock));
+    mailbox->messages[i].hdr.taken = 1; 
+    mailbox->messages[i].hdr.send_uid = enclaves[eid].uid;
+    mailbox->messages[i].hdr.size = msg_size; 
+    memcpy(mailbox->messages[i].body.body, buf, msg_size);
+    spinlock_unlock(&(mailbox->lock));
+    return 0; 
+  }
+
+   spinlock_unlock(&(mailbox->lock));
    
-   return 0;
+   return 1;
 }

@@ -330,41 +330,30 @@ err_unlock:
 
 int task_recv_msg(uintptr_t* regs, int tid, void *buf, size_t msg_size)
 {
-
     struct task *task = find_task(cpu_get_task_id());
-
     struct mailbox *mailbox = &task->mailbox;
-    uint8_t *ptr = (uint8_t *)mailbox->data;
-    struct mailbox_header *hdr = (struct mailbox_header *)ptr;
-    size_t size = 0;
-    size_t hdr_size = 0;
 
     spinlock_lock(&(mailbox->lock));
 
-    while (size < mailbox->size)
-    {
-
-        hdr_size = hdr->size;
-
-        if (hdr->send_uid == tid)
-        {
-            //Check if the message is bigger than the buffer.
-            if (hdr->size > msg_size)
-            {
-                spinlock_unlock(&(mailbox->lock));
-                return 1;
-            }
-
-            memcpy(buf, hdr->data, msg_size);
-            memcpy(hdr, ptr + hdr_size + sizeof(struct mailbox_header), mailbox->size - (size + sizeof(struct mailbox_header) + hdr_size));
-
-            mailbox->size -= hdr_size + sizeof(struct mailbox_header);
-            spinlock_unlock(&(mailbox->lock));
-            return 0;
+    for(int i = 0; i < MAILBOX_SIZE; i++){
+        if(!mailbox->messages[i].hdr.taken){
+        //Mailbox slot is empty
+        continue;
         }
-        size += sizeof(struct mailbox_header) + hdr_size;
-        ptr += sizeof(struct mailbox_header) + hdr_size;
-        hdr = (struct mailbox_header *)ptr;
+
+        if(mailbox->messages[i].hdr.send_uid != tid){
+        //Mailbox message doesn't match the sender uid we are expecting
+        continue;
+        }
+
+
+        if(mailbox->messages[i].hdr.size <= msg_size){
+            //Check whether message size is less than user's buffer size
+            mailbox->messages[i].hdr.taken = 0; 
+            memcpy(buf, (void *) mailbox->messages[i].body.body, mailbox->messages[i].hdr.size); 
+            spinlock_unlock(&(mailbox->lock));
+            return 0; 
+        }
     }
     //Release lock on mailbox
     spinlock_unlock(&(mailbox->lock));
@@ -379,32 +368,37 @@ int task_recv_msg(uintptr_t* regs, int tid, void *buf, size_t msg_size)
 
 int task_send_msg(uintptr_t* regs, int tid, void *buf, size_t msg_size, uintptr_t yield)
 {
+    int ret = 1; 
+    if(msg_size > MSG_BODY_SIZE){
+    //Message is bigger than the max message size
+        return ret;
+    }
 
     struct task *task = find_task(tid);
 
     if(!task)
-        return 0; 
+        return ret; 
 
-    struct mailbox *mbox = &task->mailbox;
+    struct mailbox *mailbox = &task->mailbox;
 
-    spinlock_lock(&(mbox->lock));
+    spinlock_lock(&(mailbox->lock));
 
-    //Check if the message + header can fit in the mailbox.
-    if (mbox->capacity - mbox->size < msg_size + sizeof(struct mailbox_header))
-    {
-        spinlock_unlock(&(mbox->lock));
-        return 0;
+    for(int i = 0; i < MAILBOX_SIZE; i++){
+        if(mailbox->messages[i].hdr.taken){
+        //Mailbox slot is empty
+        continue;
+        }
+
+        mailbox->messages[i].hdr.taken = 1; 
+        mailbox->messages[i].hdr.send_uid = cpu_get_task_id();
+        mailbox->messages[i].hdr.size = msg_size; 
+        memcpy(mailbox->messages[i].body.body, buf, msg_size);
+        spinlock_unlock(&(mailbox->lock));
+        ret = 0;
+        break;  
     }
 
-    struct mailbox_header hdr;
-    hdr.send_uid = cpu_get_task_id();
-    hdr.size = msg_size;
-
-    memcpy(mbox->data + mbox->size, &hdr, sizeof(hdr));
-    memcpy(mbox->data + mbox->size + sizeof(hdr), buf, msg_size);
-    mbox->size += msg_size + sizeof(hdr);
-
-    spinlock_unlock(&(mbox->lock));
+    spinlock_unlock(&(mailbox->lock));
 
     if(yield) {
         #ifdef ENCLAVE_DIRECT_SWITCH
@@ -413,6 +407,6 @@ int task_send_msg(uintptr_t* regs, int tid, void *buf, size_t msg_size, uintptr_
         return mcall_switch_task(regs, 0, RET_RECV_WAIT);
         #endif
     } else{
-        return 0; 
+        return ret; 
     }
 }

@@ -236,6 +236,7 @@ uintptr_t mcall_switch_task(uintptr_t* regs, uintptr_t next_task_id, uintptr_t r
                 memcpy(curr_task->regs, regs, 32 * sizeof(uintptr_t));
                 curr_task->regs[0] = read_csr(mepc);
                 ret = curr_task->regs[10];
+                ret = RET_RECV_WAIT;
                 break;
             default:
                 ret = ERROR_RET_INVALID;

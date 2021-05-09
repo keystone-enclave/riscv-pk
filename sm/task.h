@@ -80,6 +80,11 @@ struct task {
 
 	/* Whether task slot is valid */
     uintptr_t valid; 
+	
+	/* Whether task is waiting on msg */
+	uintptr_t wait_recv; 
+	uintptr_t wait_done; 
+	uintptr_t recv_buf; 
 }; 
 
 

@@ -68,6 +68,11 @@ uintptr_t mcall_register_task(uintptr_t args){
            tasks[i].ret_task_id = 0;
            tasks[i].destroyed = 0; 
            tasks[i].state = TASK_FRESH;
+            
+           // Single-copy optimization 
+           tasks[i].wait_recv = 0;
+           tasks[i].recv_buf = 0; 
+
            init_mailbox(&tasks[i].mailbox);
 
            if (register_args->enclave)
@@ -334,6 +339,12 @@ int task_recv_msg(uintptr_t* regs, int tid, void *buf, size_t msg_size)
     struct task *task = find_task(cpu_get_task_id());
     struct mailbox *mailbox = &task->mailbox;
 
+    if(task->wait_done){
+        //Message was fast-tracked. 
+        task->wait_done = 0; 
+        return 0; 
+    }
+
     spinlock_lock(&(mailbox->lock));
 
     for(int i = 0; i < MAILBOX_SIZE; i++){
@@ -359,6 +370,11 @@ int task_recv_msg(uintptr_t* regs, int tid, void *buf, size_t msg_size)
     //Release lock on mailbox
     spinlock_unlock(&(mailbox->lock));
 
+
+    task->recv_buf = (uintptr_t) buf;
+    task->wait_recv = 1; 
+    task->wait_done = 0; 
+
     //Message doesn't exist!
 #ifdef ENCLAVE_DIRECT_SWITCH
     return mcall_switch_task(regs, tid, RET_RECV_WAIT);
@@ -382,6 +398,13 @@ int task_send_msg(uintptr_t* regs, int tid, void *buf, size_t msg_size, uintptr_
 
     struct mailbox *mailbox = &task->mailbox;
 
+    if(task->wait_recv) {
+        uintptr_t recv_buf = task->recv_buf; 
+        memcpy((void *) recv_buf, buf, msg_size);
+        task->wait_done = 1; 
+        goto send_done; 
+    }
+
     spinlock_lock(&(mailbox->lock));
 
     for(int i = 0; i < MAILBOX_SIZE; i++){
@@ -401,6 +424,7 @@ int task_send_msg(uintptr_t* regs, int tid, void *buf, size_t msg_size, uintptr_
 
     spinlock_unlock(&(mailbox->lock));
 
+send_done: 
     if(yield) {
         #ifdef ENCLAVE_DIRECT_SWITCH
         return mcall_switch_task(regs, tid, RET_RECV_WAIT);

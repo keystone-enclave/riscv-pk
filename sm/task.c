@@ -339,11 +339,11 @@ int task_recv_msg(uintptr_t* regs, int tid, void *buf, size_t msg_size)
     struct task *task = find_task(cpu_get_task_id());
     struct mailbox *mailbox = &task->mailbox;
 
-    if(task->wait_done){
-        //Message was fast-tracked. 
-        task->wait_done = 0; 
-        return 0; 
-    }
+    // if(task->wait_done){
+    //     //Message was fast-tracked. 
+    //     task->wait_done = 0; 
+    //     return 0; 
+    // }
 
     spinlock_lock(&(mailbox->lock));
 

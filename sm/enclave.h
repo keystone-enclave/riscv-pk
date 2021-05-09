@@ -23,7 +23,7 @@
 #define ATTEST_DATA_MAXLEN  1024
 #define ENCLAVE_REGIONS_MAX 8
 #define MAILBOX_SIZE 32
-#define MSG_BODY_SIZE 256 
+#define MSG_BODY_SIZE 512 
 /* TODO: does not support multithreaded enclave yet */
 #define MAX_ENCL_THREADS 1
 

@@ -10,7 +10,7 @@
 #include "crypto.h"
 #include "page.h"
 
-// #define ENCLAVE_DIRECT_SWITCH
+#define ENCLAVE_DIRECT_SWITCH
 
 struct task tasks[MAX_TASKS_NUM]; 
 static spinlock_t task_lock = SPINLOCK_INIT;

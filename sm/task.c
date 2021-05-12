@@ -12,6 +12,11 @@
 
 #define ENCLAVE_DIRECT_SWITCH
 
+// #define SYNC
+#define ASYNC
+// #define SHARED
+
+
 struct task tasks[MAX_TASKS_NUM]; 
 static spinlock_t task_lock = SPINLOCK_INIT;
 
@@ -229,7 +234,7 @@ uintptr_t mcall_switch_task(uintptr_t* regs, uintptr_t next_task_id, uintptr_t r
             case RET_YIELD:
                 memcpy(curr_task->regs, regs, 32 * sizeof(uintptr_t));
                 curr_task->regs[0] = read_csr(mepc);
-                ret = curr_task->regs[10];
+                ret = next_task->regs[10];
                 break;
             /* If the return type is an interrupt, restart the instruction */
             case RET_TIMER:
@@ -336,14 +341,17 @@ err_unlock:
 
 int task_recv_msg(uintptr_t* regs, int tid, void *buf, size_t msg_size)
 {
+#ifndef SHARED
     struct task *task = find_task(cpu_get_task_id());
     struct mailbox *mailbox = &task->mailbox;
 
-    // if(task->wait_done){
-    //     //Message was fast-tracked. 
-    //     task->wait_done = 0; 
-    //     return 0; 
-    // }
+#ifdef SYNC
+    if(task->wait_done){
+        //Message was fast-tracked. 
+        task->wait_done = 0; 
+        return 0; 
+    }
+#endif
 
     spinlock_lock(&(mailbox->lock));
 
@@ -370,10 +378,18 @@ int task_recv_msg(uintptr_t* regs, int tid, void *buf, size_t msg_size)
     //Release lock on mailbox
     spinlock_unlock(&(mailbox->lock));
 
-
+#ifdef SYNC
     task->recv_buf = (uintptr_t) buf;
     task->wait_recv = 1; 
     task->wait_done = 0; 
+#endif
+
+#ifdef ASYNC
+    // Mark that the enclave has to check its mailbox again. 
+    regs[10] = 1; 
+#endif
+
+#endif //SHARED
 
     //Message doesn't exist!
 #ifdef ENCLAVE_DIRECT_SWITCH
@@ -398,13 +414,16 @@ int task_send_msg(uintptr_t* regs, int tid, void *buf, size_t msg_size, uintptr_
 
     struct mailbox *mailbox = &task->mailbox;
 
+#ifdef SYNC
     if(task->wait_recv) {
         uintptr_t recv_buf = task->recv_buf; 
         memcpy((void *) recv_buf, buf, msg_size);
         task->wait_done = 1; 
         goto send_done; 
     }
+#endif 
 
+#ifdef ASYNC
     spinlock_lock(&(mailbox->lock));
 
     for(int i = 0; i < MAILBOX_SIZE; i++){
@@ -423,6 +442,7 @@ int task_send_msg(uintptr_t* regs, int tid, void *buf, size_t msg_size, uintptr_
     }
 
     spinlock_unlock(&(mailbox->lock));
+#endif
 
 send_done: 
     if(yield) {
